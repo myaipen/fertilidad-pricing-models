@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fertilidad Integral — Dashboard de Productividad</title>
+<script src="chart.min.js"></script>
+<script src="data.js"></script>
+<script src="data_periods.js"></script>
+<style>
+  :root{
+    --gray:#C9CDD3; --red:#B66863; --blue:#7096B0; --pink:#D46A93;
+    --teal:#0F766E; --amber:#B45309; --text:#1F2937; --axis:#6B7280;
+    --card-bg:#F4F4F2; --page-bg:#FAFAF9; --border:#E5E5E2; --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:0; background:var(--page-bg); color:var(--text);
+    font-family:Calibri, "Segoe UI", Arial, sans-serif;
+  }
+  .wrap{ max-width:1280px; margin:0 auto; padding:32px 28px 60px; }
+  h1{
+    font-family:Cambria, Georgia, serif; font-size:28px; font-weight:700;
+    margin:0 0 6px; color:var(--text);
+  }
+  .subtitle{ font-style:italic; color:var(--axis); font-size:13px; margin:0 0 18px; }
+
+  .filters-row{ display:flex; flex-wrap:wrap; gap:22px; align-items:center; margin-bottom:22px; }
+  .filter-group{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .filter-label{ font-size:11px; font-weight:700; color:var(--axis); text-transform:uppercase; letter-spacing:.03em; margin-right:2px; }
+  .tab-btn{
+    font-family:Calibri, sans-serif; font-size:13px; font-weight:700;
+    padding:8px 16px; border-radius:8px; border:1px solid var(--border);
+    background:var(--white); color:var(--text); cursor:pointer;
+  }
+  .tab-btn.active{ background:var(--red); color:#fff; border-color:var(--red); }
+  .tab-btn.period.active{ background:var(--blue); border-color:var(--blue); }
+
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:10px; }
+  .kpi-card{ background:var(--card-bg); border-radius:12px; padding:16px 18px; }
+  .kpi-label{ font-size:12px; color:var(--axis); font-weight:700; text-transform:uppercase; letter-spacing:.03em; margin-bottom:6px;}
+  .kpi-big{ font-family:Cambria, Georgia, serif; font-weight:700; font-size:26px; color:var(--text); margin-bottom:4px;}
+  .kpi-sub{ font-size:12px; color:var(--axis); margin-bottom:6px;}
+  .kpi-badges{ display:flex; gap:10px; font-size:12px; font-weight:700; flex-wrap:wrap; }
+  .up{ color:var(--teal); } .down{ color:var(--amber); } .neutral{ color:var(--axis); font-weight:400; }
+  .period-note{ font-size:11.5px; color:var(--axis); font-style:italic; margin:0 0 22px; }
+
+  .section-title{ font-family:Cambria, Georgia, serif; font-size:19px; font-weight:700; margin:30px 0 4px; }
+  .section-sub{ font-style:italic; color:var(--axis); font-size:12.5px; margin:0 0 14px; }
+
+  .grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .grid-2{ display:grid; grid-template-columns:1.1fr 1fr; gap:16px; }
+  .panel{ background:var(--white); border:1px solid var(--border); border-radius:12px; padding:16px 18px 12px; }
+  .panel-title{ font-weight:700; font-size:13.5px; margin-bottom:2px; }
+  .panel-badges{ display:flex; gap:14px; font-size:11.5px; font-weight:700; margin-bottom:6px; flex-wrap:wrap; }
+  .chart-box{ position:relative; height:230px; }
+  .chart-box.tall{ height:320px; }
+  .unavailable{
+    height:230px; display:flex; align-items:center; justify-content:center; text-align:center;
+    color:var(--axis); font-size:12.5px; font-style:italic; background:var(--card-bg); border-radius:8px; padding:16px;
+  }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--axis); padding:6px 8px; border-bottom:2px solid var(--border); }
+  td{ padding:8px 8px; border-bottom:1px solid var(--border); }
+  td.num{ text-align:right; font-variant-numeric:tabular-nums; }
+
+  .highlights{ list-style:none; margin:0; padding:0; }
+  .highlights li{ font-size:12.5px; line-height:1.5; margin-bottom:12px; padding-left:14px; position:relative; color:var(--text); }
+  .highlights li::before{ content:"●"; position:absolute; left:0; color:var(--red); font-size:9px; top:5px; }
+
+  .footnote{ font-style:italic; color:var(--axis); font-size:11px; margin-top:26px; line-height:1.5; }
+  .footer{ text-align:center; font-style:italic; color:var(--axis); font-size:12px; margin-top:36px; }
+
+  @media (max-width:900px){
+    .kpi-row{ grid-template-columns:repeat(2,1fr); }
+    .grid-3{ grid-template-columns:1fr; }
+    .grid-2{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Dashboard de Productividad — Fertilidad Integral</h1>
+  <p class="subtitle" id="page-subtitle"></p>
+
+  <div class="filters-row">
+    <div class="filter-group">
+      <span class="filter-label">Sede</span>
+      <div id="tabs-sede"></div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Periodo</span>
+      <div id="tabs-periodo"></div>
+    </div>
+  </div>
+
+  <div class="kpi-row" id="kpi-row"></div>
+  <p class="period-note" id="period-note"></p>
+
+  <div class="section-title">Evolutivo con proyección</div>
+  <p class="section-sub" id="evolutivo-sub"></p>
+  <div class="grid-3" id="evolutivos"></div>
+
+  <div class="section-title">Consultas: evolutivo y agenda</div>
+  <p class="section-sub">Consultas terminadas (real) + citas agendadas confirmadas para completar el mes</p>
+  <div class="grid-2" id="consultas-section"></div>
+
+  <div class="section-title">Mezcla de servicios (mes vigente: agosto)</div>
+  <p class="section-sub">Ingresos proyectados por servicio (MDP) del mes en curso — no varía con el filtro de Periodo, sí con Sede</p>
+  <div class="grid-2" id="servicios-section"></div>
+
+  <div class="section-title">HubSpot — Leads y conversión</div>
+  <p class="section-sub">Pipeline "Interesa2" · compañía completa (no varía con el filtro de Sede) · reacciona al filtro de Periodo</p>
+  <div class="grid-3" id="hubspot-charts"></div>
+  <div class="grid-2" id="hubspot-detail" style="margin-top:16px;"></div>
+
+  <p class="footnote" id="page-footnote"></p>
+  <p class="footer">Fertilidad Integral</p>
+</div>
+
+<script>
+const D = window.DATA;
+const P = window.PERIODS;
+const COLORS = { gray:"#C9CDD3", red:"#B66863", blue:"#7096B0", pink:"#D46A93", teal:"#0F766E", amber:"#B45309", text:"#1F2937", axis:"#6B7280" };
+Chart.defaults.font.family = "Calibri, sans-serif";
+Chart.defaults.color = COLORS.axis;
+
+let currentScope = "total";     // "total" | "CDMX" | "GDL" | "MTP"
+let currentPeriod = "mes";      // "anio" | "trimestre" | "mes" | "semana" | "dia"
+const charts = {};
+
+// ---------------------------------------------------------------- generic helpers
+function fmt(v, decimals){
+  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  return v.toLocaleString("es-MX", { minimumFractionDigits: decimals || 0, maximumFractionDigits: decimals || 0 });
+}
+function pctBadge(v, label){
+  if (v === null || v === undefined || Number.isNaN(v)) return `<span class="neutral">${label}: —</span>`;
+  const cls = v >= 0 ? "up" : "down";
+  const arrow = v >= 0 ? "▲" : "▼";
+  const sign = v >= 0 ? "+" : "";
+  return `<span class="${cls}">${arrow} ${label}: ${sign}${v.toFixed(0)}%</span>`;
+}
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
+function avg(arr){ return arr.length ? sum(arr)/arr.length : null; }
+
+// ---------------------------------------------------------------- value-label plugins (numbers above bars)
+const barValueLabels = {
+  id: "barValueLabels",
+  afterDatasetsDraw(chart){
+    if (chart.options.indexAxis === "y") return; // handled by hBarValueLabels
+    if (chart.data.datasets.length > 1) return;   // stacked charts handled separately
+    const {ctx} = chart;
+    const ds = chart.data.datasets[0];
+    const meta = chart.getDatasetMeta(0);
+    ctx.save();
+    ctx.font = "700 11px Calibri, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    meta.data.forEach((bar, i)=>{
+      const v = ds.data[i];
+      if (v === null || v === undefined) return;
+      ctx.fillStyle = COLORS.text;
+      ctx.fillText(ds._fmt ? ds._fmt(v) : fmt(v), bar.x, bar.y - 4);
+    });
+    ctx.restore();
+  }
+};
+const hBarValueLabels = {
+  id: "hBarValueLabels",
+  afterDatasetsDraw(chart){
+    if (chart.options.indexAxis !== "y") return;
+    const {ctx} = chart;
+    const ds = chart.data.datasets[0];
+    const meta = chart.getDatasetMeta(0);
+    ctx.save();
+    ctx.font = "700 11px Calibri, sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = COLORS.text;
+    meta.data.forEach((bar, i)=>{
+      const v = ds.data[i];
+      if (v === null || v === undefined) return;
+      ctx.fillText(ds._fmt ? ds._fmt(v) : fmt(v), bar.x + 6, bar.y);
+    });
+    ctx.restore();
+  }
+};
+const stackedTotalLabels = {
+  id: "stackedTotalLabels",
+  afterDatasetsDraw(chart){
+    if (chart.data.datasets.length < 2) return;
+    const {ctx} = chart;
+    const [ds0, ds1] = chart.data.datasets;
+    const meta0 = chart.getDatasetMeta(0);
+    ctx.save();
+    ctx.font = "700 11px Calibri, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = COLORS.text;
+    meta0.data.forEach((bar, i)=>{
+      const total = (ds0.data[i]||0) + (ds1.data[i]||0);
+      if (!total) return;
+      const topBar = ds1.data[i] ? chart.getDatasetMeta(1).data[i] : bar;
+      ctx.fillText(fmt(total), topBar.x, topBar.y - 4);
+    });
+    ctx.restore();
+  }
+};
+Chart.register(barValueLabels, hBarValueLabels, stackedTotalLabels);
+
+// ---------------------------------------------------------------- período: config + series builders
+const PERIOD_LABELS = { anio:"Año", trimestre:"Trimestre", mes:"Mes", semana:"Semana", dia:"Día" };
+const PERIOD_BADGES = {
+  anio:      [null, null],
+  trimestre: ["vs trim. anterior", "vs prom. trim. cerrados"],
+  mes:       ["vs LM", "vs U3M"],
+  semana:    ["vs semana anterior", "vs prom. 4 sem. cerradas"],
+  dia:       ["vs día anterior", "vs prom. 7 días cerrados"],
+};
+
+function monthlySeries(scope, key){
+  const base = scope === "total" ? D.total : D.sedes[scope];
+  return base[key]; // {hist:[7], actual, proy, vsLM, vsU3M}
+}
+
+// Builds a uniform series object for a given metric + period:
+// { labels:[...], values:[...], currentIndex, hasProy(bool), proyIndex, badge1, badge2, note }
+function buildSeries(kind, scope, opts){
+  opts = opts || {};
+  if (kind === "monthly"){
+    const s = monthlySeries(scope, opts.key);
+    if (currentPeriod === "mes"){
+      return {
+        labels: [...D.meses_hist, D.mes_actual, "Proy."],
+        values: [...s.hist, s.actual, s.proy],
+        currentIndex: s.hist.length, proyIndex: s.hist.length+1,
+        badge1: s.vsLM, badge2: s.vsU3M,
+      };
+    }
+    if (currentPeriod === "trimestre"){
+      const [e,f,m,a,my,j,jl] = s.hist;
+      const Q1 = e+f+m, Q2 = a+my+j;
+      const Q3actual = jl + s.actual, Q3proy = jl + s.proy;
+      const vsLQ = (Q3proy/Q2 - 1) * 100;
+      const vsAvgClosed = (Q3proy/((Q1+Q2)/2) - 1) * 100;
+      return {
+        labels: ["Q1", "Q2", "Q3", "Q3 proy."],
+        values: [Q1, Q2, Q3actual, Q3proy],
+        currentIndex: 2, proyIndex: 3,
+        badge1: vsLQ, badge2: vsAvgClosed,
+      };
+    }
+    if (currentPeriod === "anio"){
+      const ytd = sum(s.hist) + s.actual;
+      return { labels: ["2026 (YTD)"], values: [ytd], currentIndex: 0, proyIndex: null, badge1: null, badge2: null };
+    }
+    // semana / día -> fine-grain (only ingresos & pacientes have this; atenciones doesn't)
+    return buildFineGrain(opts.fineKey, scope);
+  }
+  if (kind === "hubspot"){
+    return buildHubspotSeries(opts.key);
+  }
+}
+
+function windowLastN(obj, n){
+  // obj: {dateStr: value}. Returns [ [date,val], ... ] sorted, last n entries.
+  const entries = Object.entries(obj).sort((a,b)=> a[0] < b[0] ? -1 : 1);
+  return entries.slice(-n);
+}
+function weekLabel(wk, startStr){
+  const d = new Date(startStr + "T00:00:00");
+  return `${d.getDate()}/${d.getMonth()+1}`;
+}
+function dayLabel(dateStr){
+  const d = new Date(dateStr + "T00:00:00");
+  return `${d.getDate()}/${d.getMonth()+1}`;
+}
+
+function buildFineGrain(metricKey, scope){
+  if (!metricKey) return null; // not available at this grain (e.g. atenciones)
+  if (currentPeriod === "semana"){
+    const raw = P.weekly[scope][metricKey]; // {wk: {start, valor}}
+    const entries = Object.entries(raw).sort((a,b)=> a[0] < b[0] ? -1 : 1).slice(-13);
+    const labels = entries.map(([wk,v]) => weekLabel(wk, v.start));
+    const values = entries.map(([wk,v]) => v.valor);
+    const n = values.length;
+    const lw = values[n-2], avgClosed = avg(values.slice(Math.max(0,n-5), n-1));
+    const badge1 = lw ? (values[n-1]/lw - 1) * 100 : null;
+    const badge2 = avgClosed ? (values[n-1]/avgClosed - 1) * 100 : null;
+    return { labels, values, currentIndex: n-1, proyIndex: null, badge1, badge2 };
+  }
+  if (currentPeriod === "dia"){
+    const raw = P.daily[scope][metricKey]; // {date: value}
+    const entries = windowLastN(raw, 21);
+    const labels = entries.map(([d]) => dayLabel(d));
+    const values = entries.map(([,v]) => v);
+    const n = values.length;
+    const prev = values[n-2], avg7 = avg(values.slice(Math.max(0,n-8), n-1));
+    const badge1 = prev ? (values[n-1]/prev - 1) * 100 : null;
+    const badge2 = avg7 ? (values[n-1]/avg7 - 1) * 100 : null;
+    return { labels, values, currentIndex: n-1, proyIndex: null, badge1, badge2 };
+  }
+}
+
+function buildHubspotSeries(metricKey){
+  // metricKey: 'leads' | 'citas' | 'conversion'
+  if (currentPeriod === "mes"){
+    const h = D.hubspot;
+    if (metricKey === "conversion"){
+      const values = h.leads.hist.map((l,i)=> l ? Math.round(h.citas.hist[i]/l*100) : 0).concat([Math.round(h.citas.actual/h.leads.actual*100)]);
+      return { labels: [...D.meses_hist, D.mes_actual], values, currentIndex: values.length-1, proyIndex:null, badge1:null, badge2:null };
+    }
+    const m = h[metricKey];
+    return { labels: [...D.meses_hist, D.mes_actual], values: [...m.hist, m.actual], currentIndex: m.hist.length, proyIndex:null, badge1:null, badge2:null };
+  }
+  if (currentPeriod === "trimestre" || currentPeriod === "anio"){
+    const h = D.hubspot;
+    const leadsAll = [...h.leads.hist, h.leads.actual];
+    const citasAll = [...h.citas.hist, h.citas.actual];
+    if (currentPeriod === "anio"){
+      const l = sum(leadsAll), c = sum(citasAll);
+      const v = metricKey === "leads" ? l : metricKey === "citas" ? c : Math.round(c/l*100);
+      return { labels:["2026 (YTD)"], values:[v], currentIndex:0, proyIndex:null, badge1:null, badge2:null };
+    }
+    const bucket = (arr) => [arr[0]+arr[1]+arr[2], arr[3]+arr[4]+arr[5], arr[6]+arr[7]];
+    const lQ = bucket(leadsAll), cQ = bucket(citasAll);
+    const values = metricKey === "leads" ? lQ : metricKey === "citas" ? cQ : lQ.map((l,i)=> l ? Math.round(cQ[i]/l*100) : 0);
+    return { labels:["Q1","Q2","Q3"], values, currentIndex:2, proyIndex:null, badge1:null, badge2:null };
+  }
+  // semana / día
+  const raw = currentPeriod === "semana" ? P.weekly.hubspot : P.daily.hubspot;
+  const n = currentPeriod === "semana" ? 13 : 21;
+  const leadsEntries = currentPeriod === "semana"
+    ? Object.entries(raw.leads).sort((a,b)=> a[0]<b[0]?-1:1).slice(-n)
+    : windowLastN(raw.leads, n);
+  const citasEntries = currentPeriod === "semana"
+    ? Object.entries(raw.citas).sort((a,b)=> a[0]<b[0]?-1:1).slice(-n)
+    : windowLastN(raw.citas, n);
+  const labels = currentPeriod === "semana"
+    ? leadsEntries.map(([wk,v])=>weekLabel(wk, v.start))
+    : leadsEntries.map(([d])=>dayLabel(d));
+  const leadsVals = currentPeriod === "semana" ? leadsEntries.map(([,v])=>v.valor) : leadsEntries.map(([,v])=>v);
+  const citasVals = currentPeriod === "semana" ? citasEntries.map(([,v])=>v.valor) : citasEntries.map(([,v])=>v);
+  let values;
+  if (metricKey === "leads") values = leadsVals;
+  else if (metricKey === "citas") values = citasVals;
+  else values = leadsVals.map((l,i)=> l ? Math.round(citasVals[i]/l*100) : 0);
+  return { labels, values, currentIndex: values.length-1, proyIndex:null, badge1:null, badge2:null };
+}
+
+// ---------------------------------------------------------------- tabs
+function buildTabs(){
+  const sedeEl = document.getElementById("tabs-sede");
+  const sedeOpts = [["total","Todas las sedes"], ["CDMX","CDMX"], ["GDL","Guadalajara"], ["MTP","Metepec"]];
+  sedeEl.innerHTML = sedeOpts.map(([key,label]) =>
+    `<button class="tab-btn ${key===currentScope?'active':''}" data-scope="${key}">${label}</button>`
+  ).join("");
+  sedeEl.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{ currentScope = btn.dataset.scope; renderAll(); });
+  });
+
+  const perEl = document.getElementById("tabs-periodo");
+  perEl.innerHTML = Object.entries(PERIOD_LABELS).map(([key,label]) =>
+    `<button class="tab-btn period ${key===currentPeriod?'active':''}" data-period="${key}">${label}</button>`
+  ).join("");
+  perEl.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{ currentPeriod = btn.dataset.period; renderAll(); });
+  });
+}
+
+// ---------------------------------------------------------------- KPI row
+function buildKPIs(){
+  const items = [
+    { label:"Ingresos (MDP)", series: buildSeries("monthly", currentScope, {key:"ingresos", fineKey:"ingresos"}), dec:1, prefix:"$", suffix:"M" },
+    { label:"Atenciones", series: buildSeries("monthly", currentScope, {key:"atenciones", fineKey:null}), dec:0, prefix:"", suffix:"" },
+    { label:"Pacientes Únicos", series: buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"}), dec:0, prefix:"", suffix:"" },
+    { label:"Consultas", series: buildConsultasSeries(currentScope), dec:0, prefix:"", suffix:"" },
+  ];
+  const el = document.getElementById("kpi-row");
+  el.innerHTML = items.map(it=>{
+    const s = it.series;
+    if (!s){
+      return `<div class="kpi-card"><div class="kpi-label">${it.label}</div><div class="unavailable" style="height:auto; padding:18px 8px;">No disponible a nivel ${PERIOD_LABELS[currentPeriod].toLowerCase()}</div></div>`;
+    }
+    const current = s.proyIndex!=null ? s.values[s.proyIndex] : s.values[s.currentIndex];
+    const real = s.values[s.currentIndex];
+    const showReal = s.proyIndex != null;
+    const [b1label, b2label] = PERIOD_BADGES[currentPeriod];
+    return `
+      <div class="kpi-card">
+        <div class="kpi-label">${it.label}</div>
+        <div class="kpi-big">${it.prefix}${fmt(current, it.dec)}${it.suffix}${s.proyIndex!=null ? ' <span style="font-size:12px; font-weight:400; color:var(--axis);">proy.</span>' : ''}</div>
+        ${showReal ? `<div class="kpi-sub">Real a la fecha: ${it.prefix}${fmt(real, it.dec)}${it.suffix}</div>` : ""}
+        ${b1label ? `<div class="kpi-badges">${pctBadge(s.badge1,b1label)} ${pctBadge(s.badge2,b2label)}</div>` : ""}
+      </div>`;
+  }).join("");
+}
+
+function buildConsultasSeries(scope){
+  const s = monthlySeries(scope, "consultas");
+  if (currentPeriod === "mes"){
+    return { labels:[...D.meses_hist, D.mes_actual], values:[...s.hist, s.real+s.agendado], currentIndex:s.hist.length, proyIndex:s.hist.length, badge1:s.vsLM, badge2:s.vsU3M };
+  }
+  if (currentPeriod === "trimestre"){
+    const [e,f,m,a,my,j,jl] = s.hist;
+    const Q1=e+f+m, Q2=a+my+j, Q3 = jl + s.real + s.agendado;
+    return { labels:["Q1","Q2","Q3"], values:[Q1,Q2,Q3], currentIndex:2, proyIndex:2, badge1:(Q3/Q2-1)*100, badge2:(Q3/((Q1+Q2)/2)-1)*100 };
+  }
+  if (currentPeriod === "anio"){
+    const ytd = sum(s.hist) + s.real + s.agendado;
+    return { labels:["2026 (YTD)"], values:[ytd], currentIndex:0, proyIndex:0, badge1:null, badge2:null };
+  }
+  return buildFineGrain("consultas_real", scope);
+}
+
+// ---------------------------------------------------------------- evolutivo bar (hist gray, actual blue, proy red)
+function drawEvolutivoBar(canvasId, series, valueFmt){
+  destroyChart(canvasId);
+  const ctx = document.getElementById(canvasId).getContext("2d");
+  const bg = series.labels.map((_,i)=>{
+    if (series.proyIndex != null && i === series.proyIndex) return COLORS.red;
+    if (i === series.currentIndex) return COLORS.blue;
+    return COLORS.gray;
+  });
+  charts[canvasId] = new Chart(ctx, {
+    type:"bar",
+    data:{ labels:series.labels, datasets:[{ data: series.values, backgroundColor: bg, borderRadius:4, maxBarThickness:30, _fmt: valueFmt }] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top:20 } },
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:(c)=>valueFmt(c.raw) } } },
+      scales:{ y:{ display:false, beginAtZero:true, grace:"20%" }, x:{ grid:{ display:false }, ticks:{ font:{ size: series.labels.length>10 ? 9 : 11 }, maxRotation: series.labels.length>10 ? 60 : 0 } } },
+    },
+  });
+}
+
+function buildEvolutivos(){
+  const el = document.getElementById("evolutivos");
+  const ing = buildSeries("monthly", currentScope, {key:"ingresos", fineKey:"ingresos"});
+  const at = buildSeries("monthly", currentScope, {key:"atenciones", fineKey:null});
+  const pu = buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"});
+  const [b1,b2] = PERIOD_BADGES[currentPeriod];
+
+  function panel(id, title, series, valueFmt){
+    if (!series){
+      return `<div class="panel"><div class="panel-title">${title}</div><div class="unavailable">No disponible a nivel ${PERIOD_LABELS[currentPeriod].toLowerCase()}<br>(sin fuente día a día para esta métrica)</div></div>`;
+    }
+    return `<div class="panel">
+      <div class="panel-title">${title}</div>
+      <div class="panel-badges">${b1?pctBadge(series.badge1,b1):""} ${b2?pctBadge(series.badge2,b2):""}</div>
+      <div class="chart-box"><canvas id="${id}"></canvas></div>
+    </div>`;
+  }
+
+  el.innerHTML =
+    panel("chart-ingresos", "Ingresos — MDP", ing, v=>`$${fmt(v,1)}M`) +
+    panel("chart-atenciones", "Atenciones (#)", at, v=>`${fmt(v,0)}`) +
+    panel("chart-pacientes", "Pacientes Únicos (#)", pu, v=>`${fmt(v,0)}`);
+
+  if (ing) drawEvolutivoBar("chart-ingresos", ing, v=>`$${fmt(v,1)}M`);
+  if (at) drawEvolutivoBar("chart-atenciones", at, v=>`${fmt(v,0)}`);
+  if (pu) drawEvolutivoBar("chart-pacientes", pu, v=>`${fmt(v,0)}`);
+}
+
+// ---------------------------------------------------------------- consultas (stacked mes/trim/año, simple bar semana/día) + ranking
+function drawConsultasChart(){
+  destroyChart("chart-consultas-stack");
+  const ctx = document.getElementById("chart-consultas-stack").getContext("2d");
+  const fine = (currentPeriod === "semana" || currentPeriod === "dia");
+  if (fine){
+    const series = buildFineGrain("consultas_real", currentScope);
+    const bg = series.labels.map((_,i)=> i===series.currentIndex ? COLORS.blue : COLORS.gray);
+    charts["chart-consultas-stack"] = new Chart(ctx, {
+      type:"bar",
+      data:{ labels: series.labels, datasets:[{ data: series.values, backgroundColor: bg, borderRadius:4, maxBarThickness:26, _fmt:(v)=>`${fmt(v,0)}` }] },
+      options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:20}},
+        plugins:{ legend:{ display:false } },
+        scales:{ y:{ display:false, beginAtZero:true, grace:"20%" }, x:{ grid:{ display:false }, ticks:{ font:{ size:9 }, maxRotation:60 } } } },
+    });
+    return series;
+  }
+  const s = monthlySeries(currentScope, "consultas");
+  let labels, real, agen;
+  if (currentPeriod === "mes"){
+    labels = [...D.meses_hist, D.mes_actual];
+    real = [...s.hist, s.real];
+    agen = s.hist.map(()=>0).concat([s.agendado]);
+  } else if (currentPeriod === "trimestre"){
+    const [e,f,m,a,my,j,jl] = s.hist;
+    labels = ["Q1","Q2","Q3"];
+    real = [e+f+m, a+my+j, jl+s.real];
+    agen = [0,0,s.agendado];
+  } else {
+    labels = ["2026 (YTD)"];
+    real = [sum(s.hist)+s.real];
+    agen = [s.agendado];
+  }
+  charts["chart-consultas-stack"] = new Chart(ctx, {
+    type:"bar",
+    data:{ labels, datasets:[
+      { label:"Real", data:real, backgroundColor: labels.map((_,i)=> i===labels.length-1 ? COLORS.blue : COLORS.gray), borderRadius:4, maxBarThickness:34, stack:"s" },
+      { label:"Agendado", data:agen, backgroundColor: COLORS.pink, borderRadius:4, maxBarThickness:34, stack:"s" },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:20}},
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:12, font:{ size:11 } } } },
+      scales:{ y:{ display:false, beginAtZero:true, grace:"20%", stacked:true }, x:{ grid:{ display:false }, stacked:true, ticks:{ font:{ size:11 } } } } },
+  });
+}
+function drawRanking(){
+  destroyChart("chart-ranking");
+  const rows = D.consultas_ranking[currentScope];
+  const ctx = document.getElementById("chart-ranking").getContext("2d");
+  charts["chart-ranking"] = new Chart(ctx, {
+    type:"bar",
+    data:{ labels: rows.map(r=>r.nombre), datasets:[{ data: rows.map(r=>r.valor), backgroundColor: rows.map((r,i)=> i===0 ? COLORS.red : COLORS.gray), borderRadius:4, maxBarThickness:20, _fmt:(v)=>`${fmt(v,0)}` }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:(c)=>{
+        const r = rows[c.dataIndex];
+        const pct = r.nuevo ? "Nuevo" : (r.vsLM===null||r.vsLM===undefined ? "—" : `${r.vsLM>=0?'+':''}${r.vsLM}% vs LM`);
+        return `${c.raw} — ${pct}`;
+      }}}},
+      scales:{ x:{ display:false, beginAtZero:true, grace:"35%" }, y:{ grid:{ display:false }, ticks:{ font:{ size:11.5 } } } } },
+  });
+}
+function buildConsultas(){
+  const el = document.getElementById("consultas-section");
+  const s = monthlySeries(currentScope, "consultas");
+  const fine = (currentPeriod === "semana" || currentPeriod === "dia");
+  const [b1,b2] = fine ? PERIOD_BADGES[currentPeriod] : ["vs LM","vs U3M"];
+  el.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">Consultas ${currentScope==='total'?'':currentScope} — ${PERIOD_LABELS[currentPeriod]}</div>
+      <div class="panel-badges" id="consultas-badges"></div>
+      <div class="chart-box tall"><canvas id="chart-consultas-stack"></canvas></div>
+      <div style="font-size:11.5px; color:var(--axis); margin-top:6px;">
+        ${fine ? "Vista día/semana: solo consultas ya realizadas (real), sin agenda futura." :
+          `Real MTD: <b style="color:var(--text)">${s.real}</b> · Agendado 25–31: <b style="color:var(--text)">${s.agendado}</b> · Proyección: <b style="color:var(--text)">${s.real+s.agendado}</b>`}
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Ranking por agrupación de consulta (agosto)</div>
+      <div class="chart-box tall"><canvas id="chart-ranking"></canvas></div>
+    </div>
+  `;
+  const series = drawConsultasChart();
+  const badgeSeries = fine ? series : { badge1: (currentPeriod==='mes'?s.vsLM: currentPeriod==='trimestre'? null : null), badge2: null };
+  const badgesEl = document.getElementById("consultas-badges");
+  if (fine && series){
+    badgesEl.innerHTML = `${pctBadge(series.badge1,b1)} ${pctBadge(series.badge2,b2)}`;
+  } else if (currentPeriod === "mes"){
+    badgesEl.innerHTML = `${pctBadge(s.vsLM,"vs LM")} ${pctBadge(s.vsU3M,"vs U3M")}`;
+  } else {
+    badgesEl.innerHTML = "";
+  }
+  drawRanking();
+}
+
+// ---------------------------------------------------------------- servicios + highlights (siempre mes vigente)
+function buildServicios(){
+  const rows = D.servicios[currentScope];
+  const hi = D.highlights[currentScope] || [];
+  const el = document.getElementById("servicios-section");
+  const rowsHtml = rows.map(r=>{
+    const lm = r.nuevo ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : pctBadge(r.vsLM,"").replace(": ","");
+    const u3m = (r.vsU3M===null || r.vsU3M===undefined) ? '<span style="color:var(--axis);">—</span>' : (r.nuevo ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : pctBadge(r.vsU3M,"").replace(": ",""));
+    return `<tr><td>${r.nombre}</td><td class="num">${fmt(r.valor,1)}</td><td class="num">${lm}</td><td class="num">${u3m}</td></tr>`;
+  }).join("");
+  el.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">Ingresos por servicio (MDP)</div>
+      <table><thead><tr><th>Servicio</th><th class="num">MDP</th><th class="num">vs LM</th><th class="num">vs U3M</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Highlights</div>
+      <ul class="highlights">${hi.map(h=>`<li>${h}</li>`).join("") || '<li>Sin highlights registrados para esta sede.</li>'}</ul>
+    </div>
+  `;
+}
+
+// ---------------------------------------------------------------- HubSpot
+function buildHubspotCharts(){
+  const el = document.getElementById("hubspot-charts");
+  el.innerHTML = `
+    <div class="panel"><div class="panel-title">Leads — ${PERIOD_LABELS[currentPeriod]}</div><div class="chart-box"><canvas id="chart-leads"></canvas></div></div>
+    <div class="panel"><div class="panel-title">Citas agendadas — ${PERIOD_LABELS[currentPeriod]}</div><div class="chart-box"><canvas id="chart-citas"></canvas></div></div>
+    <div class="panel"><div class="panel-title">Conversión % — ${PERIOD_LABELS[currentPeriod]}</div><div class="chart-box"><canvas id="chart-conv"></canvas></div></div>
+  `;
+  function draw(id, metricKey, color, vf){
+    destroyChart(id);
+    const series = buildHubspotSeries(metricKey);
+    const bg = series.labels.map((_,i)=> i===series.currentIndex ? color : COLORS.gray);
+    const ctx = document.getElementById(id).getContext("2d");
+    charts[id] = new Chart(ctx, {
+      type:"bar",
+      data:{ labels: series.labels, datasets:[{ data: series.values, backgroundColor: bg, borderRadius:4, maxBarThickness: series.labels.length>15?14:28, _fmt: vf }] },
+      options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:20}},
+        plugins:{ legend:{ display:false } },
+        scales:{ y:{ display:false, beginAtZero:true, grace:"20%" }, x:{ grid:{ display:false }, ticks:{ font:{ size: series.labels.length>10?8:11 }, maxRotation: series.labels.length>10?60:0 } } } },
+    });
+  }
+  draw("chart-leads", "leads", COLORS.blue, v=>`${fmt(v,0)}`);
+  draw("chart-citas", "citas", COLORS.pink, v=>`${fmt(v,0)}`);
+  draw("chart-conv", "conversion", COLORS.red, v=>`${fmt(v,0)}%`);
+}
+function buildHubspotDetail(){
+  const el = document.getElementById("hubspot-detail");
+  const bySede = D.hubspot.conversion_por_sede;
+  const rows = Object.entries(bySede).map(([code,v])=>{
+    const diff = v.agosto - v.total2026;
+    const cls = diff>=0 ? "up":"down"; const arrow = diff>=0?"▲":"▼";
+    return `<tr><td>${code}</td><td class="num">${v.agosto}%</td><td class="num">${v.total2026}%</td><td class="num"><span class="${cls}">${arrow} ${diff>=0?'+':''}${diff} pp</span></td></tr>`;
+  }).join("");
+  const cohRows = D.hubspot.cohortes.map(r=>`
+    <tr><td>${r.mes}</td><td class="num">${fmt(r.leads,0)}</td><td class="num">${r.m0}%</td><td class="num">${r.m1}%</td><td class="num">${r.m2}%</td><td class="num">${r.sin}%</td></tr>
+  `).join("");
+  el.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">Conversión % por sede — agosto vs. total 2026</div>
+      <table><thead><tr><th>Sede</th><th class="num">Agosto</th><th class="num">Total 2026</th><th class="num">Diferencia</th></tr></thead><tbody>${rows}</tbody></table>
+      <div style="font-size:11px; color:var(--axis); margin-top:8px; font-style:italic;">Fijo por sede (no cambia con el filtro de Periodo). Agosto es parcial: leads recientes aún no completan su ventana de conversión.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Cohortes de leads: ¿cuántos meses después agenda cita?</div>
+      <table><thead><tr><th>Mes</th><th class="num">Leads</th><th class="num">+0</th><th class="num">+1</th><th class="num">+2 o más</th><th class="num">Sin cita</th></tr></thead><tbody>${cohRows}</tbody></table>
+    </div>
+  `;
+}
+
+// ---------------------------------------------------------------- header / notes
+function buildHeader(){
+  const scopeLabel = currentScope === "total" ? D.total.nombre : D.sedes[currentScope].nombre;
+  document.getElementById("page-subtitle").textContent =
+    `Vista: ${scopeLabel} · Periodo: ${PERIOD_LABELS[currentPeriod]} · Real acumulado al ${D.corte} + proyección donde aplica`;
+  const notes = {
+    anio: "Año: único año con datos completos (2026) — se muestra el acumulado a la fecha, sin proyección a cierre de año.",
+    trimestre: "Trimestre: Q1 y Q2 cerrados; Q3 = julio real + agosto (real + proyección a cierre de mes).",
+    mes: "",
+    semana: "Semana: últimas 13 semanas. Ingresos, Pacientes Únicos, Consultas y HubSpot con datos reales día a día; Atenciones no está disponible a este nivel (ver nota abajo).",
+    dia: "Día: últimos 21 días. Ingresos, Pacientes Únicos, Consultas y HubSpot con datos reales día a día; Atenciones no está disponible a este nivel (ver nota abajo).",
+  };
+  document.getElementById("period-note").textContent = notes[currentPeriod];
+  document.getElementById("evolutivo-sub").textContent =
+    (currentPeriod==="semana"||currentPeriod==="dia")
+      ? "Histórico real (gris) · periodo más reciente (azul) — a este nivel de detalle no se proyecta un cierre."
+      : "Histórico real (gris) · periodo actual real (azul) · proyección a cierre (rojo)";
+  document.getElementById("page-footnote").innerHTML =
+    `*Ingresos, Pacientes Únicos y Consultas: verificados día a día contra el archivo de cargos y el sistema de agenda. Atenciones usa una metodología de agenda propia que solo está agregada a nivel mensual, por eso no aparece en Semana/Día. ` +
+    `vs LM/vs U3M (mes), vs trimestre/vs U3M (trimestre), vs semana/4 semanas y vs día/7 días son siempre "periodo actual ÷ periodo(s) de comparación − 1". ` +
+    `HubSpot: pipeline "Interesa2", leads por fecha de creación, citas por fecha de cita agendada; siempre a nivel compañía.`;
+}
+
+function renderAll(){
+  buildTabs();
+  buildHeader();
+  buildKPIs();
+  buildEvolutivos();
+  buildConsultas();
+  buildServicios();
+  buildHubspotCharts();
+  buildHubspotDetail();
+}
+
+renderAll();
+</script>
+</body>
+</html>
