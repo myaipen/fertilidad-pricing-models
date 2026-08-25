@@ -1,15 +1,18 @@
 # Dashboard de Productividad — Fertilidad Integral
 
-Este paquete tiene 4 archivos:
+Este paquete tiene 5 archivos:
 
 | Archivo | ¿Qué es? | ¿Lo edito? |
 |---|---|---|
-| `index.html` | La página del dashboard (estructura, diseño, gráficos) | No |
-| `data.js` | Todos los números (ingresos, atenciones, pacientes, consultas, HubSpot, etc.) | **Sí, cada mes** |
+| `index.html` | La página del dashboard (estructura, diseño, gráficos, filtros) | No |
+| `data.js` | Los números mensuales (ingresos, atenciones, pacientes, consultas, servicios, HubSpot) | **Sí, cada mes** |
+| `data_periods.js` | Los mismos ingresos/pacientes/consultas/HubSpot pero día por día y semana por semana, para los filtros de Semana y Día | No a mano — se regenera (ver nota abajo) |
 | `chart.min.js` | Librería de gráficos | No |
 | `README.md` | Esta guía | No |
 
-Los 3 primeros archivos van juntos siempre, en la misma carpeta.
+Los 4 primeros archivos van juntos siempre, en la misma carpeta.
+
+**Filtros del dashboard:** arriba tienes dos filtros independientes — **Sede** (Todas / CDMX / Guadalajara / Metepec) y **Periodo** (Año / Trimestre / Mes / Semana / Día). Ambos afectan Ingresos, Pacientes Únicos y Consultas. Atenciones solo está disponible a nivel Mes/Trimestre/Año porque no existe una fuente día a día confiable para esa métrica (se explica en la nota dentro del propio dashboard). La sección de Servicios y Highlights siempre muestra el mes vigente (agosto), no cambia con el filtro de Periodo. HubSpot siempre es a nivel compañía completa, no cambia con el filtro de Sede.
 
 ---
 
@@ -42,7 +45,7 @@ Dos razones: (a) tener respaldo con historial de versiones (qué cambió cada me
 ## 5. Subir los archivos (sin usar comandos)
 
 1. En la página del repositorio recién creado, busca el link que dice **uploading an existing file** (o ve al botón **Add file → Upload files**).
-2. Arrastra los 4 archivos (`index.html`, `data.js`, `chart.min.js`, `README.md`) a la ventana, o da clic en **choose your files** y selecciónalos.
+2. Arrastra los 5 archivos (`index.html`, `data.js`, `data_periods.js`, `chart.min.js`, `README.md`) a la ventana — todos sueltos, no el .zip — o da clic en **choose your files** y selecciónalos.
 3. Abajo, en **Commit changes**, escribe un mensaje corto como `Primera versión del dashboard` y da clic en **Commit changes**.
 4. Listo — tus archivos ya están respaldados en GitHub con historial.
 
@@ -77,8 +80,13 @@ Si tu repo es público en vez de privado, este mismo proceso es gratis — pero 
 
 - **vs LM** = `(Proyección ÷ Real del mes anterior) − 1`, en %.
 - **vs U3M** = `(Proyección ÷ Promedio de los 3 meses cerrados anteriores) − 1`, en %.
-- **% conversión HubSpot** = `Citas agendadas del mes ÷ Leads del mes`.
+- **vs trimestre anterior / vs semana anterior / vs día anterior** = misma lógica que vs LM, pero comparando contra el bloque de tiempo inmediato anterior.
+- **% conversión HubSpot** = `Citas agendadas del periodo ÷ Leads del periodo`.
 - **Pacientes Únicos proyectados**: no uses el mismo ratio que Atenciones — un paciente que regresa en el mismo mes ya fue contado. Usa un ratio histórico propio: `(pacientes únicos de todo el mes) ÷ (pacientes únicos al día del corte)`, promediado de meses anteriores ya cerrados.
+
+### Sobre `data_periods.js` (los filtros de Semana y Día)
+
+Este archivo no está pensado para editarse a mano — trae miles de valores día por día. Si más adelante quieres que se actualice con datos más recientes (por ejemplo, a partir de septiembre), dile a Claude "actualiza `data_periods.js` con los datos hasta [fecha]" y lo vuelve a generar desde tus archivos fuente (cargos, consultas, HubSpot), igual que la primera vez. Mientras tanto, el dashboard sigue funcionando con los datos que ya tiene — los filtros de Semana y Día simplemente no mostrarán fechas más nuevas que las que trae cargadas.
 
 ---
 
