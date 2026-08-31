@@ -36,17 +36,18 @@ El dashboard se encarga de sumar por sede, calcular vs LM / vs U3M, armar el ran
 
 En "Mezcla de servicios", cada renglón (Tratamientos FIV/ICSI, Farmacia, Congelación de Gametos, etc.) es clicable — dice "▸ ver conceptos". Al dar clic se abre una ventana que navega la jerarquía real de clasificación: **Servicio → Subclasificación → Subclasificación 2 → Concepto**, con montos MDP y vs LM en cada nivel (vs LM se recalcula sumando los montos de ese grupo, no promediando porcentajes). Es dinámico porque se adapta a lo que cada servicio realmente tiene clasificado — no todos llegan a los 4 niveles:
 
-- **Laboratorio** sí trae los 3 niveles completos: por ejemplo Laboratorio → Laboratorio Clínico → Hormonas, Sangre y Perfiles → Perfil ETS.
+- **Laboratorio** sí trae los 3 niveles completos: por ejemplo Laboratorio → Laboratorio Clínico → Hormonas, Sangre y Perfiles → Perfil ETS. La subclasificación **Laboratorio Externo** quedó unificada (antes había una variante en minúsculas "Laboratorio externo" que aparecía como grupo aparte — ya está corregido desde el archivo de clasificación).
 - **Tratamientos FIV/ICSI** y **Congelación de Gametos** tienen 1 nivel de subclasificación (ej. FIV/ICSI → Donación → [conceptos]) y de ahí saltan directo a concepto. Esto viene directo de la hoja "Servicios" de tu archivo de clasificación — si ahí agrupas o renombras una subclasificación (por ejemplo, ya no hay "Donación de gametos" separada de "Donación": las donadoras de óvulos y donantes europeos quedaron unificadas en un solo "Donación"), el drill-down lo refleja solo en el siguiente corte que te suba.
-- **Farmacia**, **Procedimientos/Quirúrgicos**, **Imágenes**, **Otros**, **Wellness** y **Subrogación** no tienen subclasificación — el clic te lleva directo a la tabla de conceptos.
+- **Wellness** ahora también trae 1 nivel de subclasificación (Nutrición, Acupuntura, Masajes, Psicología) desde que la agregaste en tu archivo de clasificación.
+- **Farmacia**, **Procedimientos/Quirúrgicos**, **Imágenes** y **Otros** no tienen subclasificación — el clic te lleva directo a la tabla de conceptos. **Subrogación** tampoco trae subclasificación en el drill-down (ese detalle vive en su propia sección, ver 0.2).
 
 Navegas con la migas de pan (breadcrumb) arriba de la tabla — haz clic en cualquier nivel anterior para regresar ahí directo, o usa "‹ volver" para retroceder un nivel. Esta tabla respeta el filtro de **Sede** que tengas activo arriba (Todas/CDMX/Guadalajara/Metepec) — si cambias de sede y vuelves a dar clic en el mismo servicio, ves el desglose de esa sede específica.
 
-**Orden de la tabla:** los servicios se ordenan de mayor a menor ingreso, con **Subrogación siempre al final** (a petición tuya), sin importar su monto.
+**Orden de la tabla:** los servicios se ordenan estrictamente de mayor a menor ingreso, sin excepciones — incluyendo Subrogación, que cae donde le corresponda por monto.
 
 ### 0.2 Subrogación — pacientes
 
-Sección aparte de "Mezcla de servicios", con el pipeline de Subrogación a nivel paciente: candidatas gestantes en **valoración** (aún en estudios médicos) vs. **programas activos** (padres intencionales con contrato firmado), mes a mes. Es información **agregada** — número de pacientes, ingreso y ticket promedio por etapa — **nunca nombres**, dado lo sensible del dato. Es a nivel compañía completa y no cambia con el filtro de Sede (igual que HubSpot), porque Subrogación es prácticamente 100% CDMX.
+Sección aparte de "Mezcla de servicios", ubicada al final de la página (después de HubSpot), con el pipeline de Subrogación a nivel paciente: candidatas gestantes en **valoración** (aún en estudios médicos) vs. **programas activos** (padres intencionales con contrato firmado), mes a mes. Es información **agregada** — número de pacientes, ingreso y ticket promedio por etapa — **nunca nombres**, dado lo sensible del dato. Es a nivel compañía completa y no cambia con el filtro de Sede (igual que HubSpot), porque Subrogación es prácticamente 100% CDMX.
 
 **Ojo al leerla:** "Valoración" y "Programa Activo" son dos grupos de pacientes distintos, no el mismo paciente avanzando de una etapa a otra — se verificó cruzando el historial de pacientes y no hay traslape entre los dos grupos. No la leas como una tasa de conversión (ej. "de las valoraciones del mes, cuántas pasaron a programa activo"); son dos poblaciones separadas: candidatas gestantes por un lado, padres intencionales por otro. El dashboard ya trae esta aclaración junto a la tabla.
 
