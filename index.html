@@ -77,6 +77,12 @@
   .servicio-row:hover{ background:var(--card-bg); }
   .drill-hint{ font-size:10.5px; color:var(--blue); font-weight:700; margin-left:6px; opacity:.75; }
   .servicio-row:hover .drill-hint{ opacity:1; text-decoration:underline; }
+  .concept-group-row{ cursor:pointer; }
+  .concept-group-row:hover{ background:var(--card-bg); }
+  .concept-crumb{ font-size:14px; }
+  .concept-crumb:hover{ text-decoration:underline !important; }
+  .concept-back{ display:inline-block; }
+  .concept-back:hover{ text-decoration:underline; }
 
   .modal-overlay{
     display:none; position:fixed; inset:0; background:rgba(31,41,55,.45); z-index:1000;
@@ -129,10 +135,6 @@
   <p class="section-sub" id="evolutivo-sub"></p>
   <div class="grid-3" id="evolutivos"></div>
 
-  <div class="section-title">Consultas: evolutivo y agenda</div>
-  <p class="section-sub">Consultas terminadas (real) + citas agendadas confirmadas para completar el mes</p>
-  <div class="grid-2" id="consultas-section"></div>
-
   <div class="section-title">Mezcla de servicios (mes vigente: agosto)</div>
   <p class="section-sub">Ingresos proyectados por servicio (MDP) del mes en curso — no varía con el filtro de Periodo, sí con Sede</p>
   <div class="grid-2" id="servicios-section"></div>
@@ -140,6 +142,10 @@
   <div class="section-title">Subrogación — pacientes</div>
   <p class="section-sub">Pipeline de candidatas gestantes en valoración vs. programas activos contratados (padres intencionales) · datos agregados, sin nombres · compañía completa (no varía con el filtro de Sede)</p>
   <div class="grid-2" id="subrogacion-section"></div>
+
+  <div class="section-title">Consultas: evolutivo y agenda</div>
+  <p class="section-sub">Consultas terminadas (real) + citas agendadas confirmadas para completar el mes</p>
+  <div class="grid-2" id="consultas-section"></div>
 
   <div class="section-title">HubSpot — Leads y conversión</div>
   <p class="section-sub">Pipeline "Interesa2" · compañía completa (no varía con el filtro de Sede) · reacciona al filtro de Periodo</p>
@@ -628,30 +634,98 @@ function buildServicios(){
   });
 }
 
-// ---------------------------------------------------------------- modal: desglose de conceptos por servicio
-function openConceptModal(servKey, servNombre){
-  const modal = document.getElementById("concept-modal");
-  const body = document.getElementById("concept-modal-body");
-  const title = document.getElementById("concept-modal-title");
-  const scopeLabel = currentScope === "total" ? "todas las sedes" : currentScope;
-  title.textContent = `${servNombre} — desglose por concepto (${scopeLabel})`;
+// ---------------------------------------------------------------- modal: desglose dinámico por concepto
+// Jerarquía: Servicio > Subclasificación > Subclasificación 2 > Concepto — se adapta sola: si un
+// servicio no tiene Subclas (ej. Farmacia) salta directo a Concepto; si tiene Subclas pero no
+// Subclas2 (ej. FIV/ICSI) se detiene ahí; Laboratorio sí trae los 3 niveles. vs LM se recalcula en
+// cada nivel a partir de las sumas de Ago y Jul de ese grupo (no es un promedio de porcentajes).
+let conceptModalRows = [];   // filas hoja del servicio+sede actual: {subclas, subclas2, concepto, ago, jul}
+let conceptModalPath = [];   // ej. ["Laboratorio Clínico", "Hormonas, Sangre y Perfiles"]
+let conceptModalServNombre = "";
 
-  const conceptos = D.conceptos && D.conceptos[currentScope] && D.conceptos[currentScope][servKey];
-  if (!conceptos || !conceptos.length){
-    body.innerHTML = `<div class="unavailable" style="height:auto; padding:24px;">No hay datos de conceptos disponibles para "${servNombre}" en esta sede.</div>`;
-  } else {
-    const total = sum(conceptos.map(c=>c.valor));
-    const rowsHtml = conceptos.map(c=>{
-      const lm = c.nuevo ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : pctBadge(c.vsLM,"").replace(": ","");
-      return `<tr><td>${c.nombre}</td><td class="num">$${fmt(c.valor,0)}</td><td class="num">${lm}</td></tr>`;
-    }).join("");
-    body.innerHTML = `
-      <div style="font-size:12px; color:var(--axis); margin-bottom:10px;">Total del servicio: <b style="color:var(--text);">$${fmt(total,0)}</b> · ${conceptos.length} concepto${conceptos.length===1?'':'s'} · ordenado de mayor a menor</div>
-      <table><thead><tr><th>Concepto</th><th class="num">MDP (pesos)</th><th class="num">vs LM</th></tr></thead><tbody>${rowsHtml}</tbody></table>
-    `;
-  }
-  modal.style.display = "flex";
+function openConceptModal(servKey, servNombre){
+  conceptModalRows = (D.conceptos && D.conceptos[currentScope] && D.conceptos[currentScope][servKey]) || [];
+  conceptModalServNombre = servNombre;
+  conceptModalPath = [];
+  renderConceptModalLevel();
+  document.getElementById("concept-modal").style.display = "flex";
 }
+
+function conceptRowsAtPath(path){
+  return conceptModalRows.filter(r =>
+    (path.length < 1 || r.subclas === path[0]) &&
+    (path.length < 2 || r.subclas2 === path[1])
+  );
+}
+
+function conceptVsLMHtml(ago, jul){
+  const v = pctOrNull(ago, jul);
+  return v === null ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : pctBadge(v,"").replace(": ","");
+}
+
+function renderConceptModalLevel(){
+  const title = document.getElementById("concept-modal-title");
+  const body = document.getElementById("concept-modal-body");
+
+  const crumbs = [conceptModalServNombre, ...conceptModalPath];
+  title.innerHTML = crumbs.map((c,i)=>{
+    if (i === crumbs.length-1) return `<span style="color:var(--text);">${c}</span>`;
+    return `<a href="#" class="concept-crumb" data-depth="${i}" style="color:var(--blue); text-decoration:none;">${c}</a> <span style="color:var(--axis); font-weight:400;">›</span> `;
+  }).join("");
+
+  const rowsHere = conceptRowsAtPath(conceptModalPath);
+  if (!rowsHere.length){
+    body.innerHTML = `<div class="unavailable" style="height:auto; padding:24px;">No hay datos de conceptos disponibles para "${conceptModalServNombre}" en esta sede.</div>`;
+    return;
+  }
+  const totalAgo = sum(rowsHere.map(r=>r.ago));
+  const totalJul = sum(rowsHere.map(r=>r.jul));
+
+  const backBtn = conceptModalPath.length
+    ? `<div class="concept-back" style="cursor:pointer; color:var(--blue); font-size:12px; font-weight:700; margin-bottom:10px;">‹ volver</div>` : '';
+
+  // ¿el siguiente nivel es agrupable (Subclas / Subclas2), o ya estamos a nivel Concepto?
+  const nextField = conceptModalPath.length === 0 ? 'subclas' : (conceptModalPath.length === 1 ? 'subclas2' : null);
+  const canGroup = nextField && rowsHere.some(r => r[nextField]);
+
+  const summaryHtml = `<div style="font-size:12px; color:var(--axis); margin-bottom:10px;">Total: <b style="color:var(--text);">$${fmt(totalAgo,0)}</b> · vs LM ${conceptVsLMHtml(totalAgo,totalJul)} · ${rowsHere.length} concepto${rowsHere.length===1?'':'s'} en este nivel${canGroup?'':' · ordenado de mayor a menor'}</div>`;
+
+  let tableHtml;
+  if (canGroup){
+    const groups = {};
+    for (const r of rowsHere){
+      const key = r[nextField] || "(sin subclasificar)";
+      groups[key] = groups[key] || { ago:0, jul:0, count:0 };
+      groups[key].ago += r.ago; groups[key].jul += r.jul; groups[key].count += 1;
+    }
+    const groupEntries = Object.entries(groups).sort((a,b)=>b[1].ago-a[1].ago);
+    const colLabel = nextField === 'subclas' ? 'Subclasificación' : 'Subclasificación 2';
+    tableHtml = `<table><thead><tr><th>${colLabel}</th><th class="num">MDP</th><th class="num">vs LM</th></tr></thead><tbody>` +
+      groupEntries.map(([name,g])=>
+        `<tr class="servicio-row concept-group-row" data-key="${name}"><td>${name} <span class="drill-hint">▸ ${g.count} concepto${g.count===1?'':'s'}</span></td><td class="num">$${fmt(g.ago,0)}</td><td class="num">${conceptVsLMHtml(g.ago,g.jul)}</td></tr>`
+      ).join("") + `</tbody></table>`;
+  } else {
+    const sorted = [...rowsHere].sort((a,b)=>b.ago-a.ago);
+    tableHtml = `<table><thead><tr><th>Concepto</th><th class="num">MDP (pesos)</th><th class="num">vs LM</th></tr></thead><tbody>` +
+      sorted.map(r=>`<tr><td>${r.concepto}</td><td class="num">$${fmt(r.ago,0)}</td><td class="num">${conceptVsLMHtml(r.ago,r.jul)}</td></tr>`).join("") + `</tbody></table>`;
+  }
+
+  body.innerHTML = backBtn + summaryHtml + tableHtml;
+
+  body.querySelectorAll(".concept-group-row").forEach(tr=>{
+    tr.addEventListener("click", ()=>{ conceptModalPath.push(tr.dataset.key); renderConceptModalLevel(); });
+  });
+  const back = body.querySelector(".concept-back");
+  if (back) back.addEventListener("click", ()=>{ conceptModalPath.pop(); renderConceptModalLevel(); });
+  title.querySelectorAll(".concept-crumb").forEach(a=>{
+    a.addEventListener("click", (e)=>{
+      e.preventDefault();
+      conceptModalPath = conceptModalPath.slice(0, Number(a.dataset.depth));
+      renderConceptModalLevel();
+    });
+  });
+}
+
 function closeConceptModal(){
   document.getElementById("concept-modal").style.display = "none";
 }

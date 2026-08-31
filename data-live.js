@@ -379,13 +379,18 @@ async function fetchLiveHubspot() {
   CARGA EN VIVO DE CONCEPTOS (drill-down por servicio) Y SUBROGACIÓN
   ============================================================================
   "Conceptos" trae, para el mes vigente (agosto), el desglose de cada
-  servicio en sus líneas de cargo reales (ej. dentro de "Subrogación":
-  "Valoración subrogada", "All Inclusive Surrogacy Package CDMX", etc.),
-  con MDP y vs LM ya calculados. Filas: [Sede, Servicio, Concepto, Valor,
-  VsLM] donde Sede es "CDMX"/"GDL"/"MTP"/"total" y Servicio es el nombre
-  completo original (la misma llave que trae "servKey" en cada fila de
-  DATA.servicios). El dashboard usa esto para el clic sobre un servicio en
-  "Mezcla de servicios".
+  servicio en sus líneas de cargo reales, con jerarquía de hasta 3 niveles
+  (ej. dentro de "Laboratorio": Subclas "Laboratorio Clínico" > Subclas2
+  "Hormonas, Sangre y Perfiles" > Concepto). Filas: [Sede, Servicio, Subclas,
+  Subclas2, Concepto, Ago, Jul] donde Sede es "CDMX"/"GDL"/"MTP"/"total",
+  Servicio es el nombre completo original (la misma llave que trae "servKey"
+  en cada fila de DATA.servicios), Subclas/Subclas2 vienen vacíos cuando ese
+  servicio no tiene ese nivel de clasificación (ej. Farmacia no tiene
+  Subclas, así que salta directo a Concepto), y Ago/Jul son los montos en
+  pesos del mes vigente y del mes anterior — el dashboard calcula "vs LM" al
+  vuelo en cualquier nivel de agrupación sumando Ago y Jul de ese grupo
+  (nunca promediando porcentajes). El dashboard usa esto para armar el
+  drill-down dinámico al hacer clic en un servicio de "Mezcla de servicios".
 
   "SubrogacionPacientes" trae, mes a mes, cuántos PACIENTES (sin nombres —
   solo el conteo) pasaron por cada etapa del embudo de Subrogación:
@@ -399,16 +404,16 @@ async function fetchLiveHubspot() {
 
 function buildConceptosMetric(rows) {
   const out = { total: {}, CDMX: {}, GDL: {}, MTP: {} };
-  for (const [scope, serv, concepto, valorRaw, vsLMRaw] of rows) {
+  for (const [scope, serv, subclasRaw, subclas2Raw, concepto, agoRaw, julRaw] of rows) {
     if (!out[scope] || !serv || !concepto) continue;
     out[scope][serv] = out[scope][serv] || [];
-    const vsLMStr = String(vsLMRaw ?? "").trim();
-    const nuevo = vsLMStr === "";
-    out[scope][serv].push({ nombre: concepto, valor: num(valorRaw), vsLM: nuevo ? null : Math.round(num(vsLMRaw)), ...(nuevo ? { nuevo: true } : {}) });
+    const subclas = String(subclasRaw ?? "").trim() || null;
+    const subclas2 = String(subclas2Raw ?? "").trim() || null;
+    out[scope][serv].push({ subclas, subclas2, concepto, ago: num(agoRaw), jul: num(julRaw) });
   }
   for (const scope of Object.keys(out)) {
     for (const serv of Object.keys(out[scope])) {
-      out[scope][serv].sort((a, b) => b.valor - a.valor);
+      out[scope][serv].sort((a, b) => b.ago - a.ago);
     }
   }
   return out;
