@@ -235,10 +235,36 @@ const hBarValueLabels = {
     ctx.restore();
   }
 };
+const groupedValueLabels = {
+  // Para gráficas de barras agrupadas (varios datasets lado a lado, NO apiladas):
+  // pone el número encima de cada barra individual (una etiqueta por dataset).
+  id: "groupedValueLabels",
+  afterDatasetsDraw(chart){
+    if (chart.data.datasets.length < 2) return;
+    if (chart.options.scales?.x?.stacked || chart.options.scales?.y?.stacked) return; // las apiladas las maneja stackedTotalLabels
+    const {ctx} = chart;
+    ctx.save();
+    ctx.font = "700 11px Calibri, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = COLORS.text;
+    chart.data.datasets.forEach((ds, dIdx)=>{
+      if (ds.type === "line") return; // la línea de meta no lleva etiqueta por punto (ver panel-badges "vs Meta")
+      const meta = chart.getDatasetMeta(dIdx);
+      meta.data.forEach((bar, i)=>{
+        const v = ds.data[i];
+        if (v === null || v === undefined || v === 0) return;
+        ctx.fillText(ds._fmt ? ds._fmt(v) : fmt(v), bar.x, bar.y - 4);
+      });
+    });
+    ctx.restore();
+  }
+};
 const stackedTotalLabels = {
   id: "stackedTotalLabels",
   afterDatasetsDraw(chart){
     if (chart.data.datasets.length < 2) return;
+    if (!(chart.options.scales?.x?.stacked || chart.options.scales?.y?.stacked)) return; // solo gráficas realmente apiladas
     const {ctx} = chart;
     const [ds0, ds1] = chart.data.datasets;
     const meta0 = chart.getDatasetMeta(0);
@@ -256,7 +282,7 @@ const stackedTotalLabels = {
     ctx.restore();
   }
 };
-Chart.register(barValueLabels, hBarValueLabels, stackedTotalLabels);
+Chart.register(barValueLabels, hBarValueLabels, groupedValueLabels, stackedTotalLabels);
 
 // ---------------------------------------------------------------- período: config + series builders
 const PERIOD_LABELS = { anio:"Año", trimestre:"Trimestre", mes:"Mes", semana:"Semana", dia:"Día" };
@@ -464,7 +490,9 @@ function buildConsultasSeries(scope){
 }
 
 // ---------------------------------------------------------------- evolutivo bar (hist gray, actual blue, proy red)
-function drawEvolutivoBar(canvasId, series, valueFmt){
+// metaValues (opcional): arreglo alineado con series.values con la meta de
+// venta por punto -> se dibuja como línea punteada teal encima de las barras.
+function drawEvolutivoBar(canvasId, series, valueFmt, metaValues){
   destroyChart(canvasId);
   const ctx = document.getElementById(canvasId).getContext("2d");
   const bg = series.labels.map((_,i)=>{
@@ -472,16 +500,48 @@ function drawEvolutivoBar(canvasId, series, valueFmt){
     if (i === series.currentIndex) return COLORS.blue;
     return COLORS.gray;
   });
+  const hasMeta = metaValues && metaValues.some(v => v != null);
+  const datasets = [{ label:"Real", data: series.values, backgroundColor: bg, borderRadius:4, maxBarThickness:30, _fmt: valueFmt }];
+  if (hasMeta){
+    datasets.push({
+      type:"line", label:"Meta", data: metaValues,
+      borderColor: COLORS.teal, borderWidth:2, borderDash:[6,4],
+      pointRadius:3, pointBackgroundColor: COLORS.teal, pointBorderColor: COLORS.teal,
+      fill:false, spanGaps:true, order:0, _fmt: valueFmt,
+    });
+  }
   charts[canvasId] = new Chart(ctx, {
     type:"bar",
-    data:{ labels:series.labels, datasets:[{ data: series.values, backgroundColor: bg, borderRadius:4, maxBarThickness:30, _fmt: valueFmt }] },
+    data:{ labels:series.labels, datasets },
     options:{
       responsive:true, maintainAspectRatio:false,
       layout:{ padding:{ top:20 } },
-      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:(c)=>valueFmt(c.raw) } } },
+      plugins:{
+        legend:{ display: hasMeta, position:"bottom", labels:{ boxWidth:12, font:{ size:11 }, filter:(item)=> item.text === "Meta" } },
+        tooltip:{ callbacks:{ label:(c)=> `${c.dataset.label==="Meta"?"Meta: ":""}${valueFmt(c.raw)}` } },
+      },
       scales:{ y:{ display:false, beginAtZero:true, grace:"20%" }, x:{ grid:{ display:false }, ticks:{ font:{ size: series.labels.length>10 ? 9 : 11 }, maxRotation: series.labels.length>10 ? 60 : 0 } } },
     },
   });
+}
+
+// Meta de venta (sede/compañía), si la hoja "Metas" del Sheet trae datos para
+// el periodo actual. Por ahora solo disponible a nivel Mes (la hoja Metas
+// es mensual) — en Trimestre/Año/Semana/Día la gráfica de Ingresos se ve
+// igual que antes, sin línea de meta.
+function buildMetaValuesForIngresos(ing){
+  if (currentPeriod !== "mes") return null;
+  const base = currentScope === "total" ? D.total : D.sedes[currentScope];
+  const meta = base && base.meta;
+  if (!meta) return null;
+  // ing.labels = [...meses_hist, mes_actual, "Proy."] -> la meta del mes en
+  // curso aplica igual al bloque "actual" (real a la fecha) y a "Proy."
+  const values = [...meta.hist, meta.actual, meta.actual];
+  const hasAny = values.some(v => v != null);
+  if (!hasAny) return null;
+  const metaActual = meta.actual;
+  const vsMeta = (metaActual != null) ? pctOrNull(ing.values[ing.proyIndex], metaActual) : null;
+  return { values, vsMeta };
 }
 
 function buildEvolutivos(){
@@ -490,24 +550,27 @@ function buildEvolutivos(){
   const at = buildSeries("monthly", currentScope, {key:"atenciones", fineKey:"atenciones"});
   const pu = buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"});
   const [b1,b2] = PERIOD_BADGES[currentPeriod];
+  const meta = ing ? buildMetaValuesForIngresos(ing) : null;
 
-  function panel(id, title, series, valueFmt){
+  function panel(id, title, series, valueFmt, extraBadge){
     if (!series){
       return `<div class="panel"><div class="panel-title">${title}</div><div class="unavailable">No disponible a nivel ${PERIOD_LABELS[currentPeriod].toLowerCase()}<br>(sin fuente día a día para esta métrica)</div></div>`;
     }
     return `<div class="panel">
       <div class="panel-title">${title}</div>
-      <div class="panel-badges">${b1?pctBadge(series.badge1,b1):""} ${b2?pctBadge(series.badge2,b2):""}</div>
+      <div class="panel-badges">${b1?pctBadge(series.badge1,b1):""} ${b2?pctBadge(series.badge2,b2):""}${extraBadge||""}</div>
       <div class="chart-box"><canvas id="${id}"></canvas></div>
     </div>`;
   }
 
+  const metaBadge = meta ? ` ${pctBadge(meta.vsMeta, "vs Meta")}` : "";
+
   el.innerHTML =
-    panel("chart-ingresos", "Ingresos — MDP", ing, v=>`$${fmt(v,1)}M`) +
+    panel("chart-ingresos", "Ingresos — MDP", ing, v=>`$${fmt(v,1)}M`, metaBadge) +
     panel("chart-atenciones", "Atenciones (#)", at, v=>`${fmt(v,0)}`) +
     panel("chart-pacientes", "Pacientes Únicos (#)", pu, v=>`${fmt(v,0)}`);
 
-  if (ing) drawEvolutivoBar("chart-ingresos", ing, v=>`$${fmt(v,1)}M`);
+  if (ing) drawEvolutivoBar("chart-ingresos", ing, v=>`$${fmt(v,1)}M`, meta ? meta.values : null);
   if (at) drawEvolutivoBar("chart-atenciones", at, v=>`${fmt(v,0)}`);
   if (pu) drawEvolutivoBar("chart-pacientes", pu, v=>`${fmt(v,0)}`);
 }

@@ -65,6 +65,14 @@ function num(v) {
   return Number(String(v ?? "").replace(/[^0-9.-]/g, "")) || 0;
 }
 
+// Como num(), pero celda vacía -> null (en vez de 0). Se usa para Metas: una
+// celda vacía significa "todavía no se captura la meta de ese mes", no "meta
+// = $0" — así la línea de meta no cae a cero en la gráfica cuando falta dato.
+function numOrNull(v) {
+  const s = String(v ?? "").trim();
+  return s === "" ? null : num(v);
+}
+
 function pctOrNull(proy, base) {
   if (!base) return null;
   return Math.round((proy / base - 1) * 100);
@@ -291,6 +299,47 @@ function buildConsultasRanking(rows) {
   return out;
 }
 
+/**
+ * Metas: filas [Sede, MesNum, MesLabel, Meta] — Sede en códigos CDMX/GDL/MTP
+ * (igual que Atenciones/Pacientes/Consultas), Meta en pesos MXN (se convierte
+ * a MDP aquí mismo, igual que Ingresos). Una celda de Meta vacía = todavía no
+ * se captura ese mes -> null, no se dibuja ese punto de la línea.
+ * Regresa { CDMX:{hist:[7 MDP|null], actual MDP|null}, GDL:{...}, MTP:{...},
+ *           total:{...}, _hasData: bool }
+ */
+function buildMonthlyMetaMetric(rows) {
+  const bySede = {};
+  let anyData = false;
+  for (const [sede, mesNumRaw, , metaRaw] of rows) {
+    const mesNum = Number(mesNumRaw);
+    if (!sede || !mesNum) continue;
+    bySede[sede] = bySede[sede] || {};
+    const v = numOrNull(metaRaw);
+    bySede[sede][mesNum] = v;
+    if (v != null) anyData = true;
+  }
+  const toMDP = v => (v == null ? null : Math.round((v / 1e6) * 10) / 10);
+  const out = {};
+  const histTotal = [null, null, null, null, null, null, null];
+  let actualTotal = null;
+  for (const sede of SEDES) {
+    const m = bySede[sede] || {};
+    const hist = [1, 2, 3, 4, 5, 6, 7].map(n => (m[n] == null ? null : m[n]));
+    const actual = m[8] == null ? null : m[8];
+    hist.forEach((v, i) => { if (v != null) histTotal[i] = (histTotal[i] || 0) + v; });
+    if (actual != null) actualTotal = (actualTotal || 0) + actual;
+    out[sede] = { hist: hist.map(toMDP), actual: toMDP(actual) };
+  }
+  out.total = { hist: histTotal.map(toMDP), actual: toMDP(actualTotal) };
+  out._hasData = anyData;
+  return out;
+}
+
+async function fetchLiveMetas() {
+  const rows = await fetchSheetJson("Metas");
+  return buildMonthlyMetaMetric(rows);
+}
+
 async function fetchLiveOperativos() {
   const [atRows, puRows, consRows, rankRows] = await Promise.all([
     fetchSheetJson("Atenciones"),
@@ -515,5 +564,18 @@ async function loadLiveDataIntoDashboard() {
     window.DATA._liveOkConceptos = false;
     window.DATA._liveErrorConceptos = String(e.message || e);
     console.warn("No se pudo cargar Conceptos/Subrogación en vivo desde Sheets, usando último valor guardado:", e);
+  }
+
+  // Metas es opcional (hoja nueva, se llena poco a poco por sede/mes): si
+  // falla o todavía no tiene datos, la gráfica de Ingresos simplemente no
+  // dibuja la línea de meta — no rompe nada más del dashboard.
+  try {
+    const metas = await fetchLiveMetas();
+    if (metas._hasData) {
+      window.DATA.total.meta = metas.total;
+      for (const code of SEDES) window.DATA.sedes[code].meta = metas[code];
+    }
+  } catch (e) {
+    console.warn("No se pudo cargar Metas en vivo desde Sheets (opcional, sin fallback):", e);
   }
 }
