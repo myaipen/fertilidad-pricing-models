@@ -37,10 +37,12 @@ El dashboard se encarga de sumar por sede, calcular vs LM / vs U3M, armar el ran
 En "Mezcla de servicios", cada renglón (Tratamientos FIV/ICSI, Farmacia, Congelación de Gametos, etc.) es clicable — dice "▸ ver conceptos". Al dar clic se abre una ventana que navega la jerarquía real de clasificación: **Servicio → Subclasificación → Subclasificación 2 → Concepto**, con montos MDP y vs LM en cada nivel (vs LM se recalcula sumando los montos de ese grupo, no promediando porcentajes). Es dinámico porque se adapta a lo que cada servicio realmente tiene clasificado — no todos llegan a los 4 niveles:
 
 - **Laboratorio** sí trae los 3 niveles completos: por ejemplo Laboratorio → Laboratorio Clínico → Hormonas, Sangre y Perfiles → Perfil ETS.
-- **Tratamientos FIV/ICSI**, **Congelación de Gametos** y **Subrogación** tienen 1 nivel de subclasificación (ej. FIV/ICSI → Donación de gametos → [conceptos]) y de ahí saltan directo a concepto.
-- **Farmacia**, **Consultas**, **Procedimientos/Quirúrgicos**, **Imágenes**, **Otros** y **Wellness** no tienen subclasificación — el clic te lleva directo a la tabla de conceptos.
+- **Tratamientos FIV/ICSI** y **Congelación de Gametos** tienen 1 nivel de subclasificación (ej. FIV/ICSI → Donación → [conceptos]) y de ahí saltan directo a concepto. Esto viene directo de la hoja "Servicios" de tu archivo de clasificación — si ahí agrupas o renombras una subclasificación (por ejemplo, ya no hay "Donación de gametos" separada de "Donación": las donadoras de óvulos y donantes europeos quedaron unificadas en un solo "Donación"), el drill-down lo refleja solo en el siguiente corte que te suba.
+- **Farmacia**, **Procedimientos/Quirúrgicos**, **Imágenes**, **Otros**, **Wellness** y **Subrogación** no tienen subclasificación — el clic te lleva directo a la tabla de conceptos.
 
 Navegas con la migas de pan (breadcrumb) arriba de la tabla — haz clic en cualquier nivel anterior para regresar ahí directo, o usa "‹ volver" para retroceder un nivel. Esta tabla respeta el filtro de **Sede** que tengas activo arriba (Todas/CDMX/Guadalajara/Metepec) — si cambias de sede y vuelves a dar clic en el mismo servicio, ves el desglose de esa sede específica.
+
+**Orden de la tabla:** los servicios se ordenan de mayor a menor ingreso, con **Subrogación siempre al final** (a petición tuya), sin importar su monto.
 
 ### 0.2 Subrogación — pacientes
 
