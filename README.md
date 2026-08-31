@@ -27,14 +27,20 @@ Estas ocho secciones vienen directo de tu Google Sheet **"Proyeccion_Venta_Sede_
 - **Consultas** (Sede, MesNum, MesLabel, Real, Agendado) → proyección = Real + Agendado (usa tu agenda real de citas).
 - **ConsultasRanking** (Sede, Categoria, Valor, VsLM) → el top de motivos de consulta que se ve en el ranking. Deja `VsLM` en blanco para una categoría nueva (sin dato del mes anterior); el dashboard la marca como "Nuevo" automáticamente.
 - **Hubspot** (MesNum, MesLabel, Leads, Citas), **HubspotSede** (Sede, LeadsAgo, CitasAgo, LeadsYTD, CitasYTD) y **HubspotCohortes** (MesNum, MesLabel, Leads, M0, M1, M2) → leads y citas agendadas del pipeline "Interesa2". A diferencia de lo anterior, estas tres hojas **no las llenas tú a mano**: pídeme (a Claude) que las actualice cada corte de mes — jalo los números directo de HubSpot vía API y los subo al Sheet. No es posible conectar HubSpot en vivo directo desde el navegador de quien ve el dashboard sin exponer credenciales, así que este es el punto intermedio seguro: HubSpot → yo actualizo el Sheet una vez al mes → el dashboard lee el Sheet en vivo en cada visita.
-- **Conceptos** (Sede, Servicio, Concepto, Valor, VsLM) → alimenta el clic en cada renglón de "Mezcla de servicios" (ver 0.1). Igual que HubSpot, **no la llenas tú a mano**: pídeme que la actualice cada corte de mes con el desglose de cargos por concepto.
+- **Conceptos** (Sede, Servicio, Subclas, Subclas2, Concepto, Ago, Jul) → alimenta el clic en cada renglón de "Mezcla de servicios" (ver 0.1). Igual que HubSpot, **no la llenas tú a mano**: pídeme que la actualice cada corte de mes con el desglose de cargos por concepto. Subclas y Subclas2 vienen vacíos cuando ese servicio no tiene ese nivel de detalle (ej. Farmacia no tiene subclasificación).
 - **SubrogacionPacientes** (MesNum, MesLabel, Etapa, Pacientes, Ingreso, TicketProm) → alimenta la sección "Subrogación — pacientes" (ver 0.2). Tampoco la llenas tú a mano — te la actualizo yo cada corte.
 
 El dashboard se encarga de sumar por sede, calcular vs LM / vs U3M, armar el ranking y calcular los % de conversión y cohortes — no necesitas calcular nada a mano en estas ocho secciones.
 
-### 0.1 Clic en un servicio para ver los conceptos que lo mueven
+### 0.1 Clic en un servicio para ver los conceptos que lo mueven (drill-down dinámico)
 
-En "Mezcla de servicios", cada renglón (Tratamientos FIV/ICSI, Farmacia, Congelación de Gametos, etc.) es clicable — dice "▸ ver conceptos". Al dar clic se abre una ventana con la tabla completa de conceptos de ese servicio: nombre del cargo, monto MDP y vs LM, ordenados de mayor a menor. Así ves de inmediato qué concepto específico jaló el servicio hacia arriba o hacia abajo, sin tener que ir al Sheet. Esta tabla respeta el filtro de **Sede** que tengas activo arriba (Todas/CDMX/Guadalajara/Metepec) — si cambias de sede y vuelves a dar clic en el mismo servicio, ves el desglose de esa sede específica.
+En "Mezcla de servicios", cada renglón (Tratamientos FIV/ICSI, Farmacia, Congelación de Gametos, etc.) es clicable — dice "▸ ver conceptos". Al dar clic se abre una ventana que navega la jerarquía real de clasificación: **Servicio → Subclasificación → Subclasificación 2 → Concepto**, con montos MDP y vs LM en cada nivel (vs LM se recalcula sumando los montos de ese grupo, no promediando porcentajes). Es dinámico porque se adapta a lo que cada servicio realmente tiene clasificado — no todos llegan a los 4 niveles:
+
+- **Laboratorio** sí trae los 3 niveles completos: por ejemplo Laboratorio → Laboratorio Clínico → Hormonas, Sangre y Perfiles → Perfil ETS.
+- **Tratamientos FIV/ICSI**, **Congelación de Gametos** y **Subrogación** tienen 1 nivel de subclasificación (ej. FIV/ICSI → Donación de gametos → [conceptos]) y de ahí saltan directo a concepto.
+- **Farmacia**, **Consultas**, **Procedimientos/Quirúrgicos**, **Imágenes**, **Otros** y **Wellness** no tienen subclasificación — el clic te lleva directo a la tabla de conceptos.
+
+Navegas con la migas de pan (breadcrumb) arriba de la tabla — haz clic en cualquier nivel anterior para regresar ahí directo, o usa "‹ volver" para retroceder un nivel. Esta tabla respeta el filtro de **Sede** que tengas activo arriba (Todas/CDMX/Guadalajara/Metepec) — si cambias de sede y vuelves a dar clic en el mismo servicio, ves el desglose de esa sede específica.
 
 ### 0.2 Subrogación — pacientes
 
