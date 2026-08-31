@@ -108,6 +108,14 @@ async function fetchLiveIngresos() {
   const sedeNombres = Object.keys(SEDE_CODE);
   const servicios = Object.keys(SERVICIO_LABEL).filter(s => s !== "Sin clasificar");
 
+  // Ordena servicios por valor descendente, pero deja "Subrogación" siempre al
+  // final de la tabla (a petición de negocio, sin importar su monto).
+  function sortServiciosPinUltimo(rows, nombrePin, limit) {
+    const pin = rows.filter(r => r.nombre === nombrePin);
+    const resto = rows.filter(r => r.nombre !== nombrePin).sort((a, b) => b.valor - a.valor);
+    return resto.slice(0, limit - pin.length).concat(pin);
+  }
+
   // ---- por sede: ingresos totales + servicios ----
   const sedesOut = {};
   const serviciosOut = { total: [] };
@@ -136,8 +144,7 @@ async function fetchLiveIngresos() {
         });
       }
     }
-    servRows.sort((a,b) => b.valor - a.valor);
-    serviciosOut[code] = servRows.slice(0, 7);
+    serviciosOut[code] = sortServiciosPinUltimo(servRows, "Subrogación", 10);
 
     const jul = hist[6];
     const u3m = (hist[4]+hist[5]+hist[6])/3;
@@ -183,8 +190,7 @@ async function fetchLiveIngresos() {
       });
     }
   }
-  serviciosOut.total.sort((a,b) => b.valor - a.valor);
-  serviciosOut.total = serviciosOut.total.slice(0, 10);
+  serviciosOut.total = sortServiciosPinUltimo(serviciosOut.total, "Subrogación", 10);
 
   return { totalIngresos, sedesOut, serviciosOut };
 }
