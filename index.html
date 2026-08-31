@@ -669,15 +669,23 @@ function renderAll(){
 (async function start(){
   await loadLiveDataIntoDashboard();
   const banner = document.getElementById("live-status-banner");
-  if (window.DATA._liveOk) {
+  const okIngresos = window.DATA._liveOk;
+  const okOperativos = window.DATA._liveOkOperativos;
+  if (okIngresos && okOperativos) {
     banner.style.display = "block";
     banner.style.background = "#ECFDF5";
     banner.style.color = "#065F46";
-    banner.textContent = "✓ Ingresos y Mezcla de Servicios cargados en vivo desde Google Sheets.";
+    banner.textContent = "✓ Ingresos, Servicios, Atenciones, Pacientes y Consultas cargados en vivo desde Google Sheets.";
     setTimeout(() => { banner.style.display = "none"; }, 4000);
+  } else if (okIngresos || okOperativos) {
+    banner.style.display = "block";
+    banner.style.background = "#FFFBEB";
+    banner.style.color = "#92400E";
+    const faltante = okIngresos ? "Atenciones/Pacientes/Consultas" : "Ingresos/Servicios";
+    banner.textContent = "⚠ Parte de los datos se cargó en vivo, pero " + faltante + " no (" + (window.DATA._liveError || window.DATA._liveErrorOperativos || "error desconocido") + "). Esa parte muestra el último corte guardado (" + window.DATA.corte + ").";
   } else {
     banner.style.display = "block";
-    banner.textContent = "⚠ No se pudo cargar Ingresos/Servicios en vivo desde Google Sheets (" + (window.DATA._liveError || "sin API key configurada") + "). Mostrando el último corte guardado (" + window.DATA.corte + ").";
+    banner.textContent = "⚠ No se pudo cargar en vivo desde Google Sheets (" + (window.DATA._liveError || "sin conexión") + "). Mostrando el último corte guardado (" + window.DATA.corte + ").";
   }
   renderAll();
 })();

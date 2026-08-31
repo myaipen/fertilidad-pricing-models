@@ -183,6 +183,125 @@ async function fetchLiveIngresos() {
   return { totalIngresos, sedesOut, serviciosOut };
 }
 
+/*
+  ============================================================================
+  CARGA EN VIVO DE ATENCIONES, PACIENTES ÚNICOS, CONSULTAS Y SU RANKING
+  ============================================================================
+  Mismo mecanismo que Ingresos (arriba), pero leyendo 4 hojas nuevas del
+  mismo Google Sheet: "Atenciones", "Pacientes", "Consultas" y
+  "ConsultasRanking". Cada hoja trae Sede/MesNum/MesLabel/Real (y Agendado
+  para Consultas), un renglón por sede y mes (MesNum 1-8, Ene-Ago).
+
+  Fórmulas de proyección (mismas que ya usaba Revenue Management a mano):
+    - Atenciones / Pacientes Únicos: Proyectado = Real + Real/30
+      (equivale a sumar un día promedio más — NO se usa agenda para estas
+      dos métricas, son de facturación).
+    - Consultas: Proyectado = Real + Agendado (usa la agenda real de citas
+      para lo que falta del mes).
+  ============================================================================
+*/
+
+async function fetchSheetJson(sheetName) {
+  const res = await fetch(`${WEB_APP_URL}?sheet=${encodeURIComponent(sheetName)}`);
+  if (!res.ok) throw new Error(`Apps Script HTTP ${res.status} (${sheetName})`);
+  const json = await res.json();
+  if (json.error) throw new Error(`Apps Script error (${sheetName}): ${json.error}`);
+  return json.values || [];
+}
+
+const SEDES = ["CDMX", "GDL", "MTP"];
+
+function avg3(hist) {
+  return (hist[4] + hist[5] + hist[6]) / 3;
+}
+
+/**
+ * Atenciones / Pacientes comparten forma: filas [Sede, MesNum, MesLabel, Real].
+ * Regresa { CDMX:{hist,actual,proy,vsLM,vsU3M}, GDL:{...}, MTP:{...}, total:{...} }
+ */
+function buildMonthlyRealMetric(rows) {
+  const bySede = {};
+  for (const [sede, mesNumRaw, , realRaw] of rows) {
+    const mesNum = Number(mesNumRaw);
+    const real = num(realRaw);
+    bySede[sede] = bySede[sede] || {};
+    bySede[sede][mesNum] = real;
+  }
+  const out = {};
+  let histTotal = [0,0,0,0,0,0,0], actualTotal = 0;
+  for (const sede of SEDES) {
+    const m = bySede[sede] || {};
+    const hist = [1,2,3,4,5,6,7].map(n => m[n] || 0);
+    const actual = m[8] || 0;
+    const proy = actual + actual / 30;
+    hist.forEach((v,i) => histTotal[i] += v);
+    actualTotal += actual;
+    out[sede] = { hist, actual, proy: Math.round(proy), vsLM: pctOrNull(proy, hist[6]), vsU3M: pctOrNull(proy, avg3(hist)) };
+  }
+  const proyTotal = actualTotal + actualTotal / 30;
+  out.total = { hist: histTotal, actual: actualTotal, proy: Math.round(proyTotal), vsLM: pctOrNull(proyTotal, histTotal[6]), vsU3M: pctOrNull(proyTotal, avg3(histTotal)) };
+  return out;
+}
+
+/**
+ * Consultas: filas [Sede, MesNum, MesLabel, Real, Agendado].
+ * Regresa { CDMX:{hist,real,agendado,vsLM,vsU3M}, ..., total:{...} }
+ */
+function buildConsultasMetric(rows) {
+  const bySede = {};
+  for (const [sede, mesNumRaw, , realRaw, agendadoRaw] of rows) {
+    const mesNum = Number(mesNumRaw);
+    bySede[sede] = bySede[sede] || {};
+    bySede[sede][mesNum] = { real: num(realRaw), agendado: num(agendadoRaw) };
+  }
+  const out = {};
+  let histTotal = [0,0,0,0,0,0,0], real8Total = 0, agen8Total = 0;
+  for (const sede of SEDES) {
+    const m = bySede[sede] || {};
+    const hist = [1,2,3,4,5,6,7].map(n => (m[n] && m[n].real) || 0);
+    const real8 = (m[8] && m[8].real) || 0;
+    const agendado8 = (m[8] && m[8].agendado) || 0;
+    const proy = real8 + agendado8;
+    hist.forEach((v,i) => histTotal[i] += v);
+    real8Total += real8; agen8Total += agendado8;
+    out[sede] = { hist, real: real8, agendado: agendado8, vsLM: pctOrNull(proy, hist[6]), vsU3M: pctOrNull(proy, avg3(hist)) };
+  }
+  const proyTotal = real8Total + agen8Total;
+  out.total = { hist: histTotal, real: real8Total, agendado: agen8Total, vsLM: pctOrNull(proyTotal, histTotal[6]), vsU3M: pctOrNull(proyTotal, avg3(histTotal)) };
+  return out;
+}
+
+/**
+ * ConsultasRanking: filas [Sede, Categoria, Valor, VsLM]. Sede ya viene como
+ * "total"/"CDMX"/"GDL"/"MTP" (coincide con las llaves de currentScope) y el
+ * orden de las filas ya viene de mayor a menor valor.
+ */
+function buildConsultasRanking(rows) {
+  const out = { total: [], CDMX: [], GDL: [], MTP: [] };
+  for (const [scope, nombre, valorRaw, vsLMRaw] of rows) {
+    if (!out[scope]) continue;
+    const vsLMStr = String(vsLMRaw ?? "").trim();
+    const nuevo = vsLMStr === "";
+    out[scope].push({ nombre, valor: num(valorRaw), vsLM: nuevo ? null : Math.round(num(vsLMRaw)), ...(nuevo ? { nuevo: true } : {}) });
+  }
+  return out;
+}
+
+async function fetchLiveOperativos() {
+  const [atRows, puRows, consRows, rankRows] = await Promise.all([
+    fetchSheetJson("Atenciones"),
+    fetchSheetJson("Pacientes"),
+    fetchSheetJson("Consultas"),
+    fetchSheetJson("ConsultasRanking"),
+  ]);
+  return {
+    atenciones: buildMonthlyRealMetric(atRows),
+    pacientes: buildMonthlyRealMetric(puRows),
+    consultas: buildConsultasMetric(consRows),
+    ranking: buildConsultasRanking(rankRows),
+  };
+}
+
 /**
  * Mezcla los datos en vivo (si el fetch funciona) sobre window.DATA, que ya
  * trae los valores del último corte como respaldo (fallback).
@@ -200,5 +319,23 @@ async function loadLiveDataIntoDashboard() {
     window.DATA._liveOk = false;
     window.DATA._liveError = String(e.message || e);
     console.warn("No se pudo cargar Ingresos/Servicios en vivo desde Sheets, usando último valor guardado:", e);
+  }
+
+  try {
+    const op = await fetchLiveOperativos();
+    window.DATA.total.atenciones = { ...window.DATA.total.atenciones, ...op.atenciones.total };
+    window.DATA.total.pacientes = { ...window.DATA.total.pacientes, ...op.pacientes.total };
+    window.DATA.total.consultas = { ...window.DATA.total.consultas, ...op.consultas.total };
+    for (const code of SEDES) {
+      window.DATA.sedes[code].atenciones = { ...window.DATA.sedes[code].atenciones, ...op.atenciones[code] };
+      window.DATA.sedes[code].pacientes = { ...window.DATA.sedes[code].pacientes, ...op.pacientes[code] };
+      window.DATA.sedes[code].consultas = { ...window.DATA.sedes[code].consultas, ...op.consultas[code] };
+    }
+    window.DATA.consultas_ranking = op.ranking;
+    window.DATA._liveOkOperativos = true;
+  } catch (e) {
+    window.DATA._liveOkOperativos = false;
+    window.DATA._liveErrorOperativos = String(e.message || e);
+    console.warn("No se pudo cargar Atenciones/Pacientes/Consultas en vivo desde Sheets, usando último valor guardado:", e);
   }
 }
