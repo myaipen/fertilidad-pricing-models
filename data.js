@@ -184,7 +184,10 @@ window.DATA = {
 
   // ------------------------------------------------------------------------
   // HUBSPOT — Pipeline "Interesa2". Leads por fecha de creación, citas por
-  // Fecha_CitaAgendada_Int2. Corte 24-ago-2026.
+  // Fecha_CitaAgendada_Int2. ESTOS VALORES YA SE CARGAN EN VIVO (ver
+  // data-live.js y la hoja "Hubspot"/"HubspotSede"/"HubspotCohortes" del
+  // Sheet) — lo de aquí es solo el respaldo si el fetch en vivo falla.
+  // Corte de este respaldo: 24-ago-2026.
   // ------------------------------------------------------------------------
   hubspot: {
     leads: { hist: [837, 1068, 1023, 1015, 1759, 1438, 1539], actual: 1531 },

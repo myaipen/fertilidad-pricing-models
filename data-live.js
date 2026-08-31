@@ -1,17 +1,21 @@
 /*
   ============================================================================
-  CARGA EN VIVO DE INGRESOS Y SERVICIOS — desde Google Sheets (hoja "Base")
+  CARGA EN VIVO — Ingresos, Servicios, Atenciones, Pacientes, Consultas y
+  HubSpot, todo desde el mismo Google Sheet
   ============================================================================
-  Este archivo reemplaza la necesidad de editar a mano las secciones
-  "ingresos" y "servicios" de data.js cada mes: las lee directo del Google
-  Sheet "Proyeccion_Venta_Sede_Servicio" a través de un Google Apps Script
-  publicado como App web (endpoint tipo API).
+  Este archivo reemplaza la necesidad de editar a mano casi todo data.js cada
+  mes: lee los números directo del Google Sheet "Proyeccion_Venta_Sede_
+  Servicio VF" a través de un Google Apps Script publicado como App web
+  (endpoint tipo API).
 
-  Todo lo demás (Atenciones, Pacientes Únicos, Consultas, HubSpot,
-  Highlights, y las series de Semana/Día en data_periods.js) sigue viniendo
-  de data.js / data_periods.js tal como hasta ahora — esos datos no viven en
-  este Sheet, salen de los archivos de Cargos/Consultas/HubSpot que se
-  procesan cada corte.
+  HubSpot (pipeline "Interesa2") se sube al Sheet una vez al mes vía consulta
+  directa a la API de HubSpot (no hay forma segura de llamar a HubSpot desde
+  el navegador del visitante sin exponer credenciales) — ver hoja "Hubspot"/
+  "HubspotSede"/"HubspotCohortes" del Sheet. Solo Highlights sigue siendo
+  100% manual en data.js.
+
+  Todo lo demás (Highlights, y las series de Semana/Día en data_periods.js)
+  sigue viniendo de data.js / data_periods.js tal como hasta ahora.
 
   CÓMO FUNCIONA (ya configurado, no requiere nada de tu parte):
     - El Google Sheet se queda 100% PRIVADO ("Restringido"). No hace falta
@@ -302,6 +306,72 @@ async function fetchLiveOperativos() {
   };
 }
 
+/*
+  ============================================================================
+  CARGA EN VIVO DE HUBSPOT (pipeline "Interesa2")
+  ============================================================================
+  Hojas: "Hubspot" (MesNum, MesLabel, Leads, Citas — compañía completa),
+  "HubspotSede" (Sede, LeadsAgo, CitasAgo, LeadsYTD, CitasYTD) y
+  "HubspotCohortes" (MesNum, MesLabel, Leads, M0, M1, M2 — conteos, el
+  dashboard calcula el % aquí mismo). Leads = deals creados en el mes
+  (createdate); Citas = deals con Fecha_CitaAgendada_Int2 en el mes.
+  ============================================================================
+*/
+
+function pct(n, base) {
+  return base ? Math.round((n / base) * 100) : 0;
+}
+
+function buildHubspotMetric(rows) {
+  const hist = [], leadsArr = [], citasArr = [];
+  for (const [, , leadsRaw, citasRaw] of rows) {
+    leadsArr.push(num(leadsRaw));
+    citasArr.push(num(citasRaw));
+  }
+  const leadsHist = leadsArr.slice(0, 7), citasHist = citasArr.slice(0, 7);
+  const leadsActual = leadsArr[7] || 0, citasActual = citasArr[7] || 0;
+  const convHist = leadsHist.map((l, i) => pct(citasHist[i], l));
+  return {
+    leads: { hist: leadsHist, actual: leadsActual },
+    citas: { hist: citasHist, actual: citasActual },
+    conversion_pct: { hist: convHist, actual: pct(citasActual, leadsActual) },
+  };
+}
+
+function buildHubspotSedeMetric(rows) {
+  const out = {};
+  for (const [sede, leadsAgoRaw, citasAgoRaw, leadsYtdRaw, citasYtdRaw] of rows) {
+    if (!SEDES.includes(sede)) continue;
+    out[sede] = {
+      agosto: pct(num(citasAgoRaw), num(leadsAgoRaw)),
+      total2026: pct(num(citasYtdRaw), num(leadsYtdRaw)),
+    };
+  }
+  return out;
+}
+
+function buildHubspotCohortes(rows) {
+  return rows.map(([, mesLabel, leadsRaw, m0Raw, m1Raw, m2Raw]) => {
+    const leads = num(leadsRaw);
+    const m0 = pct(num(m0Raw), leads), m1 = pct(num(m1Raw), leads), m2 = pct(num(m2Raw), leads);
+    return { mes: `${mesLabel}-26`, leads, m0, m1, m2, sin: Math.max(0, 100 - m0 - m1 - m2) };
+  });
+}
+
+async function fetchLiveHubspot() {
+  const [hsRows, sedeRows, cohortRows] = await Promise.all([
+    fetchSheetJson("Hubspot"),
+    fetchSheetJson("HubspotSede"),
+    fetchSheetJson("HubspotCohortes"),
+  ]);
+  const base = buildHubspotMetric(hsRows);
+  return {
+    ...base,
+    conversion_por_sede: buildHubspotSedeMetric(sedeRows),
+    cohortes: buildHubspotCohortes(cohortRows),
+  };
+}
+
 /**
  * Mezcla los datos en vivo (si el fetch funciona) sobre window.DATA, que ya
  * trae los valores del último corte como respaldo (fallback).
@@ -337,5 +407,15 @@ async function loadLiveDataIntoDashboard() {
     window.DATA._liveOkOperativos = false;
     window.DATA._liveErrorOperativos = String(e.message || e);
     console.warn("No se pudo cargar Atenciones/Pacientes/Consultas en vivo desde Sheets, usando último valor guardado:", e);
+  }
+
+  try {
+    const hs = await fetchLiveHubspot();
+    window.DATA.hubspot = { ...window.DATA.hubspot, ...hs };
+    window.DATA._liveOkHubspot = true;
+  } catch (e) {
+    window.DATA._liveOkHubspot = false;
+    window.DATA._liveErrorHubspot = String(e.message || e);
+    console.warn("No se pudo cargar HubSpot en vivo desde Sheets, usando último valor guardado:", e);
   }
 }
