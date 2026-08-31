@@ -6,7 +6,7 @@ Este paquete tiene 6 archivos:
 |---|---|---|
 | `index.html` | La página del dashboard (estructura, diseño, gráficos, filtros) | No |
 | `data.js` | Respaldo del último corte guardado (solo Highlights se edita aquí). Todo lo demás se carga solo — ver sección 0 | **Sí, cada mes** (solo Highlights) |
-| `data-live.js` | Conecta el dashboard al Google Sheet para traer Ingresos, Servicios, Atenciones, Pacientes, Consultas y HubSpot en vivo | No |
+| `data-live.js` | Conecta el dashboard al Google Sheet para traer Ingresos, Servicios, Atenciones, Pacientes, Consultas, HubSpot, Conceptos y Subrogación en vivo | No |
 | `data_periods.js` | Los mismos ingresos/pacientes/consultas/HubSpot pero día por día y semana por semana, para los filtros de Semana y Día | No a mano — se regenera (ver nota abajo) |
 | `chart.min.js` | Librería de gráficos | No |
 | `README.md` | Esta guía | No |
@@ -17,9 +17,9 @@ Los 5 primeros archivos van juntos siempre, en la misma carpeta.
 
 ---
 
-## 0. Ingresos, Servicios, Atenciones, Pacientes, Consultas y HubSpot ya se actualizan solos
+## 0. Ingresos, Servicios, Atenciones, Pacientes, Consultas, HubSpot, Conceptos y Subrogación ya se actualizan solos
 
-Estas seis secciones vienen directo de tu Google Sheet **"Proyeccion_Venta_Sede_Servicio VF"** — cada vez que alguien abre el dashboard, se conecta a ese Sheet y trae los números más recientes. No hace falta tocar `data.js` para esto, ni volver a subir archivos a GitHub cada mes solo por esta parte. Con esto, lo único que sigue siendo 100% manual en `data.js` es la sección de **Highlights** (ver sección 7).
+Estas ocho secciones vienen directo de tu Google Sheet **"Proyeccion_Venta_Sede_Servicio VF"** — cada vez que alguien abre el dashboard, se conecta a ese Sheet y trae los números más recientes. No hace falta tocar `data.js` para esto, ni volver a subir archivos a GitHub cada mes solo por esta parte. Con esto, lo único que sigue siendo 100% manual en `data.js` es la sección de **Highlights** (ver sección 7).
 
 **Lo único que tienes que hacer:** mantener actualizadas estas hojas del Sheet, como ya haces con "Base":
 - **Base** (Sede, Servicio, MesNum, MesLabel, Real, Proyectado) → Ingresos y Servicios.
@@ -27,8 +27,20 @@ Estas seis secciones vienen directo de tu Google Sheet **"Proyeccion_Venta_Sede_
 - **Consultas** (Sede, MesNum, MesLabel, Real, Agendado) → proyección = Real + Agendado (usa tu agenda real de citas).
 - **ConsultasRanking** (Sede, Categoria, Valor, VsLM) → el top de motivos de consulta que se ve en el ranking. Deja `VsLM` en blanco para una categoría nueva (sin dato del mes anterior); el dashboard la marca como "Nuevo" automáticamente.
 - **Hubspot** (MesNum, MesLabel, Leads, Citas), **HubspotSede** (Sede, LeadsAgo, CitasAgo, LeadsYTD, CitasYTD) y **HubspotCohortes** (MesNum, MesLabel, Leads, M0, M1, M2) → leads y citas agendadas del pipeline "Interesa2". A diferencia de lo anterior, estas tres hojas **no las llenas tú a mano**: pídeme (a Claude) que las actualice cada corte de mes — jalo los números directo de HubSpot vía API y los subo al Sheet. No es posible conectar HubSpot en vivo directo desde el navegador de quien ve el dashboard sin exponer credenciales, así que este es el punto intermedio seguro: HubSpot → yo actualizo el Sheet una vez al mes → el dashboard lee el Sheet en vivo en cada visita.
+- **Conceptos** (Sede, Servicio, Concepto, Valor, VsLM) → alimenta el clic en cada renglón de "Mezcla de servicios" (ver 0.1). Igual que HubSpot, **no la llenas tú a mano**: pídeme que la actualice cada corte de mes con el desglose de cargos por concepto.
+- **SubrogacionPacientes** (MesNum, MesLabel, Etapa, Pacientes, Ingreso, TicketProm) → alimenta la sección "Subrogación — pacientes" (ver 0.2). Tampoco la llenas tú a mano — te la actualizo yo cada corte.
 
-El dashboard se encarga de sumar por sede, calcular vs LM / vs U3M, armar el ranking y calcular los % de conversión y cohortes — no necesitas calcular nada a mano en estas seis secciones.
+El dashboard se encarga de sumar por sede, calcular vs LM / vs U3M, armar el ranking y calcular los % de conversión y cohortes — no necesitas calcular nada a mano en estas ocho secciones.
+
+### 0.1 Clic en un servicio para ver los conceptos que lo mueven
+
+En "Mezcla de servicios", cada renglón (Tratamientos FIV/ICSI, Farmacia, Congelación de Gametos, etc.) es clicable — dice "▸ ver conceptos". Al dar clic se abre una ventana con la tabla completa de conceptos de ese servicio: nombre del cargo, monto MDP y vs LM, ordenados de mayor a menor. Así ves de inmediato qué concepto específico jaló el servicio hacia arriba o hacia abajo, sin tener que ir al Sheet. Esta tabla respeta el filtro de **Sede** que tengas activo arriba (Todas/CDMX/Guadalajara/Metepec) — si cambias de sede y vuelves a dar clic en el mismo servicio, ves el desglose de esa sede específica.
+
+### 0.2 Subrogación — pacientes
+
+Sección aparte de "Mezcla de servicios", con el pipeline de Subrogación a nivel paciente: candidatas gestantes en **valoración** (aún en estudios médicos) vs. **programas activos** (padres intencionales con contrato firmado), mes a mes. Es información **agregada** — número de pacientes, ingreso y ticket promedio por etapa — **nunca nombres**, dado lo sensible del dato. Es a nivel compañía completa y no cambia con el filtro de Sede (igual que HubSpot), porque Subrogación es prácticamente 100% CDMX.
+
+**Ojo al leerla:** "Valoración" y "Programa Activo" son dos grupos de pacientes distintos, no el mismo paciente avanzando de una etapa a otra — se verificó cruzando el historial de pacientes y no hay traslape entre los dos grupos. No la leas como una tasa de conversión (ej. "de las valoraciones del mes, cuántas pasaron a programa activo"); son dos poblaciones separadas: candidatas gestantes por un lado, padres intencionales por otro. El dashboard ya trae esta aclaración junto a la tabla.
 
 **¿Cómo funciona por dentro?** El Sheet se queda privado — nadie puede abrirlo desde el link del dashboard. Lo que expone los datos es un pequeño script (Google Apps Script, proyecto "Fertilidad Dashboard API") publicado como "App web", vinculado a ese Sheet, que solo devuelve las hojas que el dashboard necesita — el resto del Sheet nunca queda expuesto. Si algún día ese script se borra o se despublica, el dashboard no se rompe: automáticamente vuelve a mostrar el último corte guardado en `data.js` y avisa con un mensaje discreto arriba de la pantalla (te dice si fue solo una parte o todo).
 
@@ -85,7 +97,7 @@ Si tu repo es público en vez de privado, este mismo proceso es gratis — pero 
 
 ## 7. Actualizar los datos cada mes (lo único que vas a hacer seguido)
 
-**Ingresos, Servicios, Atenciones, Pacientes, Consultas y HubSpot:** no se tocan aquí — se actualizan solos en cuanto actualizas las hojas correspondientes del Google Sheet (ver sección 0; para HubSpot, pídeme a mí que actualice esas tres hojas cada corte). Este paso 7 ya solo aplica a **Highlights** (los hallazgos cualitativos del corte).
+**Ingresos, Servicios, Atenciones, Pacientes, Consultas, HubSpot, Conceptos y Subrogación:** no se tocan aquí — se actualizan solos en cuanto actualizas las hojas correspondientes del Google Sheet (ver sección 0; para HubSpot, Conceptos y SubrogacionPacientes, pídeme a mí que actualice esas hojas cada corte). Este paso 7 ya solo aplica a **Highlights** (los hallazgos cualitativos del corte).
 
 1. Abre `data.js` con cualquier editor de texto simple (en Windows, clic derecho → **Abrir con → Bloc de notas**; en Mac, **TextEdit**). No necesitas ningún programa especial.
 2. Busca el bloque `highlights` (tiene comentarios en español explicando qué cambiar).
