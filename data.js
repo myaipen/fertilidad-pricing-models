@@ -21,7 +21,11 @@
 */
 
 window.DATA = {
-  corte: "24-ago-2026",
+  // "corte" se muestra en el encabezado del dashboard. Ingresos, Servicios,
+  // Atenciones, Pacientes y Consultas ya vienen en vivo desde el Sheet (ver
+  // sección 0 del README); HubSpot y Highlights siguen siendo manuales aquí
+  // y quedan al corte que se indica abajo hasta que también se automaticen.
+  corte: "30-ago-2026",
   meses_hist: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul"],
   mes_actual: "Ago",
 
