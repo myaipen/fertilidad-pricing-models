@@ -1,0 +1,17 @@
+MesNum,MesLabel,Etapa,Pacientes,Ingreso,TicketProm
+1,Ene,Valoración,16,22758.56,1422.41
+1,Ene,Programa Activo,0,0.0,0.0
+2,Feb,Valoración,4,5689.64,1422.41
+2,Feb,Programa Activo,2,242672.41,121336.21
+3,Mar,Valoración,0,0.0,0.0
+3,Mar,Programa Activo,0,0.0,0.0
+4,Abr,Valoración,4,4267.23,1066.81
+4,Abr,Programa Activo,1,225862.1,225862.1
+5,May,Valoración,11,15646.51,1422.41
+5,May,Programa Activo,1,142241.38,142241.38
+6,Jun,Valoración,4,5689.64,1422.41
+6,Jun,Programa Activo,2,555172.42,277586.21
+7,Jul,Valoración,3,4267.23,1422.41
+7,Jul,Programa Activo,3,543103.44,181034.48
+8,Ago,Valoración,3,2844.82,948.27
+8,Ago,Programa Activo,6,1460258.98,243376.5
