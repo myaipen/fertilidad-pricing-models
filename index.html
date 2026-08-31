@@ -73,6 +73,30 @@
   .footnote{ font-style:italic; color:var(--axis); font-size:11px; margin-top:26px; line-height:1.5; }
   .footer{ text-align:center; font-style:italic; color:var(--axis); font-size:12px; margin-top:36px; }
 
+  .servicio-row{ cursor:pointer; }
+  .servicio-row:hover{ background:var(--card-bg); }
+  .drill-hint{ font-size:10.5px; color:var(--blue); font-weight:700; margin-left:6px; opacity:.75; }
+  .servicio-row:hover .drill-hint{ opacity:1; text-decoration:underline; }
+
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(31,41,55,.45); z-index:1000;
+    align-items:center; justify-content:center; padding:24px;
+  }
+  .modal-box{
+    background:var(--white); border-radius:14px; max-width:640px; width:100%; max-height:80vh;
+    overflow-y:auto; padding:22px 24px; box-shadow:0 10px 40px rgba(0,0,0,.25);
+  }
+  .modal-header{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:6px; }
+  .modal-title{ font-family:Cambria, Georgia, serif; font-size:16.5px; font-weight:700; color:var(--text); }
+  .modal-close{
+    border:none; background:var(--card-bg); color:var(--axis); font-size:16px; font-weight:700;
+    width:28px; height:28px; border-radius:50%; cursor:pointer; flex:none;
+  }
+  .modal-close:hover{ background:var(--border); color:var(--text); }
+
+  .patient-kpi-row{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:10px; }
+  .patient-note{ font-size:11.5px; color:var(--axis); font-style:italic; margin:6px 0 14px; line-height:1.5; }
+
   @media (max-width:900px){
     .kpi-row{ grid-template-columns:repeat(2,1fr); }
     .grid-3{ grid-template-columns:1fr; }
@@ -113,6 +137,10 @@
   <p class="section-sub">Ingresos proyectados por servicio (MDP) del mes en curso — no varía con el filtro de Periodo, sí con Sede</p>
   <div class="grid-2" id="servicios-section"></div>
 
+  <div class="section-title">Subrogación — pacientes</div>
+  <p class="section-sub">Pipeline de candidatas gestantes en valoración vs. programas activos contratados (padres intencionales) · datos agregados, sin nombres · compañía completa (no varía con el filtro de Sede)</p>
+  <div class="grid-2" id="subrogacion-section"></div>
+
   <div class="section-title">HubSpot — Leads y conversión</div>
   <p class="section-sub">Pipeline "Interesa2" · compañía completa (no varía con el filtro de Sede) · reacciona al filtro de Periodo</p>
   <div class="grid-3" id="hubspot-charts"></div>
@@ -120,6 +148,16 @@
 
   <p class="footnote" id="page-footnote"></p>
   <p class="footer">Fertilidad Integral</p>
+</div>
+
+<div class="modal-overlay" id="concept-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="concept-modal-title">Desglose por concepto</div>
+      <button class="modal-close" id="concept-modal-close" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="concept-modal-body"></div>
+  </div>
 </div>
 
 <script>
@@ -569,11 +607,15 @@ function buildServicios(){
   const rowsHtml = rows.map(r=>{
     const lm = r.nuevo ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : pctBadge(r.vsLM,"").replace(": ","");
     const u3m = (r.vsU3M===null || r.vsU3M===undefined) ? '<span style="color:var(--axis);">—</span>' : (r.nuevo ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : pctBadge(r.vsU3M,"").replace(": ",""));
-    return `<tr><td>${r.nombre}</td><td class="num">${fmt(r.valor,1)}</td><td class="num">${lm}</td><td class="num">${u3m}</td></tr>`;
+    const clickable = !!r.servKey;
+    return `<tr class="${clickable?'servicio-row':''}" ${clickable?`data-servkey="${r.servKey}" data-nombre="${r.nombre}"`:''}>
+      <td>${r.nombre}${clickable?' <span class="drill-hint">▸ ver conceptos</span>':''}</td>
+      <td class="num">${fmt(r.valor,1)}</td><td class="num">${lm}</td><td class="num">${u3m}</td></tr>`;
   }).join("");
   el.innerHTML = `
     <div class="panel">
       <div class="panel-title">Ingresos por servicio (MDP)</div>
+      <div class="section-sub" style="margin:0 0 8px;">Clic en un servicio para ver el desglose por concepto (mes vigente)</div>
       <table><thead><tr><th>Servicio</th><th class="num">MDP</th><th class="num">vs LM</th><th class="num">vs U3M</th></tr></thead><tbody>${rowsHtml}</tbody></table>
     </div>
     <div class="panel">
@@ -581,6 +623,98 @@ function buildServicios(){
       <ul class="highlights">${hi.map(h=>`<li>${h}</li>`).join("") || '<li>Sin highlights registrados para esta sede.</li>'}</ul>
     </div>
   `;
+  el.querySelectorAll(".servicio-row").forEach(tr=>{
+    tr.addEventListener("click", ()=> openConceptModal(tr.dataset.servkey, tr.dataset.nombre));
+  });
+}
+
+// ---------------------------------------------------------------- modal: desglose de conceptos por servicio
+function openConceptModal(servKey, servNombre){
+  const modal = document.getElementById("concept-modal");
+  const body = document.getElementById("concept-modal-body");
+  const title = document.getElementById("concept-modal-title");
+  const scopeLabel = currentScope === "total" ? "todas las sedes" : currentScope;
+  title.textContent = `${servNombre} — desglose por concepto (${scopeLabel})`;
+
+  const conceptos = D.conceptos && D.conceptos[currentScope] && D.conceptos[currentScope][servKey];
+  if (!conceptos || !conceptos.length){
+    body.innerHTML = `<div class="unavailable" style="height:auto; padding:24px;">No hay datos de conceptos disponibles para "${servNombre}" en esta sede.</div>`;
+  } else {
+    const total = sum(conceptos.map(c=>c.valor));
+    const rowsHtml = conceptos.map(c=>{
+      const lm = c.nuevo ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : pctBadge(c.vsLM,"").replace(": ","");
+      return `<tr><td>${c.nombre}</td><td class="num">$${fmt(c.valor,0)}</td><td class="num">${lm}</td></tr>`;
+    }).join("");
+    body.innerHTML = `
+      <div style="font-size:12px; color:var(--axis); margin-bottom:10px;">Total del servicio: <b style="color:var(--text);">$${fmt(total,0)}</b> · ${conceptos.length} concepto${conceptos.length===1?'':'s'} · ordenado de mayor a menor</div>
+      <table><thead><tr><th>Concepto</th><th class="num">MDP (pesos)</th><th class="num">vs LM</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+    `;
+  }
+  modal.style.display = "flex";
+}
+function closeConceptModal(){
+  document.getElementById("concept-modal").style.display = "none";
+}
+function setupConceptModalHandlers(){
+  const overlay = document.getElementById("concept-modal");
+  document.getElementById("concept-modal-close").addEventListener("click", closeConceptModal);
+  overlay.addEventListener("click", (e)=>{ if (e.target === overlay) closeConceptModal(); });
+  document.addEventListener("keydown", (e)=>{ if (e.key === "Escape") closeConceptModal(); });
+}
+
+// ---------------------------------------------------------------- Subrogación (pacientes, agregado, siempre compañía)
+function buildSubrogacion(){
+  const el = document.getElementById("subrogacion-section");
+  const sub = D.subrogacion;
+  if (!sub || !sub.labels || !sub.labels.length){
+    el.innerHTML = `<div class="panel" style="grid-column:1 / -1;"><div class="unavailable" style="height:auto; padding:24px;">Datos de Subrogación no disponibles en este momento.</div></div>`;
+    return;
+  }
+  const val = sub.actual["Valoración"] || {pacientes:0, ingreso:0, ticket:0};
+  const prog = sub.actual["Programa Activo"] || {pacientes:0, ingreso:0, ticket:0};
+  el.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">Agosto — estado del pipeline</div>
+      <div class="patient-kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">Valoración (candidatas)</div>
+          <div class="kpi-big">${fmt(val.pacientes,0)}</div>
+          <div class="kpi-sub">$${fmt(val.ingreso,0)} en valoraciones</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Programa activo</div>
+          <div class="kpi-big">${fmt(prog.pacientes,0)}</div>
+          <div class="kpi-sub">$${fmt(prog.ingreso,0)} · ticket prom. $${fmt(prog.ticket,0)}</div>
+        </div>
+      </div>
+      <div class="patient-note">
+        Son dos poblaciones distintas de personas, no una tasa de conversión: "Valoración" cuenta candidatas gestantes evaluadas médicamente;
+        "Programa activo" cuenta padres intencionales con un paquete de subrogación ya contratado. Acumulado 2026 (Ene–Ago):
+        ${fmt(sub.totalPacientesYTD["Valoración"],0)} valoraciones · ${fmt(sub.totalPacientesYTD["Programa Activo"],0)} programas activos ·
+        $${fmt(sub.ingresoYTD,0)} en ingresos de Subrogación.
+      </div>
+      <div class="chart-box"><canvas id="chart-subrogacion"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Pacientes por mes y etapa</div>
+      <table>
+        <thead><tr><th>Mes</th><th class="num">Valoración</th><th class="num">Programa activo</th></tr></thead>
+        <tbody>${sub.labels.map((lbl,i)=>`<tr><td>${lbl}</td><td class="num">${sub.hist["Valoración"][i]}</td><td class="num">${sub.hist["Programa Activo"][i]}</td></tr>`).join("")}</tbody>
+      </table>
+    </div>
+  `;
+  destroyChart("chart-subrogacion");
+  const ctx = document.getElementById("chart-subrogacion").getContext("2d");
+  charts["chart-subrogacion"] = new Chart(ctx, {
+    type:"bar",
+    data:{ labels: sub.labels, datasets:[
+      { label:"Valoración", data: sub.hist["Valoración"], backgroundColor: COLORS.gray, borderRadius:4, maxBarThickness:26 },
+      { label:"Programa activo", data: sub.hist["Programa Activo"], backgroundColor: COLORS.red, borderRadius:4, maxBarThickness:26 },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:10}},
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:12, font:{ size:11 } } } },
+      scales:{ y:{ display:false, beginAtZero:true, grace:"20%" }, x:{ grid:{ display:false }, ticks:{ font:{ size:11 } } } } },
+  });
 }
 
 // ---------------------------------------------------------------- HubSpot
@@ -662,6 +796,7 @@ function renderAll(){
   buildEvolutivos();
   buildConsultas();
   buildServicios();
+  buildSubrogacion();
   buildHubspotCharts();
   buildHubspotDetail();
 }
@@ -673,13 +808,14 @@ function renderAll(){
     ["Ingresos/Servicios", window.DATA._liveOk, window.DATA._liveError],
     ["Atenciones/Pacientes/Consultas", window.DATA._liveOkOperativos, window.DATA._liveErrorOperativos],
     ["HubSpot", window.DATA._liveOkHubspot, window.DATA._liveErrorHubspot],
+    ["Conceptos/Subrogación", window.DATA._liveOkConceptos, window.DATA._liveErrorConceptos],
   ];
   const okCount = flags.filter(f => f[1]).length;
   if (okCount === flags.length) {
     banner.style.display = "block";
     banner.style.background = "#ECFDF5";
     banner.style.color = "#065F46";
-    banner.textContent = "✓ Ingresos, Servicios, Atenciones, Pacientes, Consultas y HubSpot cargados en vivo desde Google Sheets.";
+    banner.textContent = "✓ Ingresos, Servicios, Atenciones, Pacientes, Consultas, HubSpot, Conceptos y Subrogación cargados en vivo desde Google Sheets.";
     setTimeout(() => { banner.style.display = "none"; }, 4000);
   } else if (okCount > 0) {
     banner.style.display = "block";
@@ -692,6 +828,7 @@ function renderAll(){
     banner.style.display = "block";
     banner.textContent = "⚠ No se pudo cargar en vivo desde Google Sheets (" + (window.DATA._liveError || "sin conexión") + "). Mostrando el último corte guardado (" + window.DATA.corte + ").";
   }
+  setupConceptModalHandlers();
   renderAll();
 })();
 </script>

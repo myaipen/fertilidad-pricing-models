@@ -128,6 +128,7 @@ async function fetchLiveIngresos() {
       if (s.proy > 0 || s.m8 > 0) {
         servRows.push({
           nombre: SERVICIO_LABEL[serv],
+          servKey: serv,
           valor: Math.round((s.proy/1e6)*10)/10,
           vsLM: pctOrNull(s.proy, s.m7),
           vsU3M: pctOrNull(s.proy, (s.m5+s.m6+s.m7)/3),
@@ -174,6 +175,7 @@ async function fetchLiveIngresos() {
     if (c.proy > 0 || c.jul > 0) {
       serviciosOut.total.push({
         nombre: SERVICIO_LABEL[serv],
+        servKey: serv,
         valor: Math.round((c.proy/1e6)*10)/10,
         vsLM: pctOrNull(c.proy, c.jul),
         vsU3M: pctOrNull(c.proy, c.u3m),
@@ -372,6 +374,88 @@ async function fetchLiveHubspot() {
   };
 }
 
+/*
+  ============================================================================
+  CARGA EN VIVO DE CONCEPTOS (drill-down por servicio) Y SUBROGACIÓN
+  ============================================================================
+  "Conceptos" trae, para el mes vigente (agosto), el desglose de cada
+  servicio en sus líneas de cargo reales (ej. dentro de "Subrogación":
+  "Valoración subrogada", "All Inclusive Surrogacy Package CDMX", etc.),
+  con MDP y vs LM ya calculados. Filas: [Sede, Servicio, Concepto, Valor,
+  VsLM] donde Sede es "CDMX"/"GDL"/"MTP"/"total" y Servicio es el nombre
+  completo original (la misma llave que trae "servKey" en cada fila de
+  DATA.servicios). El dashboard usa esto para el clic sobre un servicio en
+  "Mezcla de servicios".
+
+  "SubrogacionPacientes" trae, mes a mes, cuántos PACIENTES (sin nombres —
+  solo el conteo) pasaron por cada etapa del embudo de Subrogación:
+  "Valoración" (candidatas gestantes que se hacen la valoración médica) y
+  "Programa Activo" (padres intencionales con un paquete de subrogación
+  contratado). Son dos poblaciones de personas distintas, no una tasa de
+  conversión de la misma persona — el dashboard lo aclara en el texto.
+  Filas: [MesNum, MesLabel, Etapa, Pacientes, Ingreso, TicketProm].
+  ============================================================================
+*/
+
+function buildConceptosMetric(rows) {
+  const out = { total: {}, CDMX: {}, GDL: {}, MTP: {} };
+  for (const [scope, serv, concepto, valorRaw, vsLMRaw] of rows) {
+    if (!out[scope] || !serv || !concepto) continue;
+    out[scope][serv] = out[scope][serv] || [];
+    const vsLMStr = String(vsLMRaw ?? "").trim();
+    const nuevo = vsLMStr === "";
+    out[scope][serv].push({ nombre: concepto, valor: num(valorRaw), vsLM: nuevo ? null : Math.round(num(vsLMRaw)), ...(nuevo ? { nuevo: true } : {}) });
+  }
+  for (const scope of Object.keys(out)) {
+    for (const serv of Object.keys(out[scope])) {
+      out[scope][serv].sort((a, b) => b.valor - a.valor);
+    }
+  }
+  return out;
+}
+
+const SUBROGACION_ETAPAS = ["Valoración", "Programa Activo"];
+
+function buildSubrogacionMetric(rows) {
+  const byMes = {};
+  for (const [mesNumRaw, mesLabel, etapa, pacientesRaw, ingresoRaw, ticketRaw] of rows) {
+    const mesNum = Number(mesNumRaw);
+    byMes[mesNum] = byMes[mesNum] || { mesLabel };
+    byMes[mesNum][etapa] = { pacientes: num(pacientesRaw), ingreso: num(ingresoRaw), ticket: num(ticketRaw) };
+  }
+  const meses = Object.keys(byMes).map(Number).sort((a, b) => a - b);
+  const hist = {};
+  for (const etapa of SUBROGACION_ETAPAS) {
+    hist[etapa] = meses.map(m => (byMes[m][etapa] && byMes[m][etapa].pacientes) || 0);
+  }
+  const mesActual = meses[meses.length - 1];
+  const actual = {};
+  for (const etapa of SUBROGACION_ETAPAS) {
+    actual[etapa] = byMes[mesActual][etapa] || { pacientes: 0, ingreso: 0, ticket: 0 };
+  }
+  return {
+    labels: meses.map(m => byMes[m].mesLabel),
+    hist,
+    actual,
+    totalPacientesYTD: {
+      "Valoración": meses.reduce((a, m) => a + ((byMes[m]["Valoración"] && byMes[m]["Valoración"].pacientes) || 0), 0),
+      "Programa Activo": meses.reduce((a, m) => a + ((byMes[m]["Programa Activo"] && byMes[m]["Programa Activo"].pacientes) || 0), 0),
+    },
+    ingresoYTD: meses.reduce((a, m) => a + SUBROGACION_ETAPAS.reduce((b, e) => b + ((byMes[m][e] && byMes[m][e].ingreso) || 0), 0), 0),
+  };
+}
+
+async function fetchLiveConceptosYSubrogacion() {
+  const [concRows, subRows] = await Promise.all([
+    fetchSheetJson("Conceptos"),
+    fetchSheetJson("SubrogacionPacientes"),
+  ]);
+  return {
+    conceptos: buildConceptosMetric(concRows),
+    subrogacion: buildSubrogacionMetric(subRows),
+  };
+}
+
 /**
  * Mezcla los datos en vivo (si el fetch funciona) sobre window.DATA, que ya
  * trae los valores del último corte como respaldo (fallback).
@@ -417,5 +501,16 @@ async function loadLiveDataIntoDashboard() {
     window.DATA._liveOkHubspot = false;
     window.DATA._liveErrorHubspot = String(e.message || e);
     console.warn("No se pudo cargar HubSpot en vivo desde Sheets, usando último valor guardado:", e);
+  }
+
+  try {
+    const cs = await fetchLiveConceptosYSubrogacion();
+    window.DATA.conceptos = cs.conceptos;
+    window.DATA.subrogacion = cs.subrogacion;
+    window.DATA._liveOkConceptos = true;
+  } catch (e) {
+    window.DATA._liveOkConceptos = false;
+    window.DATA._liveErrorConceptos = String(e.message || e);
+    console.warn("No se pudo cargar Conceptos/Subrogación en vivo desde Sheets, usando último valor guardado:", e);
   }
 }

@@ -210,4 +210,35 @@ window.DATA = {
       { mes: "Ago-26", leads: 1531, m0: 22, m1: 0, m2: 0, sin: 78 },
     ],
   },
+
+  // ------------------------------------------------------------------------
+  // SUBROGACIÓN — pacientes por etapa (agregado, sin nombres). ESTOS VALORES
+  // YA SE CARGAN EN VIVO (ver data-live.js y la hoja "SubrogacionPacientes"
+  // del Sheet) — lo de aquí es solo el respaldo si el fetch en vivo falla.
+  // "Valoración" = candidatas gestantes evaluadas; "Programa Activo" =
+  // padres intencionales con paquete contratado — son poblaciones distintas.
+  // Corte de este respaldo: 30-ago-2026.
+  // ------------------------------------------------------------------------
+  subrogacion: {
+    labels: ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago"],
+    hist: {
+      "Valoración":      [16, 4, 0, 4, 11, 4, 3, 3],
+      "Programa Activo": [0, 2, 0, 1, 1, 2, 3, 6],
+    },
+    actual: {
+      "Valoración":      { pacientes: 3, ingreso: 2844.82, ticket: 948.27 },
+      "Programa Activo": { pacientes: 6, ingreso: 1460258.98, ticket: 243376.50 },
+    },
+    totalPacientesYTD: { "Valoración": 45, "Programa Activo": 15 },
+    ingresoYTD: 3230474.36,
+  },
+
+  // ------------------------------------------------------------------------
+  // CONCEPTOS — desglose por línea de cargo dentro de cada servicio, usado
+  // por el clic en "Mezcla de servicios". SE CARGA SOLO EN VIVO (ver
+  // data-live.js y la hoja "Conceptos" del Sheet) — no hay respaldo estático
+  // aquí por su tamaño; si el fetch en vivo falla, el clic muestra "no
+  // disponible" en vez de romper el dashboard.
+  // ------------------------------------------------------------------------
+  conceptos: {},
 };
