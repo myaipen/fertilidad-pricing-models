@@ -7,6 +7,7 @@
 <script src="chart.min.js"></script>
 <script src="data.js"></script>
 <script src="data_periods.js"></script>
+<script src="data-live.js"></script>
 <style>
   :root{
     --gray:#C9CDD3; --red:#B66863; --blue:#7096B0; --pink:#D46A93;
@@ -84,6 +85,7 @@
 
   <h1>Dashboard de Productividad — FI</h1>
   <p class="subtitle" id="page-subtitle"></p>
+  <p id="live-status-banner" style="display:none; font-size:12px; background:#FEF3C7; color:#92400E; padding:6px 10px; border-radius:6px; margin:0 0 14px;"></p>
 
   <div class="filters-row">
     <div class="filter-group">
@@ -664,7 +666,21 @@ function renderAll(){
   buildHubspotDetail();
 }
 
-renderAll();
+(async function start(){
+  await loadLiveDataIntoDashboard();
+  const banner = document.getElementById("live-status-banner");
+  if (window.DATA._liveOk) {
+    banner.style.display = "block";
+    banner.style.background = "#ECFDF5";
+    banner.style.color = "#065F46";
+    banner.textContent = "✓ Ingresos y Mezcla de Servicios cargados en vivo desde Google Sheets.";
+    setTimeout(() => { banner.style.display = "none"; }, 4000);
+  } else {
+    banner.style.display = "block";
+    banner.textContent = "⚠ No se pudo cargar Ingresos/Servicios en vivo desde Google Sheets (" + (window.DATA._liveError || "sin API key configurada") + "). Mostrando el último corte guardado (" + window.DATA.corte + ").";
+  }
+  renderAll();
+})();
 </script>
 </body>
 </html>

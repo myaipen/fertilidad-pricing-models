@@ -1,18 +1,31 @@
 # Dashboard de Productividad — Fertilidad Integral
 
-Este paquete tiene 5 archivos:
+Este paquete tiene 6 archivos:
 
 | Archivo | ¿Qué es? | ¿Lo edito? |
 |---|---|---|
 | `index.html` | La página del dashboard (estructura, diseño, gráficos, filtros) | No |
-| `data.js` | Los números mensuales (ingresos, atenciones, pacientes, consultas, servicios, HubSpot) | **Sí, cada mes** |
+| `data.js` | Los números mensuales (atenciones, pacientes, consultas, HubSpot, highlights). Ingresos y Servicios se cargan solos — ver sección 0 | **Sí, cada mes** (excepto Ingresos/Servicios) |
+| `data-live.js` | Conecta el dashboard al Google Sheet para traer Ingresos y Servicios en vivo | No |
 | `data_periods.js` | Los mismos ingresos/pacientes/consultas/HubSpot pero día por día y semana por semana, para los filtros de Semana y Día | No a mano — se regenera (ver nota abajo) |
 | `chart.min.js` | Librería de gráficos | No |
 | `README.md` | Esta guía | No |
 
-Los 4 primeros archivos van juntos siempre, en la misma carpeta.
+Los 5 primeros archivos van juntos siempre, en la misma carpeta.
 
 **Filtros del dashboard:** arriba tienes dos filtros independientes — **Sede** (Todas / CDMX / Guadalajara / Metepec) y **Periodo** (Año / Trimestre / Mes / Semana / Día). Ambos afectan Ingresos, Pacientes Únicos y Consultas. Atenciones solo está disponible a nivel Mes/Trimestre/Año porque no existe una fuente día a día confiable para esa métrica (se explica en la nota dentro del propio dashboard). La sección de Servicios y Highlights siempre muestra el mes vigente (agosto), no cambia con el filtro de Periodo. HubSpot siempre es a nivel compañía completa, no cambia con el filtro de Sede.
+
+---
+
+## 0. Ingresos y Servicios ya se actualizan solos
+
+Esta sección de datos (Ingresos por sede/servicio) viene directo de tu Google Sheet **"Proyeccion_Venta_Sede_Servicio"**, hoja **"Base"** — cada vez que alguien abre el dashboard, se conecta a ese Sheet y trae los números más recientes. No hace falta tocar `data.js` para esta parte, ni volver a subir archivos a GitHub cada mes solo por esto.
+
+**Lo único que tienes que hacer:** mantener actualizada la hoja "Base" de ese Google Sheet (Sede, Servicio, MesNum, MesLabel, Real, Proyectado) como ya lo haces. El dashboard se encarga del resto.
+
+**¿Cómo funciona por dentro?** El Sheet se queda privado — nadie puede abrirlo desde el link del dashboard. Lo que expone los datos es un pequeño script (Google Apps Script, proyecto "Fertilidad Dashboard API") publicado como "App web", vinculado a ese Sheet, que solo devuelve el rango de datos que el dashboard necesita. Si algún día ese script se borra o se despublica, el dashboard no se rompe: automáticamente vuelve a mostrar el último corte guardado en `data.js` y avisa con un mensaje discreto arriba de la pantalla.
+
+**Si necesitas revisar o volver a publicar ese script:** en el Google Sheet, ve a **Extensiones → Apps Script**. Ahí está el proyecto "Fertilidad Dashboard API" con la función `doGet()`. Para publicar cambios: **Implementar → Administrar las implementaciones →** ícono de lápiz **→ Nueva versión → Implementar**. La URL del dashboard no cambia al hacer esto.
 
 ---
 
@@ -45,7 +58,7 @@ Dos razones: (a) tener respaldo con historial de versiones (qué cambió cada me
 ## 5. Subir los archivos (sin usar comandos)
 
 1. En la página del repositorio recién creado, busca el link que dice **uploading an existing file** (o ve al botón **Add file → Upload files**).
-2. Arrastra los 5 archivos (`index.html`, `data.js`, `data_periods.js`, `chart.min.js`, `README.md`) a la ventana — todos sueltos, no el .zip — o da clic en **choose your files** y selecciónalos.
+2. Arrastra los 6 archivos (`index.html`, `data.js`, `data-live.js`, `data_periods.js`, `chart.min.js`, `README.md`) a la ventana — todos sueltos, no el .zip — o da clic en **choose your files** y selecciónalos.
 3. Abajo, en **Commit changes**, escribe un mensaje corto como `Primera versión del dashboard` y da clic en **Commit changes**.
 4. Listo — tus archivos ya están respaldados en GitHub con historial.
 
@@ -65,16 +78,18 @@ Si tu repo es público en vez de privado, este mismo proceso es gratis — pero 
 
 ## 7. Actualizar los datos cada mes (lo único que vas a hacer seguido)
 
+**Ingresos y Servicios:** no se tocan aquí — se actualizan solos en cuanto actualizas la hoja "Base" del Google Sheet (ver sección 0). Este paso 7 es solo para el resto de las métricas.
+
 1. Abre `data.js` con cualquier editor de texto simple (en Windows, clic derecho → **Abrir con → Bloc de notas**; en Mac, **TextEdit**). No necesitas ningún programa especial.
 2. Cada bloque tiene comentarios en español explicando qué cambiar (busca el bloque grande de instrucciones hasta arriba del archivo).
-3. En resumen, para cada métrica (`ingresos`, `atenciones`, `pacientes`, `consultas`):
+3. En resumen, para cada métrica (`atenciones`, `pacientes`, `consultas`):
    - Agrega el mes que ya cerró al final de la lista `hist`.
    - Cambia `actual` por el número real acumulado a la nueva fecha de corte.
    - Cambia `proy` por la nueva proyección a cierre de mes.
    - Cambia `vsLM` y `vsU3M` por los nuevos porcentajes (solo el número, ej. `22` para +22%).
 4. Guarda el archivo.
 5. Vuelve a tu repositorio en GitHub, entra a `data.js`, da clic en el ícono de lápiz (**Edit**), borra todo el contenido y pega el contenido actualizado (o usa **Add file → Upload files** para volver a subirlo, sobrescribiendo el anterior).
-6. Da clic en **Commit changes**. Si tienes GitHub Pages activado, el dashboard se actualiza solo en 1–2 minutos. Si no, simplemente vuelve a compartir el archivo `index.html` + `data.js` + `chart.min.js` juntos.
+6. Da clic en **Commit changes**. Si tienes GitHub Pages activado, el dashboard se actualiza solo en 1–2 minutos. Si no, simplemente vuelve a compartir el archivo `index.html` + `data.js` + `data-live.js` + `chart.min.js` juntos.
 
 ### Fórmulas de referencia (por si necesitas recalcular algo)
 
