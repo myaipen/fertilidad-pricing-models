@@ -65,6 +65,14 @@ function num(v) {
   return Number(String(v ?? "").replace(/[^0-9.-]/g, "")) || 0;
 }
 
+// El mes vigente (agosto) ya cerró (llegó a su último día): Real = cierre
+// final, no queda ningún día pendiente que proyectar para Atenciones ni
+// Pacientes Únicos (Ingresos y Consultas ya reflejan esto solos, porque su
+// "Proyectado"/"Agendado" vienen directo del Sheet). Cambiar a false en el
+// próximo corte, en cuanto vuelva a haber un mes en curso con días por
+// transcurrir.
+const MES_VIGENTE_CERRADO = true;
+
 // Como num(), pero celda vacía -> null (en vez de 0). Se usa para Metas: una
 // celda vacía significa "todavía no se captura la meta de ese mes", no "meta
 // = $0" — así la línea de meta no cae a cero en la gráfica cuando falta dato.
@@ -245,12 +253,12 @@ function buildMonthlyRealMetric(rows) {
     const m = bySede[sede] || {};
     const hist = [1,2,3,4,5,6,7].map(n => m[n] || 0);
     const actual = m[8] || 0;
-    const proy = actual + actual / 30;
+    const proy = MES_VIGENTE_CERRADO ? actual : actual + actual / 30;
     hist.forEach((v,i) => histTotal[i] += v);
     actualTotal += actual;
     out[sede] = { hist, actual, proy: Math.round(proy), vsLM: pctOrNull(proy, hist[6]), vsU3M: pctOrNull(proy, avg3(hist)) };
   }
-  const proyTotal = actualTotal + actualTotal / 30;
+  const proyTotal = MES_VIGENTE_CERRADO ? actualTotal : actualTotal + actualTotal / 30;
   out.total = { hist: histTotal, actual: actualTotal, proy: Math.round(proyTotal), vsLM: pctOrNull(proyTotal, histTotal[6]), vsU3M: pctOrNull(proyTotal, avg3(histTotal)) };
   return out;
 }
