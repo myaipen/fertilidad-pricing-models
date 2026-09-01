@@ -102,6 +102,9 @@
 
   .patient-kpi-row{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:10px; }
   .patient-note{ font-size:11.5px; color:var(--axis); font-style:italic; margin:6px 0 14px; line-height:1.5; }
+  .scroll-table{ max-height:560px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; }
+  .scroll-table table{ font-size:12.5px; }
+  .scroll-table thead th{ position:sticky; top:0; background:var(--white); z-index:1; }
 
   @media (max-width:900px){
     .kpi-row{ grid-template-columns:repeat(2,1fr); }
@@ -149,8 +152,12 @@
   <div class="grid-2" id="consultas-section"></div>
 
   <div class="section-title">Subrogación — pacientes</div>
-  <p class="section-sub">Pipeline de candidatas gestantes en valoración vs. programas activos contratados (padres intencionales) · datos agregados, sin nombres · compañía completa (no varía con el filtro de Sede)</p>
+  <p class="section-sub">Pipeline de candidatas gestantes en valoración vs. programas activos contratados (padres intencionales) · datos agregados, sin nombres · reacciona a Sede y Periodo</p>
   <div class="grid-2" id="subrogacion-section"></div>
+
+  <div class="section-title">Evolutivo por médico</div>
+  <p class="section-sub">Ingresos, Atenciones y Pacientes Únicos por médico (Profesional Historia) — misma fuente y criterio que arriba (línea de cargo = atención) · top 20 por ingresos + "Otros" agregado · reacciona a Sede y Periodo</p>
+  <div id="medicos-section"></div>
 
   <p class="footnote" id="page-footnote"></p>
   <p class="footer">Fertilidad Integral</p>
@@ -182,12 +189,53 @@ function fmt(v, decimals){
   if (v === null || v === undefined || Number.isNaN(v)) return "—";
   return v.toLocaleString("es-MX", { minimumFractionDigits: decimals || 0, maximumFractionDigits: decimals || 0 });
 }
-function pctBadge(v, label){
+// nomStr (opcional): texto ya formateado del valor nominal (ej. "+$2.6M",
+// "-12") que se añade entre paréntesis después del %, para que cada
+// comparación muestre siempre el % Y el número absoluto detrás.
+function pctBadge(v, label, nomStr){
   if (v === null || v === undefined || Number.isNaN(v)) return `<span class="neutral">${label}: —</span>`;
   const cls = v >= 0 ? "up" : "down";
   const arrow = v >= 0 ? "▲" : "▼";
   const sign = v >= 0 ? "+" : "";
-  return `<span class="${cls}">${arrow} ${label}: ${sign}${v.toFixed(0)}%</span>`;
+  const nomPart = nomStr ? ` (${nomStr})` : "";
+  return `<span class="${cls}">${arrow} ${label}: ${sign}${v.toFixed(0)}%${nomPart}</span>`;
+}
+// Formatea un valor nominal (puede ser negativo) con signo explícito,
+// usando la misma función de formato que ya se usa para el valor principal
+// (ej. v=>`$${fmt(v,1)}M` o fmt(v,0)) — así el nominal siempre luce
+// consistente con el número grande que acompaña.
+function fmtSignedFn(v, fn){
+  if (v === null || v === undefined || Number.isNaN(v)) return null;
+  const sign = v >= 0 ? "+" : "-";
+  return `${sign}${fn(Math.abs(v))}`;
+}
+// Versión compacta de pctBadge para celdas de tabla (sin la etiqueta "vs LM:").
+function miniPct(v, nomStr){
+  if (v === null || v === undefined || Number.isNaN(v)) return '<span style="color:var(--axis);">—</span>';
+  const cls = v >= 0 ? "up" : "down";
+  const arrow = v >= 0 ? "▲" : "▼";
+  const sign = v >= 0 ? "+" : "";
+  const nomPart = nomStr ? ` <span style="font-weight:400;">(${nomStr})</span>` : "";
+  return `<span class="${cls}">${arrow} ${sign}${v.toFixed(0)}%${nomPart}</span>`;
+}
+// vs LM / vs U3M / nominal genérico para una serie mensual {hist:[7], actual}
+// dado el periodo activo — mismo criterio que ya usaba buildSeries para
+// Ingresos/Atenciones/Pacientes/Consultas, reutilizado aquí para Subrogación
+// y para la nueva sección "Evolutivo por médico".
+function periodStats(hist, actual, period){
+  if (period === "mes"){
+    const base = hist[6], baseU3M = (hist[4]+hist[5]+hist[6])/3;
+    return { current: actual, vsLM: pctOrNull(actual,base), vsU3M: pctOrNull(actual,baseU3M), nomLM: actual-base, nomU3M: actual-baseU3M };
+  }
+  if (period === "trimestre"){
+    const [e,f,m,a,my,j,jl] = hist;
+    const Q1=e+f+m, Q2=a+my+j, Q3=jl+actual;
+    return { current:Q3, vsLM: pctOrNull(Q3,Q2), vsU3M: pctOrNull(Q3,(Q1+Q2)/2), nomLM:Q3-Q2, nomU3M:Q3-(Q1+Q2)/2 };
+  }
+  if (period === "anio"){
+    return { current: hist.reduce((a,b)=>a+b,0)+actual, vsLM:null, vsU3M:null, nomLM:null, nomU3M:null };
+  }
+  return null; // semana/dia: sin fuente día a día
 }
 function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
 function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
@@ -230,7 +278,7 @@ const hBarValueLabels = {
     meta.data.forEach((bar, i)=>{
       const v = ds.data[i];
       if (v === null || v === undefined) return;
-      ctx.fillText(ds._fmt ? ds._fmt(v) : fmt(v), bar.x + 6, bar.y);
+      ctx.fillText(ds._fmt ? ds._fmt(v, i) : fmt(v), bar.x + 6, bar.y);
     });
     ctx.restore();
   }
@@ -311,6 +359,7 @@ function buildSeries(kind, scope, opts){
         values: [...s.hist, s.actual, s.proy],
         currentIndex: s.hist.length, proyIndex: s.hist.length+1,
         badge1: s.vsLM, badge2: s.vsU3M,
+        nomLM: s.proy - s.hist[6], nomU3M: s.proy - (s.hist[4]+s.hist[5]+s.hist[6])/3,
       };
     }
     if (currentPeriod === "trimestre"){
@@ -324,11 +373,12 @@ function buildSeries(kind, scope, opts){
         values: [Q1, Q2, Q3actual, Q3proy],
         currentIndex: 2, proyIndex: 3,
         badge1: vsLQ, badge2: vsAvgClosed,
+        nomLM: Q3proy - Q2, nomU3M: Q3proy - (Q1+Q2)/2,
       };
     }
     if (currentPeriod === "anio"){
       const ytd = sum(s.hist) + s.actual;
-      return { labels: ["2026 (YTD)"], values: [ytd], currentIndex: 0, proyIndex: null, badge1: null, badge2: null };
+      return { labels: ["2026 (YTD)"], values: [ytd], currentIndex: 0, proyIndex: null, badge1: null, badge2: null, nomLM: null, nomU3M: null };
     }
     // semana / día -> fine-grain (only ingresos & pacientes have this; atenciones doesn't)
     return buildFineGrain(opts.fineKey, scope);
@@ -363,7 +413,8 @@ function buildFineGrain(metricKey, scope){
     const lw = values[n-2], avgClosed = avg(values.slice(Math.max(0,n-5), n-1));
     const badge1 = lw ? (values[n-1]/lw - 1) * 100 : null;
     const badge2 = avgClosed ? (values[n-1]/avgClosed - 1) * 100 : null;
-    return { labels, values, currentIndex: n-1, proyIndex: null, badge1, badge2 };
+    const nomLM = lw!=null ? values[n-1]-lw : null, nomU3M = avgClosed!=null ? values[n-1]-avgClosed : null;
+    return { labels, values, currentIndex: n-1, proyIndex: null, badge1, badge2, nomLM, nomU3M };
   }
   if (currentPeriod === "dia"){
     const raw = P.daily[scope][metricKey]; // {date: value}
@@ -374,7 +425,8 @@ function buildFineGrain(metricKey, scope){
     const prev = values[n-2], avg7 = avg(values.slice(Math.max(0,n-8), n-1));
     const badge1 = prev ? (values[n-1]/prev - 1) * 100 : null;
     const badge2 = avg7 ? (values[n-1]/avg7 - 1) * 100 : null;
-    return { labels, values, currentIndex: n-1, proyIndex: null, badge1, badge2 };
+    const nomLM = prev!=null ? values[n-1]-prev : null, nomU3M = avg7!=null ? values[n-1]-avg7 : null;
+    return { labels, values, currentIndex: n-1, proyIndex: null, badge1, badge2, nomLM, nomU3M };
   }
 }
 
@@ -467,7 +519,7 @@ function buildKPIs(){
         <div class="kpi-label">${it.label}</div>
         <div class="kpi-big">${it.prefix}${fmt(current, it.dec)}${it.suffix}${s.proyIndex!=null ? ' <span style="font-size:12px; font-weight:400; color:var(--axis);">proy.</span>' : ''}</div>
         ${showReal ? `<div class="kpi-sub">Real a la fecha: ${it.prefix}${fmt(real, it.dec)}${it.suffix}</div>` : ""}
-        ${b1label ? `<div class="kpi-badges">${pctBadge(s.badge1,b1label)} ${pctBadge(s.badge2,b2label)}</div>` : ""}
+        ${b1label ? `<div class="kpi-badges">${pctBadge(s.badge1,b1label,fmtSignedFn(s.nomLM,v=>`${it.prefix}${fmt(v,it.dec)}${it.suffix}`))} ${pctBadge(s.badge2,b2label,fmtSignedFn(s.nomU3M,v=>`${it.prefix}${fmt(v,it.dec)}${it.suffix}`))}</div>` : ""}
       </div>`;
   }).join("");
 }
@@ -475,16 +527,19 @@ function buildKPIs(){
 function buildConsultasSeries(scope){
   const s = monthlySeries(scope, "consultas");
   if (currentPeriod === "mes"){
-    return { labels:[...D.meses_hist, D.mes_actual], values:[...s.hist, s.real+s.agendado], currentIndex:s.hist.length, proyIndex:s.hist.length, badge1:s.vsLM, badge2:s.vsU3M };
+    const proy = s.real+s.agendado;
+    return { labels:[...D.meses_hist, D.mes_actual], values:[...s.hist, proy], currentIndex:s.hist.length, proyIndex:s.hist.length, badge1:s.vsLM, badge2:s.vsU3M,
+      nomLM: proy - s.hist[6], nomU3M: proy - (s.hist[4]+s.hist[5]+s.hist[6])/3 };
   }
   if (currentPeriod === "trimestre"){
     const [e,f,m,a,my,j,jl] = s.hist;
     const Q1=e+f+m, Q2=a+my+j, Q3 = jl + s.real + s.agendado;
-    return { labels:["Q1","Q2","Q3"], values:[Q1,Q2,Q3], currentIndex:2, proyIndex:2, badge1:(Q3/Q2-1)*100, badge2:(Q3/((Q1+Q2)/2)-1)*100 };
+    return { labels:["Q1","Q2","Q3"], values:[Q1,Q2,Q3], currentIndex:2, proyIndex:2, badge1:(Q3/Q2-1)*100, badge2:(Q3/((Q1+Q2)/2)-1)*100,
+      nomLM: Q3-Q2, nomU3M: Q3-(Q1+Q2)/2 };
   }
   if (currentPeriod === "anio"){
     const ytd = sum(s.hist) + s.real + s.agendado;
-    return { labels:["2026 (YTD)"], values:[ytd], currentIndex:0, proyIndex:0, badge1:null, badge2:null };
+    return { labels:["2026 (YTD)"], values:[ytd], currentIndex:0, proyIndex:0, badge1:null, badge2:null, nomLM:null, nomU3M:null };
   }
   return buildFineGrain("consultas_real", scope);
 }
@@ -558,7 +613,7 @@ function buildEvolutivos(){
     }
     return `<div class="panel">
       <div class="panel-title">${title}</div>
-      <div class="panel-badges">${b1?pctBadge(series.badge1,b1):""} ${b2?pctBadge(series.badge2,b2):""}${extraBadge||""}</div>
+      <div class="panel-badges">${b1?pctBadge(series.badge1,b1,fmtSignedFn(series.nomLM,valueFmt)):""} ${b2?pctBadge(series.badge2,b2,fmtSignedFn(series.nomU3M,valueFmt)):""}${extraBadge||""}</div>
       <div class="chart-box"><canvas id="${id}"></canvas></div>
     </div>`;
   }
@@ -619,20 +674,34 @@ function drawConsultasChart(){
       scales:{ y:{ display:false, beginAtZero:true, grace:"20%", stacked:true }, x:{ grid:{ display:false }, stacked:true, ticks:{ font:{ size:11 } } } } },
   });
 }
+// Etiqueta que se dibuja al costado (a la derecha) de cada barra: valor +
+// % vs LM + nominal vs LM, todo junto — así no falta ninguna comparación en
+// ninguna categoría (todas las categorías del mes se traen del Sheet, sin
+// truncar a un top-N).
+function rankingBarLabel(r){
+  const v = `${fmt(r.valor,0)}`;
+  if (r.nuevo) return `${v} · Nuevo`;
+  if (r.vsLM === null || r.vsLM === undefined) return v;
+  const pctStr = `${r.vsLM>=0?'+':''}${r.vsLM}%`;
+  const nomStr = `${r.nomLM>=0?'+':''}${fmt(r.nomLM,0)}`;
+  return `${v} · ${pctStr} (${nomStr})`;
+}
 function drawRanking(){
   destroyChart("chart-ranking");
   const rows = D.consultas_ranking[currentScope];
-  const ctx = document.getElementById("chart-ranking").getContext("2d");
+  const canvas = document.getElementById("chart-ranking");
+  canvas.parentElement.style.height = `${Math.max(260, rows.length*32 + 30)}px`;
+  const ctx = canvas.getContext("2d");
   charts["chart-ranking"] = new Chart(ctx, {
     type:"bar",
-    data:{ labels: rows.map(r=>r.nombre), datasets:[{ data: rows.map(r=>r.valor), backgroundColor: rows.map((r,i)=> i===0 ? COLORS.red : COLORS.gray), borderRadius:4, maxBarThickness:20, _fmt:(v)=>`${fmt(v,0)}` }] },
+    data:{ labels: rows.map(r=>r.nombre), datasets:[{ data: rows.map(r=>r.valor), backgroundColor: rows.map((r,i)=> i===0 ? COLORS.red : COLORS.gray), borderRadius:4, maxBarThickness:20, _fmt:(v,i)=>rankingBarLabel(rows[i]) }] },
     options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:(c)=>{
         const r = rows[c.dataIndex];
-        const pct = r.nuevo ? "Nuevo" : (r.vsLM===null||r.vsLM===undefined ? "—" : `${r.vsLM>=0?'+':''}${r.vsLM}% vs LM`);
+        const pct = r.nuevo ? "Nuevo" : (r.vsLM===null||r.vsLM===undefined ? "—" : `${r.vsLM>=0?'+':''}${r.vsLM}% (${r.nomLM>=0?'+':''}${fmt(r.nomLM,0)}) vs LM`);
         return `${c.raw} — ${pct}`;
       }}}},
-      scales:{ x:{ display:false, beginAtZero:true, grace:"35%" }, y:{ grid:{ display:false }, ticks:{ font:{ size:11.5 } } } } },
+      scales:{ x:{ display:false, beginAtZero:true, grace:"70%" }, y:{ grid:{ display:false }, ticks:{ font:{ size:11.5 } } } } },
   });
 }
 function buildConsultas(){
@@ -656,12 +725,18 @@ function buildConsultas(){
     </div>
   `;
   const series = drawConsultasChart();
-  const badgeSeries = fine ? series : { badge1: (currentPeriod==='mes'?s.vsLM: currentPeriod==='trimestre'? null : null), badge2: null };
   const badgesEl = document.getElementById("consultas-badges");
+  const intFmt = v=>fmt(v,0);
   if (fine && series){
-    badgesEl.innerHTML = `${pctBadge(series.badge1,b1)} ${pctBadge(series.badge2,b2)}`;
+    badgesEl.innerHTML = `${pctBadge(series.badge1,b1,fmtSignedFn(series.nomLM,intFmt))} ${pctBadge(series.badge2,b2,fmtSignedFn(series.nomU3M,intFmt))}`;
   } else if (currentPeriod === "mes"){
-    badgesEl.innerHTML = `${pctBadge(s.vsLM,"vs LM")} ${pctBadge(s.vsU3M,"vs U3M")}`;
+    const proy = s.real+s.agendado;
+    const nomLM = proy - s.hist[6], nomU3M = proy - (s.hist[4]+s.hist[5]+s.hist[6])/3;
+    badgesEl.innerHTML = `${pctBadge(s.vsLM,"vs LM",fmtSignedFn(nomLM,intFmt))} ${pctBadge(s.vsU3M,"vs U3M",fmtSignedFn(nomU3M,intFmt))}`;
+  } else if (currentPeriod === "trimestre"){
+    const [e,f,m,a,my,j,jl] = s.hist;
+    const Q1=e+f+m, Q2=a+my+j, Q3=jl+s.real+s.agendado;
+    badgesEl.innerHTML = `${pctBadge((Q3/Q2-1)*100,"vs trim. anterior",fmtSignedFn(Q3-Q2,intFmt))} ${pctBadge((Q3/((Q1+Q2)/2)-1)*100,"vs prom. trim. cerrados",fmtSignedFn(Q3-(Q1+Q2)/2,intFmt))}`;
   } else {
     badgesEl.innerHTML = "";
   }
@@ -674,8 +749,10 @@ function buildServicios(){
   const hi = D.highlights[currentScope] || [];
   const el = document.getElementById("servicios-section");
   const rowsHtml = rows.map(r=>{
-    const lm = r.nuevo ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : pctBadge(r.vsLM,"").replace(": ","");
-    const u3m = (r.vsU3M===null || r.vsU3M===undefined) ? '<span style="color:var(--axis);">—</span>' : (r.nuevo ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : pctBadge(r.vsU3M,"").replace(": ",""));
+    const nomLMStr = fmtSignedFn(r.nomLM, v=>`$${fmt(v,1)}M`);
+    const nomU3MStr = fmtSignedFn(r.nomU3M, v=>`$${fmt(v,1)}M`);
+    const lm = r.nuevo ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : miniPct(r.vsLM, nomLMStr);
+    const u3m = (r.vsU3M===null || r.vsU3M===undefined) ? '<span style="color:var(--axis);">—</span>' : (r.nuevo ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : miniPct(r.vsU3M, nomU3MStr));
     const clickable = !!r.servKey;
     return `<tr class="${clickable?'servicio-row':''}" ${clickable?`data-servkey="${r.servKey}" data-nombre="${r.nombre}"`:''}>
       <td>${r.nombre}${clickable?' <span class="drill-hint">▸ ver conceptos</span>':''}</td>
@@ -799,29 +876,43 @@ function setupConceptModalHandlers(){
   document.addEventListener("keydown", (e)=>{ if (e.key === "Escape") closeConceptModal(); });
 }
 
-// ---------------------------------------------------------------- Subrogación (pacientes, agregado, siempre compañía)
+// ---------------------------------------------------------------- Subrogación (pacientes) — reacciona a Sede y Periodo
 function buildSubrogacion(){
   const el = document.getElementById("subrogacion-section");
-  const sub = D.subrogacion;
+  const subAll = D.subrogacion;
+  const sub = subAll && subAll[currentScope];
   if (!sub || !sub.labels || !sub.labels.length){
     el.innerHTML = `<div class="panel" style="grid-column:1 / -1;"><div class="unavailable" style="height:auto; padding:24px;">Datos de Subrogación no disponibles en este momento.</div></div>`;
     return;
   }
+  if (currentPeriod === "semana" || currentPeriod === "dia"){
+    el.innerHTML = `<div class="panel" style="grid-column:1 / -1;"><div class="unavailable" style="height:auto; padding:24px;">Subrogación no tiene datos día a día — cambia a Mes, Trimestre o Año.</div></div>`;
+    return;
+  }
   const val = sub.actual["Valoración"] || {pacientes:0, ingreso:0, ticket:0};
   const prog = sub.actual["Programa Activo"] || {pacientes:0, ingreso:0, ticket:0};
+  const statsVal = periodStats(sub.hist["Valoración"], val.pacientes, currentPeriod);
+  const statsProg = periodStats(sub.hist["Programa Activo"], prog.pacientes, currentPeriod);
+  const badgeVal = statsVal ? miniPct(statsVal.vsLM, fmtSignedFn(statsVal.nomLM, v=>fmt(v,0))) : '<span style="color:var(--axis);">—</span>';
+  const badgeProg = statsProg ? miniPct(statsProg.vsLM, fmtSignedFn(statsProg.nomLM, v=>fmt(v,0))) : '<span style="color:var(--axis);">—</span>';
+  const chartLabels = [...sub.labels, D.mes_actual];
+  const chartVal = [...sub.hist["Valoración"], val.pacientes];
+  const chartProg = [...sub.hist["Programa Activo"], prog.pacientes];
   el.innerHTML = `
     <div class="panel">
-      <div class="panel-title">Agosto — estado del pipeline</div>
+      <div class="panel-title">${D.mes_actual} — estado del pipeline (${PERIOD_LABELS[currentPeriod]})</div>
       <div class="patient-kpi-row">
         <div class="kpi-card">
           <div class="kpi-label">Valoración (candidatas)</div>
           <div class="kpi-big">${fmt(val.pacientes,0)}</div>
           <div class="kpi-sub">$${fmt(val.ingreso,0)} en valoraciones</div>
+          <div class="kpi-sub">${badgeVal}</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Programa activo</div>
           <div class="kpi-big">${fmt(prog.pacientes,0)}</div>
           <div class="kpi-sub">$${fmt(prog.ingreso,0)} · ticket prom. $${fmt(prog.ticket,0)}</div>
+          <div class="kpi-sub">${badgeProg}</div>
         </div>
       </div>
       <div class="patient-note">
@@ -836,7 +927,7 @@ function buildSubrogacion(){
       <div class="panel-title">Pacientes por mes y etapa</div>
       <table>
         <thead><tr><th>Mes</th><th class="num">Valoración</th><th class="num">Programa activo</th></tr></thead>
-        <tbody>${sub.labels.map((lbl,i)=>`<tr><td>${lbl}</td><td class="num">${sub.hist["Valoración"][i]}</td><td class="num">${sub.hist["Programa Activo"][i]}</td></tr>`).join("")}</tbody>
+        <tbody>${chartLabels.map((lbl,i)=>`<tr><td>${lbl}</td><td class="num">${chartVal[i]}</td><td class="num">${chartProg[i]}</td></tr>`).join("")}</tbody>
       </table>
     </div>
   `;
@@ -844,14 +935,71 @@ function buildSubrogacion(){
   const ctx = document.getElementById("chart-subrogacion").getContext("2d");
   charts["chart-subrogacion"] = new Chart(ctx, {
     type:"bar",
-    data:{ labels: sub.labels, datasets:[
-      { label:"Valoración", data: sub.hist["Valoración"], backgroundColor: COLORS.gray, borderRadius:4, maxBarThickness:26 },
-      { label:"Programa activo", data: sub.hist["Programa Activo"], backgroundColor: COLORS.red, borderRadius:4, maxBarThickness:26 },
+    data:{ labels: chartLabels, datasets:[
+      { label:"Valoración", data: chartVal, backgroundColor: COLORS.gray, borderRadius:4, maxBarThickness:26 },
+      { label:"Programa activo", data: chartProg, backgroundColor: COLORS.red, borderRadius:4, maxBarThickness:26 },
     ]},
     options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:10}},
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:12, font:{ size:11 } } } },
       scales:{ y:{ display:false, beginAtZero:true, grace:"20%" }, x:{ grid:{ display:false }, ticks:{ font:{ size:11 } } } } },
   });
+}
+
+// ---------------------------------------------------------------- Evolutivo por médico (Profesional Historia) — top 20 + Otros
+function buildMedicos(){
+  const el = document.getElementById("medicos-section");
+  const doctoresAll = D.doctores;
+  const doctores = doctoresAll && doctoresAll[currentScope];
+  if (!doctores || !Object.keys(doctores).length){
+    el.innerHTML = `<div class="panel" style="grid-column:1 / -1;"><div class="unavailable" style="height:auto; padding:24px;">Datos por médico no disponibles en este momento.</div></div>`;
+    return;
+  }
+  if (currentPeriod === "semana" || currentPeriod === "dia"){
+    el.innerHTML = `<div class="panel" style="grid-column:1 / -1;"><div class="unavailable" style="height:auto; padding:24px;">Evolutivo por médico no tiene datos día a día — cambia a Mes, Trimestre o Año.</div></div>`;
+    return;
+  }
+  const rows = Object.entries(doctores).map(([nombre, d])=>{
+    const ing = periodStats(d.ingreso.hist, d.ingreso.actual, currentPeriod);
+    const at = periodStats(d.atenciones.hist, d.atenciones.actual, currentPeriod);
+    const pac = periodStats(d.pacientes.hist, d.pacientes.actual, currentPeriod);
+    return { nombre, ing, at, pac };
+  }).filter(r => (r.ing && r.ing.current > 0) || (r.at && r.at.current > 0));
+  rows.sort((a,b)=> (b.ing?.current||0) - (a.ing?.current||0));
+  const top = rows.slice(0,20);
+  const rest = rows.slice(20);
+  function sumStat(list, key, field){
+    return list.reduce((s,r)=> s + (r[key] && r[key][field]!=null ? r[key][field] : 0), 0);
+  }
+  const otros = rest.length ? {
+    nombre: `Otros (${rest.length} médicos)`,
+    ing: { current: sumStat(rest,"ing","current"), vsLM: null, nomLM: null },
+    at: { current: sumStat(rest,"at","current"), vsLM: null, nomLM: null },
+    pac: { current: sumStat(rest,"pac","current"), vsLM: null, nomLM: null },
+  } : null;
+  function rowHtml(r, isOtros){
+    const ingBadge = (r.ing && r.ing.vsLM!=null) ? miniPct(r.ing.vsLM, fmtSignedFn(r.ing.nomLM, v=>`$${fmt(v,0)}`)) : '<span style="color:var(--axis);">—</span>';
+    const atBadge = (r.at && r.at.vsLM!=null) ? miniPct(r.at.vsLM, fmtSignedFn(r.at.nomLM, v=>fmt(v,0))) : '<span style="color:var(--axis);">—</span>';
+    const pacBadge = (r.pac && r.pac.vsLM!=null) ? miniPct(r.pac.vsLM, fmtSignedFn(r.pac.nomLM, v=>fmt(v,0))) : '<span style="color:var(--axis);">—</span>';
+    return `<tr style="${isOtros?'font-style:italic; color:var(--axis);':''}">
+      <td>${r.nombre}</td>
+      <td class="num">$${fmt(r.ing?.current||0,0)}</td><td class="num">${ingBadge}</td>
+      <td class="num">${fmt(r.at?.current||0,0)}</td><td class="num">${atBadge}</td>
+      <td class="num">${fmt(r.pac?.current||0,0)}</td><td class="num">${pacBadge}</td>
+    </tr>`;
+  }
+  const bodyRows = top.map(r=>rowHtml(r,false)).join("") + (otros ? rowHtml(otros, true) : "");
+  el.innerHTML = `
+    <div class="panel" style="grid-column:1 / -1;">
+      <div class="panel-title">Top 20 médicos por ingresos — ${PERIOD_LABELS[currentPeriod]}${currentPeriod==='anio'?' (acumulado, sin vs LM)':' (badge = vs LM)'}</div>
+      <div class="section-sub" style="margin:0 0 8px;">${rows.length} médicos con actividad en este filtro · el resto se agrupa en "Otros"</div>
+      <div class="scroll-table">
+        <table>
+          <thead><tr><th>Médico</th><th class="num">Ingresos</th><th class="num">vs LM</th><th class="num">Atenciones</th><th class="num">vs LM</th><th class="num">Pac. Únicos</th><th class="num">vs LM</th></tr></thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
 }
 
 // ---------------------------------------------------------------- HubSpot
@@ -936,6 +1084,7 @@ function renderAll(){
   buildSubrogacion();
   buildHubspotCharts();
   buildHubspotDetail();
+  buildMedicos();
 }
 
 (async function start(){
@@ -946,13 +1095,14 @@ function renderAll(){
     ["Atenciones/Pacientes/Consultas", window.DATA._liveOkOperativos, window.DATA._liveErrorOperativos],
     ["HubSpot", window.DATA._liveOkHubspot, window.DATA._liveErrorHubspot],
     ["Conceptos/Subrogación", window.DATA._liveOkConceptos, window.DATA._liveErrorConceptos],
+    ["Por médico", window.DATA._liveOkDoctores, window.DATA._liveErrorDoctores],
   ];
   const okCount = flags.filter(f => f[1]).length;
   if (okCount === flags.length) {
     banner.style.display = "block";
     banner.style.background = "#ECFDF5";
     banner.style.color = "#065F46";
-    banner.textContent = "✓ Ingresos, Servicios, Atenciones, Pacientes, Consultas, HubSpot, Conceptos y Subrogación cargados en vivo desde Google Sheets.";
+    banner.textContent = "✓ Ingresos, Servicios, Atenciones, Pacientes, Consultas, HubSpot, Conceptos, Subrogación y Por médico cargados en vivo desde Google Sheets.";
     setTimeout(() => { banner.style.display = "none"; }, 4000);
   } else if (okCount > 0) {
     banner.style.display = "block";

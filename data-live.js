@@ -61,10 +61,6 @@ const SERVICIO_LABEL = {
 };
 const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul"];
 
-function num(v) {
-  return Number(String(v ?? "").replace(/[^0-9.-]/g, "")) || 0;
-}
-
 // El mes vigente (agosto) ya cerró (llegó a su último día): Real = cierre
 // final, no queda ningún día pendiente que proyectar para Atenciones ni
 // Pacientes Únicos (Ingresos y Consultas ya reflejan esto solos, porque su
@@ -72,6 +68,10 @@ function num(v) {
 // próximo corte, en cuanto vuelva a haber un mes en curso con días por
 // transcurrir.
 const MES_VIGENTE_CERRADO = true;
+
+function num(v) {
+  return Number(String(v ?? "").replace(/[^0-9.-]/g, "")) || 0;
+}
 
 // Como num(), pero celda vacía -> null (en vez de 0). Se usa para Metas: una
 // celda vacía significa "todavía no se captura la meta de ese mes", no "meta
@@ -142,12 +142,15 @@ async function fetchLiveIngresos() {
       companyByServ[serv].u3m += (s.m5+s.m6+s.m7)/3;
       companyByServ[serv].proy += s.proy;
       if (s.proy > 0 || s.m8 > 0) {
+        const servU3M = (s.m5+s.m6+s.m7)/3;
         servRows.push({
           nombre: SERVICIO_LABEL[serv],
           servKey: serv,
           valor: Math.round((s.proy/1e6)*10)/10,
           vsLM: pctOrNull(s.proy, s.m7),
-          vsU3M: pctOrNull(s.proy, (s.m5+s.m6+s.m7)/3),
+          vsU3M: pctOrNull(s.proy, servU3M),
+          nomLM: Math.round(((s.proy - s.m7)/1e6)*100)/100,
+          nomU3M: Math.round(((s.proy - servU3M)/1e6)*100)/100,
           nuevo: s.m7 === 0,
         });
       }
@@ -163,6 +166,8 @@ async function fetchLiveIngresos() {
         proy: Math.round((proy8/1e6)*10)/10,
         vsLM: pctOrNull(proy8, jul),
         vsU3M: pctOrNull(proy8, u3m),
+        nomLM: Math.round(((proy8 - jul)/1e6)*10)/10,
+        nomU3M: Math.round(((proy8 - u3m)/1e6)*10)/10,
       },
     };
   }
@@ -182,6 +187,8 @@ async function fetchLiveIngresos() {
     proy: Math.round(proy8Total*10)/10,
     vsLM: pctOrNull(proy8Total, julTotal),
     vsU3M: pctOrNull(proy8Total, u3mTotal),
+    nomLM: Math.round((proy8Total-julTotal)*10)/10,
+    nomU3M: Math.round((proy8Total-u3mTotal)*10)/10,
     nota: `$${(proy8Total-julTotal).toFixed(1)}M vs LM, $${(proy8Total-u3mTotal).toFixed(1)}M vs U3M`,
   };
 
@@ -194,6 +201,8 @@ async function fetchLiveIngresos() {
         valor: Math.round((c.proy/1e6)*10)/10,
         vsLM: pctOrNull(c.proy, c.jul),
         vsU3M: pctOrNull(c.proy, c.u3m),
+        nomLM: Math.round(((c.proy - c.jul)/1e6)*100)/100,
+        nomU3M: Math.round(((c.proy - c.u3m)/1e6)*100)/100,
         nuevo: c.jul === 0,
       });
     }
@@ -292,18 +301,26 @@ function buildConsultasMetric(rows) {
 }
 
 /**
- * ConsultasRanking: filas [Sede, Categoria, Valor, VsLM]. Sede ya viene como
- * "total"/"CDMX"/"GDL"/"MTP" (coincide con las llaves de currentScope) y el
- * orden de las filas ya viene de mayor a menor valor.
+ * ConsultasRanking: filas [Sede, Categoria, Ago, Jul]. Sede ya viene como
+ * "total"/"CDMX"/"GDL"/"MTP" (coincide con las llaves de currentScope).
+ * Categoria = Concepto de agenda tal cual (sin agrupar) para no dejar fuera
+ * ninguna categoría real. vs LM y el nominal se calculan aquí mismo a partir
+ * de Ago y Jul (Jul=0 -> "Nuevo", sin vs LM). Se ordena de mayor a menor Ago.
  */
 function buildConsultasRanking(rows) {
   const out = { total: [], CDMX: [], GDL: [], MTP: [] };
-  for (const [scope, nombre, valorRaw, vsLMRaw] of rows) {
+  for (const [scope, nombre, agoRaw, julRaw] of rows) {
     if (!out[scope]) continue;
-    const vsLMStr = String(vsLMRaw ?? "").trim();
-    const nuevo = vsLMStr === "";
-    out[scope].push({ nombre, valor: num(valorRaw), vsLM: nuevo ? null : Math.round(num(vsLMRaw)), ...(nuevo ? { nuevo: true } : {}) });
+    const ago = num(agoRaw), jul = num(julRaw);
+    const nuevo = jul === 0;
+    out[scope].push({
+      nombre, valor: ago, valorLM: jul,
+      vsLM: nuevo ? null : pctOrNull(ago, jul),
+      nomLM: ago - jul,
+      ...(nuevo ? { nuevo: true } : {}),
+    });
   }
+  for (const scope of Object.keys(out)) out[scope].sort((a, b) => b.valor - a.valor);
   return out;
 }
 
@@ -447,13 +464,16 @@ async function fetchLiveHubspot() {
   (nunca promediando porcentajes). El dashboard usa esto para armar el
   drill-down dinámico al hacer clic en un servicio de "Mezcla de servicios".
 
-  "SubrogacionPacientes" trae, mes a mes, cuántos PACIENTES (sin nombres —
-  solo el conteo) pasaron por cada etapa del embudo de Subrogación:
+  "SubrogacionPacientes" trae, mes a mes y por sede, cuántos PACIENTES (sin
+  nombres — solo el conteo) pasaron por cada etapa del embudo de Subrogación:
   "Valoración" (candidatas gestantes que se hacen la valoración médica) y
   "Programa Activo" (padres intencionales con un paquete de subrogación
   contratado). Son dos poblaciones de personas distintas, no una tasa de
   conversión de la misma persona — el dashboard lo aclara en el texto.
-  Filas: [MesNum, MesLabel, Etapa, Pacientes, Ingreso, TicketProm].
+  Filas: [MesNum, MesLabel, Sede, Etapa, Pacientes, Ingreso] — Sede en
+  códigos CDMX/GDL/MTP (Subrogación es ~100% CDMX, pero se guarda por sede
+  para que el filtro de Sede funcione igual que en el resto del dashboard;
+  el ticket promedio se calcula aquí mismo, no se guarda en el Sheet).
   ============================================================================
 */
 
@@ -476,32 +496,54 @@ function buildConceptosMetric(rows) {
 
 const SUBROGACION_ETAPAS = ["Valoración", "Programa Activo"];
 
-function buildSubrogacionMetric(rows) {
+/**
+ * Arma la métrica de Subrogación para UN scope (total/CDMX/GDL/MTP), con los
+ * 8 meses (Ene-Ago) siempre presentes (rellenando con 0 los que no traigan
+ * fila) para que el filtro de Sede nunca rompa la alineación de meses aunque
+ * una sede no tenga nada ese mes (ej. GDL/MTP la mayoría de meses).
+ */
+function buildSubrogacionForScope(rows, scope) {
   const byMes = {};
-  for (const [mesNumRaw, mesLabel, etapa, pacientesRaw, ingresoRaw, ticketRaw] of rows) {
+  for (let m = 1; m <= 8; m++) {
+    byMes[m] = { "Valoración": { pacientes: 0, ingreso: 0 }, "Programa Activo": { pacientes: 0, ingreso: 0 } };
+  }
+  for (const [mesNumRaw, , sede, etapa, pacientesRaw, ingresoRaw] of rows) {
+    if (scope !== "total" && sede !== scope) continue;
     const mesNum = Number(mesNumRaw);
-    byMes[mesNum] = byMes[mesNum] || { mesLabel };
-    byMes[mesNum][etapa] = { pacientes: num(pacientesRaw), ingreso: num(ingresoRaw), ticket: num(ticketRaw) };
+    if (!byMes[mesNum] || !SUBROGACION_ETAPAS.includes(etapa)) continue;
+    byMes[mesNum][etapa].pacientes += num(pacientesRaw);
+    byMes[mesNum][etapa].ingreso += num(ingresoRaw);
   }
-  const meses = Object.keys(byMes).map(Number).sort((a, b) => a - b);
   const hist = {};
-  for (const etapa of SUBROGACION_ETAPAS) {
-    hist[etapa] = meses.map(m => (byMes[m][etapa] && byMes[m][etapa].pacientes) || 0);
-  }
-  const mesActual = meses[meses.length - 1];
+  for (const etapa of SUBROGACION_ETAPAS) hist[etapa] = [1,2,3,4,5,6,7].map(m => byMes[m][etapa].pacientes);
   const actual = {};
   for (const etapa of SUBROGACION_ETAPAS) {
-    actual[etapa] = byMes[mesActual][etapa] || { pacientes: 0, ingreso: 0, ticket: 0 };
+    const a = byMes[8][etapa];
+    actual[etapa] = { pacientes: a.pacientes, ingreso: a.ingreso, ticket: a.pacientes ? Math.round(a.ingreso / a.pacientes) : 0 };
   }
+  const totalPacientesYTD = {}, ingresoYTDByEtapa = {};
+  let ingresoYTD = 0;
+  for (const etapa of SUBROGACION_ETAPAS) {
+    totalPacientesYTD[etapa] = hist[etapa].reduce((a,b)=>a+b,0) + actual[etapa].pacientes;
+    const ingEtapa = [1,2,3,4,5,6,7,8].reduce((a,m)=>a+byMes[m][etapa].ingreso, 0);
+    ingresoYTDByEtapa[etapa] = ingEtapa;
+    ingresoYTD += ingEtapa;
+  }
+  return { labels: MESES, hist, actual, totalPacientesYTD, ingresoYTD, byMes };
+}
+
+// El cálculo de vs LM / vs U3M / nominal por periodo para Subrogación se
+// hace en index.html con el helper genérico periodStats(hist, actual,
+// periodo) — mismo patrón que usa la nueva sección "Evolutivo por médico" —
+// ya que sub.hist[etapa] (7 valores) + sub.actual[etapa].pacientes tienen
+// exactamente esa forma.
+
+function buildSubrogacionMetric(rows) {
   return {
-    labels: meses.map(m => byMes[m].mesLabel),
-    hist,
-    actual,
-    totalPacientesYTD: {
-      "Valoración": meses.reduce((a, m) => a + ((byMes[m]["Valoración"] && byMes[m]["Valoración"].pacientes) || 0), 0),
-      "Programa Activo": meses.reduce((a, m) => a + ((byMes[m]["Programa Activo"] && byMes[m]["Programa Activo"].pacientes) || 0), 0),
-    },
-    ingresoYTD: meses.reduce((a, m) => a + SUBROGACION_ETAPAS.reduce((b, e) => b + ((byMes[m][e] && byMes[m][e].ingreso) || 0), 0), 0),
+    total: buildSubrogacionForScope(rows, "total"),
+    CDMX: buildSubrogacionForScope(rows, "CDMX"),
+    GDL: buildSubrogacionForScope(rows, "GDL"),
+    MTP: buildSubrogacionForScope(rows, "MTP"),
   };
 }
 
@@ -514,6 +556,57 @@ async function fetchLiveConceptosYSubrogacion() {
     conceptos: buildConceptosMetric(concRows),
     subrogacion: buildSubrogacionMetric(subRows),
   };
+}
+
+/*
+  ============================================================================
+  CARGA EN VIVO POR MÉDICO (Profesional Historia)
+  ============================================================================
+  "PorMedico" trae, mes a mes, sede y médico ("Profesional Historia" del
+  archivo de cargos — misma fuente y misma definición de línea de cargo =
+  atención, Historia = paciente, que Ingresos/Atenciones/Pacientes Únicos),
+  cuánto ingreso, cuántas atenciones y cuántos pacientes únicos generó cada
+  médico ese mes. Filas: [Sede, Profesional, MesNum, MesLabel, Ingreso,
+  Atenciones, Pacientes]. El scope "total" se arma sumando, para el mismo
+  nombre de médico, sus 3 posibles sedes (igual criterio que Pacientes
+  Únicos total: suma simple, no dedup de paciente cruzando sede).
+  ============================================================================
+*/
+
+function buildDoctoresMetric(rows) {
+  const bySedeDoc = {};
+  for (const [sede, prof, mesNumRaw, , ingresoRaw, atRaw, pacRaw] of rows) {
+    if (!SEDES.includes(sede) || !prof) continue;
+    const mesNum = Number(mesNumRaw);
+    if (mesNum < 1 || mesNum > 8) continue;
+    const key = sede + "||" + prof;
+    bySedeDoc[key] = bySedeDoc[key] || { sede, prof, ingreso: Array(8).fill(0), atenciones: Array(8).fill(0), pacientes: Array(8).fill(0) };
+    bySedeDoc[key].ingreso[mesNum-1] += num(ingresoRaw);
+    bySedeDoc[key].atenciones[mesNum-1] += num(atRaw);
+    bySedeDoc[key].pacientes[mesNum-1] += num(pacRaw);
+  }
+  function mk(){ return { ingreso:{hist:Array(7).fill(0),actual:0}, atenciones:{hist:Array(7).fill(0),actual:0}, pacientes:{hist:Array(7).fill(0),actual:0} }; }
+  const out = { total: {}, CDMX: {}, GDL: {}, MTP: {} };
+  for (const key of Object.keys(bySedeDoc)) {
+    const d = bySedeDoc[key];
+    const entry = {
+      ingreso: { hist: d.ingreso.slice(0,7).map(v=>Math.round(v)), actual: Math.round(d.ingreso[7]) },
+      atenciones: { hist: d.atenciones.slice(0,7), actual: d.atenciones[7] },
+      pacientes: { hist: d.pacientes.slice(0,7), actual: d.pacientes[7] },
+    };
+    out[d.sede][d.prof] = entry;
+    out.total[d.prof] = out.total[d.prof] || mk();
+    for (const metric of ["ingreso","atenciones","pacientes"]) {
+      for (let i=0;i<7;i++) out.total[d.prof][metric].hist[i] += entry[metric].hist[i];
+      out.total[d.prof][metric].actual += entry[metric].actual;
+    }
+  }
+  return out;
+}
+
+async function fetchLiveDoctores() {
+  const rows = await fetchSheetJson("PorMedico");
+  return buildDoctoresMetric(rows);
 }
 
 /**
@@ -572,6 +665,15 @@ async function loadLiveDataIntoDashboard() {
     window.DATA._liveOkConceptos = false;
     window.DATA._liveErrorConceptos = String(e.message || e);
     console.warn("No se pudo cargar Conceptos/Subrogación en vivo desde Sheets, usando último valor guardado:", e);
+  }
+
+  try {
+    window.DATA.doctores = await fetchLiveDoctores();
+    window.DATA._liveOkDoctores = true;
+  } catch (e) {
+    window.DATA._liveOkDoctores = false;
+    window.DATA._liveErrorDoctores = String(e.message || e);
+    console.warn("No se pudo cargar Por médico en vivo desde Sheets:", e);
   }
 
   // Metas es opcional (hoja nueva, se llena poco a poco por sede/mes): si

@@ -212,26 +212,45 @@ window.DATA = {
   },
 
   // ------------------------------------------------------------------------
-  // SUBROGACIÓN — pacientes por etapa (agregado, sin nombres). ESTOS VALORES
-  // YA SE CARGAN EN VIVO (ver data-live.js y la hoja "SubrogacionPacientes"
-  // del Sheet) — lo de aquí es solo el respaldo si el fetch en vivo falla.
-  // "Valoración" = candidatas gestantes evaluadas; "Programa Activo" =
-  // padres intencionales con paquete contratado — son poblaciones distintas.
-  // Corte de este respaldo: 30-ago-2026.
+  // SUBROGACIÓN — pacientes por etapa (agregado, sin nombres), por sede.
+  // ESTOS VALORES YA SE CARGAN EN VIVO (ver data-live.js y la hoja
+  // "SubrogacionPacientes" del Sheet) — lo de aquí es solo el respaldo si el
+  // fetch en vivo falla. "Valoración" = candidatas gestantes evaluadas;
+  // "Programa Activo" = padres intencionales con paquete contratado — son
+  // poblaciones distintas. Forma nueva: {total, CDMX, GDL, MTP}, cada una con
+  // hist de 7 meses (Ene-Jul; Ago vive aparte en "actual") — igual forma que
+  // arma buildSubrogacionForScope() en data-live.js, para que el filtro de
+  // Sede no rompa aunque el fetch en vivo falle. Subrogación es ~100% CDMX,
+  // así que este respaldo estático replica el total en CDMX y deja GDL/MTP
+  // en cero (el live fetch trae el desglose real por sede). Corte: 30-ago-2026.
   // ------------------------------------------------------------------------
-  subrogacion: {
-    labels: ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago"],
-    hist: {
-      "Valoración":      [16, 4, 0, 4, 11, 4, 3, 3],
-      "Programa Activo": [0, 2, 0, 1, 1, 2, 3, 6],
-    },
-    actual: {
-      "Valoración":      { pacientes: 3, ingreso: 2844.82, ticket: 948.27 },
-      "Programa Activo": { pacientes: 6, ingreso: 1460258.98, ticket: 243376.50 },
-    },
-    totalPacientesYTD: { "Valoración": 45, "Programa Activo": 15 },
-    ingresoYTD: 3230474.36,
-  },
+  subrogacion: (function(){
+    const labels = ["Ene","Feb","Mar","Abr","May","Jun","Jul"];
+    const cdmx = {
+      labels,
+      hist: {
+        "Valoración":      [16, 4, 0, 4, 11, 4, 3],
+        "Programa Activo": [0, 2, 0, 1, 1, 2, 3],
+      },
+      actual: {
+        "Valoración":      { pacientes: 3, ingreso: 2844.82, ticket: 948.27 },
+        "Programa Activo": { pacientes: 6, ingreso: 1460258.98, ticket: 243376.50 },
+      },
+      totalPacientesYTD: { "Valoración": 45, "Programa Activo": 15 },
+      ingresoYTD: 3230474.36,
+    };
+    const vacio = {
+      labels,
+      hist: { "Valoración": [0,0,0,0,0,0,0], "Programa Activo": [0,0,0,0,0,0,0] },
+      actual: {
+        "Valoración":      { pacientes: 0, ingreso: 0, ticket: 0 },
+        "Programa Activo": { pacientes: 0, ingreso: 0, ticket: 0 },
+      },
+      totalPacientesYTD: { "Valoración": 0, "Programa Activo": 0 },
+      ingresoYTD: 0,
+    };
+    return { total: cdmx, CDMX: cdmx, GDL: vacio, MTP: vacio };
+  })(),
 
   // ------------------------------------------------------------------------
   // CONCEPTOS — desglose por línea de cargo dentro de cada servicio, usado
