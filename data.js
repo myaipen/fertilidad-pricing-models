@@ -25,7 +25,7 @@ window.DATA = {
   // Atenciones, Pacientes y Consultas ya vienen en vivo desde el Sheet (ver
   // sección 0 del README); HubSpot y Highlights siguen siendo manuales aquí
   // y quedan al corte que se indica abajo hasta que también se automaticen.
-  corte: "30-ago-2026",
+  corte: "31-ago-2026",
   meses_hist: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul"],
   mes_actual: "Ago",
 
@@ -126,23 +126,23 @@ window.DATA = {
   // ------------------------------------------------------------------------
   highlights: {
     total: [
-      "Ingresos: $14.6M proy., +22% vs LM. Pipeline CDMX: FIV +$238k, Laboratorio +$506k.",
-      "Laboratorio (+42%): FI +32%/día y Clínico +23%/día; Externo cae -26%/día. CDMX: $506k pipeline sin detalle (validar).",
-      "Metepec: +63% vs LM — Laboratorio FI (PGT-A) +$153k impulsa el mes; Farmacia -$56k y Procedimientos -$7k por pipeline conocido.",
-      "Guadalajara: +51% vs LM — motor Congelación (+188%/día); Donación cae a $0 (vs $94.8k jul, 5 casos) — validar agenda.",
-      "Subrogación (CDMX): $1.3M, +135% vs LM — 7 casos en agosto, liderados por 1 paquete Frozen Donor ($546k) + 3 All Inclusive.",
+      "Ingresos: $16.2M al cierre de agosto (mes cerrado, Real = Proyectado), +35% vs LM, +32% vs U3M.",
+      "Laboratorio ($2.36M, +22% vs LM): Laboratorio FI +31% ($1.73M) es el motor; Laboratorio Clínico +7% ($605k); Laboratorio Externo -31% ($29k).",
+      "Subrogación: $1.46M, +167% vs LM — 100% CDMX. All Inclusive Package $819k (+51%) + 2 paquetes nuevos: Integrated Frozen Donor $546k y Essentials $95k.",
+      "Metepec: +82% vs LM — Laboratorio (+210%) y Congelación son el motor, aunque sobre base pequeña (sede chica).",
+      "Reclasificación de este corte: ~$218k de Donación de óvulos/esperma (CDMX) que caían en Congelación se movieron a Tratamientos FIV/ICSI — ya reflejado en los números de arriba.",
     ],
     CDMX: [
-      "Donación: $418k en agosto (4 casos; 2 óvulos FI de alto ticket: $250k y $146.5k) vs $22k en julio — validar recurrencia antes de proyectar a septiembre.",
-      "Inseminación Intrauterina (IIU): -26%/día vs LM — única subclasificación en descenso sostenido dentro de Laboratorio/FIV; dar seguimiento.",
+      "Donación (dentro de FIV/ICSI): $511k en agosto vs $22k en julio. Incluye ~$218k reclasificados este corte (antes en Congelación) — validar cuánto del resto es recurrente antes de proyectar septiembre.",
+      "Inseminación Intrauterina (IIU): $37k, -42% vs LM — única subclasificación en descenso sostenido dentro de FIV/ICSI; dar seguimiento.",
     ],
     GDL: [
-      "Donación de esperma: $0 en agosto vs $94.8k en julio (5 casos) — el servicio se detuvo por completo; investigar agenda y disponibilidad de donantes.",
-      "FIV/ICSI (+266%/día) y Congelación (+188%/día) son el motor del mes — validar que la capacidad de laboratorio soporte el ritmo.",
+      "FIV/ICSI (+118% vs LM, $0.7M) y Congelación (+209% vs LM, $0.7M) son el motor del mes — validar que la capacidad de laboratorio soporte el ritmo.",
+      "Laboratorio +35% vs LM ($0.6M) — segundo motor de crecimiento de la sede.",
     ],
     MTP: [
-      "Laboratorio FI (PGT-A) +$153k/día impulsa Laboratorio +172% vs LM — principal motor de crecimiento de la sede.",
-      "Laboratorio Clínico cae -39%/día y Externo -28%/día vs LM — volumen aún bajo (sede pequeña) pero tendencia a vigilar.",
+      "Laboratorio ($0.2M, +210% vs LM) es el principal motor de la sede — volumen aún bajo (sede pequeña) pero tendencia sostenida.",
+      "Congelación de Gametos +1358% vs LM — salto por base casi nula en julio; validar si es recurrente antes de proyectar.",
     ],
   },
 
@@ -187,27 +187,27 @@ window.DATA = {
   // Fecha_CitaAgendada_Int2. ESTOS VALORES YA SE CARGAN EN VIVO (ver
   // data-live.js y la hoja "Hubspot"/"HubspotSede"/"HubspotCohortes" del
   // Sheet) — lo de aquí es solo el respaldo si el fetch en vivo falla.
-  // Corte de este respaldo: 24-ago-2026.
+  // Corte de este respaldo: 31-ago-2026 (mes cerrado).
   // ------------------------------------------------------------------------
   hubspot: {
-    leads: { hist: [837, 1068, 1023, 1015, 1759, 1438, 1539], actual: 1531 },
-    citas: { hist: [178, 220, 316, 330, 362, 310, 407], actual: 380 },
-    conversion_pct: { hist: [21, 21, 31, 33, 21, 22, 26], actual: 25 },
+    leads: { hist: [836, 1068, 1023, 1015, 1759, 1438, 1538], actual: 1958 },
+    citas: { hist: [188, 230, 319, 334, 367, 314, 415], actual: 482 },
+    conversion_pct: { hist: [22, 22, 31, 33, 21, 22, 27], actual: 25 },
     conversion_por_sede: {
-      // Agosto (parcial, corte 24-ago) vs Total acumulado 2026
-      CDMX: { agosto: 25, total2026: 28 },
-      GDL: { agosto: 21, total2026: 20 },
-      MTP: { agosto: 33, total2026: 30 },
+      // Agosto (cerrado) vs Total acumulado 2026
+      CDMX: { agosto: 23, total2026: 28 },
+      GDL: { agosto: 23, total2026: 21 },
+      MTP: { agosto: 34, total2026: 30 },
     },
     cohortes: [
-      { mes: "Ene-26", leads: 837, m0: 21, m1: 1, m2: 1, sin: 76 },
-      { mes: "Feb-26", leads: 1068, m0: 19, m1: 2, m2: 0, sin: 78 },
+      { mes: "Ene-26", leads: 836, m0: 21, m1: 1, m2: 1, sin: 77 },
+      { mes: "Feb-26", leads: 1068, m0: 19, m1: 2, m2: 0, sin: 79 },
       { mes: "Mar-26", leads: 1023, m0: 28, m1: 1, m2: 1, sin: 70 },
-      { mes: "Abr-26", leads: 1015, m0: 31, m1: 3, m2: 0, sin: 66 },
-      { mes: "May-26", leads: 1759, m0: 19, m1: 1, m2: 1, sin: 80 },
+      { mes: "Abr-26", leads: 1015, m0: 31, m1: 3, m2: 1, sin: 65 },
+      { mes: "May-26", leads: 1759, m0: 19, m1: 1, m2: 1, sin: 79 },
       { mes: "Jun-26", leads: 1438, m0: 20, m1: 2, m2: 0, sin: 78 },
-      { mes: "Jul-26", leads: 1539, m0: 24, m1: 2, m2: 0, sin: 74 },
-      { mes: "Ago-26", leads: 1531, m0: 22, m1: 0, m2: 0, sin: 78 },
+      { mes: "Jul-26", leads: 1538, m0: 24, m1: 2, m2: 0, sin: 74 },
+      { mes: "Ago-26", leads: 1958, m0: 22, m1: 0, m2: 0, sin: 78 },
     ],
   },
 
