@@ -980,7 +980,7 @@ function drawMiniMonthBarChart(canvasId, values, valueFmt){
   const bg = values.map((_,i)=> i === values.length-1 ? COLORS.blue : COLORS.gray);
   charts[canvasId] = new Chart(canvas.getContext("2d"), {
     type:"bar",
-    data:{ labels: MESES_8, datasets:[{ data: values, backgroundColor: bg, borderRadius:4, maxBarThickness:22 }] },
+    data:{ labels: MESES_8, datasets:[{ data: values, backgroundColor: bg, borderRadius:4, maxBarThickness:22, _fmt: valueFmt }] },
     options:{
       responsive:true, maintainAspectRatio:false,
       layout:{ padding:{ top:18 } },
