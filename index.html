@@ -148,7 +148,7 @@
   <p class="section-sub">Ingresos proyectados por servicio (MDP) del mes en curso — no varía con el filtro de Periodo, sí con Sede</p>
   <div class="grid-2" id="servicios-section"></div>
 
-  <div class="section-title">HubSpot — Leads y conversión</div>
+  <div class="section-title">HubSpot — Deals y conversión</div>
   <p class="section-sub">Pipeline "Interesa2" · compañía completa (no varía con el filtro de Sede) · reacciona al filtro de Periodo</p>
   <div class="grid-3" id="hubspot-charts"></div>
   <div class="grid-2" id="hubspot-detail" style="margin-top:16px;"></div>
@@ -1140,7 +1140,7 @@ function buildMedicos(){
 function buildHubspotCharts(){
   const el = document.getElementById("hubspot-charts");
   el.innerHTML = `
-    <div class="panel"><div class="panel-title">Leads — ${PERIOD_LABELS[currentPeriod]}</div><div class="chart-box"><canvas id="chart-leads"></canvas></div></div>
+    <div class="panel"><div class="panel-title">Deals — ${PERIOD_LABELS[currentPeriod]}</div><div class="chart-box"><canvas id="chart-leads"></canvas></div></div>
     <div class="panel"><div class="panel-title">Citas agendadas — ${PERIOD_LABELS[currentPeriod]}</div><div class="chart-box"><canvas id="chart-citas"></canvas></div></div>
     <div class="panel"><div class="panel-title">Conversión % — ${PERIOD_LABELS[currentPeriod]}</div><div class="chart-box"><canvas id="chart-conv"></canvas></div></div>
   `;
@@ -1176,11 +1176,11 @@ function buildHubspotDetail(){
     <div class="panel">
       <div class="panel-title">Conversión % por sede — agosto vs. total 2026</div>
       <table><thead><tr><th>Sede</th><th class="num">Agosto</th><th class="num">Total 2026</th><th class="num">Diferencia</th></tr></thead><tbody>${rows}</tbody></table>
-      <div style="font-size:11px; color:var(--axis); margin-top:8px; font-style:italic;">Fijo por sede (no cambia con el filtro de Periodo). Agosto es parcial: leads recientes aún no completan su ventana de conversión.</div>
+      <div style="font-size:11px; color:var(--axis); margin-top:8px; font-style:italic;">Fijo por sede (no cambia con el filtro de Periodo). Agosto es parcial: deals recientes aún no completan su ventana de conversión.</div>
     </div>
     <div class="panel">
-      <div class="panel-title">Cohortes de leads: ¿cuántos meses después agenda cita?</div>
-      <table><thead><tr><th>Mes</th><th class="num">Leads</th><th class="num">+0</th><th class="num">+1</th><th class="num">+2 o más</th><th class="num">Sin cita</th></tr></thead><tbody>${cohRows}</tbody></table>
+      <div class="panel-title">Cohortes de deals: ¿cuántos meses después agenda cita?</div>
+      <table><thead><tr><th>Mes</th><th class="num">Deals</th><th class="num">+0</th><th class="num">+1</th><th class="num">+2 o más</th><th class="num">Sin cita</th></tr></thead><tbody>${cohRows}</tbody></table>
     </div>
   `;
 }
@@ -1205,7 +1205,7 @@ function buildHeader(){
   document.getElementById("page-footnote").innerHTML =
     `*Ingresos, Atenciones y Pacientes Únicos: los tres se cuentan desde el mismo archivo de cargos (línea de cargo = atención, fecha = F. Cargo), igual que Consultas desde el sistema de agenda. La proyección de Atenciones a cierre de mes usa el ratio real/agenda ya validado por sede (CDMX 1.16×, GDL 1.19×, MTP 1.26×) aplicado sobre el real acumulado del mes; Semana/Día muestran solo lo real (sin proyección). ` +
     `vs LM/vs U3M (mes), vs trimestre/vs U3M (trimestre), vs semana/4 semanas y vs día/7 días son siempre "periodo actual ÷ periodo(s) de comparación − 1". ` +
-    `HubSpot: pipeline "Interesa2", leads por fecha de creación, citas por fecha de cita agendada; siempre a nivel compañía.`;
+    `HubSpot: pipeline "Interesa2", deals por fecha de creación, citas por fecha de cita agendada; siempre a nivel compañía.`;
 }
 
 function renderAll(){
