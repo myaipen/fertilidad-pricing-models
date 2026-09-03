@@ -83,10 +83,12 @@
   .concept-crumb:hover{ text-decoration:underline !important; }
   .concept-back{ display:inline-block; }
   .concept-back:hover{ text-decoration:underline; }
-  .concept-detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0 4px; }
+  .concept-detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:14px 0 10px; }
   @media (max-width:520px){ .concept-detail-grid{ grid-template-columns:1fr; } }
-  .concept-detail-box{ position:relative; height:130px; }
+  .concept-detail-box{ position:relative; height:160px; }
   .concept-detail-title{ font-weight:700; font-size:12px; color:var(--axis); margin-bottom:4px; }
+  .concept-doctors-title{ font-weight:700; font-size:13px; color:var(--text); margin:16px 0 2px; }
+  .concept-doctors-sub{ font-size:11px; color:var(--axis); font-style:italic; margin-bottom:6px; }
 
   .modal-overlay{
     display:none; position:fixed; inset:0; background:rgba(31,41,55,.45); z-index:1000;
@@ -912,37 +914,63 @@ function renderConceptModalLevel(){
 // cargado desde la hoja "ConceptosMensual"). Ago/Jul de Ingresos ya vienen
 // pisados con el valor validado de "Conceptos" desde data-live.js, así que
 // coinciden exactamente con lo que se ve en la fila de la tabla.
+// Ingresos siempre se muestran en miles de pesos (K) en esta vista — los
+// montos MXN de un solo concepto ya caben cómodos en K y así el número no
+// se corta arriba de la barra más alta.
+function fmtKPesos(v){ return `$${fmt(Math.round((v||0)/1000),0)}K`; }
+
 function renderConceptDetailHtml(concepto, showUds){
   const row = conceptModalRows.find(r => r.concepto === concepto);
   const series = D.conceptosMensual && D.conceptosMensual[currentScope] && D.conceptosMensual[currentScope][concepto];
 
   const summaryHtml = row
-    ? `<div style="font-size:12px; color:var(--axis); margin-bottom:6px;">Mes vigente: <b style="color:var(--text);">$${fmt(row.ago,0)}</b> · vs LM ${conceptVsLMHtml(row.ago,row.jul)} · ${fmt(row.count||0,0)} atenciones${showUds?` · ${fmt(row.uds||0,0)} UDS`:''}</div>`
+    ? `<div style="font-size:12px; color:var(--axis); margin-bottom:6px;">Mes vigente: <b style="color:var(--text);">${fmtKPesos(row.ago)}</b> · vs LM ${conceptVsLMHtml(row.ago,row.jul)} · ${fmt(row.count||0,0)} atenciones${showUds?` · ${fmt(row.uds||0,0)} UDS`:''}</div>`
     : '';
 
-  if (!series){
-    return summaryHtml + `<div class="unavailable" style="height:auto; padding:20px;">No hay histórico mensual disponible para este concepto en esta sede.</div>`;
+  const chartsHtml = (()=>{
+    if (!series) return `<div class="unavailable" style="height:auto; padding:20px;">No hay histórico mensual disponible para este concepto en esta sede.</div>`;
+    const panels = [
+      { id:"ingresos", title:"Ingresos — miles de $ (MXN)" },
+      { id:"atenciones", title:"Atenciones (#)" },
+      { id:"ticket", title:"Ticket medio (pesos)" },
+    ];
+    if (showUds) panels.push({ id:"uds", title:"UDS (#)" });
+    const panelsHtml = panels.map(p =>
+      `<div><div class="concept-detail-title">${p.title}</div><div class="concept-detail-box"><canvas id="concept-detail-chart-${p.id}"></canvas></div></div>`
+    ).join("");
+    return `<div class="concept-detail-grid">${panelsHtml}</div>`;
+  })();
+
+  return summaryHtml + chartsHtml + renderConceptDoctorsHtml(concepto, showUds);
+}
+
+// Tabla "por médico" — para saber qué médico usa/receta más este concepto.
+// Fuente: D.conceptosPorMedico[currentScope][concepto] (Profesional Historia,
+// acumulado Ene–Ago 2026). Se ordena por UDS cuando aplica (Farmacia) o por
+// Atenciones en los demás servicios — esa es la mejor proxy de "quién más lo usa".
+// Top 8 médicos + fila "Otros médicos" agregada para no desbordar el modal.
+function renderConceptDoctorsHtml(concepto, showUds){
+  const list = D.conceptosPorMedico && D.conceptosPorMedico[currentScope] && D.conceptosPorMedico[currentScope][concepto];
+  if (!list || !list.length){
+    return `<div class="concept-doctors-title">Por médico (Profesional Historia)</div><div class="unavailable" style="height:auto; padding:16px;">No hay desglose por médico disponible para este concepto en esta sede.</div>`;
+  }
+  const sortKey = showUds ? "uds" : "atenciones";
+  const sorted = [...list].sort((a,b)=> b[sortKey]-a[sortKey]);
+  const TOP_N = 8;
+  const top = sorted.slice(0, TOP_N);
+  const rest = sorted.slice(TOP_N);
+
+  const rowHtml = (d)=> `<tr><td>${d.medico}</td><td class="num">${fmt(d.atenciones,0)}</td>${showUds?`<td class="num">${fmt(d.uds,0)}</td>`:''}<td class="num">${fmtKPesos(d.ingresos)}</td></tr>`;
+
+  let rowsHtml = top.map(rowHtml).join("");
+  if (rest.length){
+    const agg = rest.reduce((a,d)=>({ atenciones:a.atenciones+d.atenciones, uds:a.uds+d.uds, ingresos:a.ingresos+d.ingresos }), {atenciones:0,uds:0,ingresos:0});
+    rowsHtml += `<tr style="font-style:italic; color:var(--axis);"><td>Otros médicos (${rest.length})</td><td class="num">${fmt(agg.atenciones,0)}</td>${showUds?`<td class="num">${fmt(agg.uds,0)}</td>`:''}<td class="num">${fmtKPesos(agg.ingresos)}</td></tr>`;
   }
 
-  const panels = [
-    { id:"ingresos", title:"Ingresos — MDP (pesos)" },
-    { id:"atenciones", title:"Atenciones (#)" },
-    { id:"ticket", title:"Ticket medio (pesos)" },
-  ];
-  if (showUds) panels.push({ id:"uds", title:"UDS (#)" });
-
-  const panelsHtml = panels.map(p =>
-    `<div><div class="concept-detail-title">${p.title}</div><div class="concept-detail-box"><canvas id="concept-detail-chart-${p.id}"></canvas></div></div>`
-  ).join("");
-
-  const rows8 = MESES_8.map((mes,i)=>{
-    const ing = series.ingresos[i], at = series.atenciones[i];
-    const ticket = at ? Math.round(ing/at) : null;
-    return `<tr><td>${mes}</td><td class="num">$${fmt(ing,0)}</td><td class="num">${fmt(at,0)}</td>${showUds?`<td class="num">${fmt(series.uds[i],0)}</td>`:''}<td class="num">${ticket===null?'—':`$${fmt(ticket,0)}`}</td></tr>`;
-  }).join("");
-  const tableHtml = `<table style="margin-top:6px;"><thead><tr><th>Mes</th><th class="num">Ingresos</th><th class="num">Atenciones</th>${showUds?'<th class="num">UDS</th>':''}<th class="num">Ticket medio</th></tr></thead><tbody>${rows8}</tbody></table>`;
-
-  return summaryHtml + `<div class="concept-detail-grid">${panelsHtml}</div>` + tableHtml;
+  return `<div class="concept-doctors-title">Por médico (Profesional Historia)</div>` +
+    `<div class="concept-doctors-sub">Acumulado Ene–Ago 2026 · ${list.length} médico${list.length===1?'':'s'} en total · ordenado por ${showUds?'UDS':'atenciones'}</div>` +
+    `<table><thead><tr><th>Médico</th><th class="num">Atenciones</th>${showUds?'<th class="num">UDS</th>':''}<th class="num">Ingresos</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
 }
 
 function drawMiniMonthBarChart(canvasId, values, valueFmt){
@@ -955,8 +983,9 @@ function drawMiniMonthBarChart(canvasId, values, valueFmt){
     data:{ labels: MESES_8, datasets:[{ data: values, backgroundColor: bg, borderRadius:4, maxBarThickness:22 }] },
     options:{
       responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top:18 } },
       plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(c)=> valueFmt(c.raw) } } },
-      scales:{ y:{ display:false, beginAtZero:true, grace:"12%" }, x:{ grid:{display:false}, ticks:{font:{size:9.5}} } },
+      scales:{ y:{ display:false, beginAtZero:true, grace:"20%" }, x:{ grid:{display:false}, ticks:{font:{size:9.5}} } },
     },
   });
 }
@@ -965,7 +994,7 @@ function drawConceptDetailCharts(concepto, showUds){
   const series = D.conceptosMensual && D.conceptosMensual[currentScope] && D.conceptosMensual[currentScope][concepto];
   if (!series) return;
   const ticket = series.ingresos.map((ing,i)=> series.atenciones[i] ? Math.round(ing/series.atenciones[i]) : 0);
-  drawMiniMonthBarChart("concept-detail-chart-ingresos", series.ingresos, v=>`$${fmt(v,0)}`);
+  drawMiniMonthBarChart("concept-detail-chart-ingresos", series.ingresos, fmtKPesos);
   drawMiniMonthBarChart("concept-detail-chart-atenciones", series.atenciones, v=>`${fmt(v,0)}`);
   drawMiniMonthBarChart("concept-detail-chart-ticket", ticket, v=>`$${fmt(v,0)}`);
   if (showUds) drawMiniMonthBarChart("concept-detail-chart-uds", series.uds, v=>`${fmt(v,0)}`);

@@ -525,6 +525,26 @@ function buildConceptosMensualMetric(rows) {
   return out;
 }
 
+/*
+  "ConceptosPorMedico" trae, por Sede ("CDMX"/"GDL"/"MTP"/"total") y Concepto
+  (mismo texto exacto que en "Conceptos"/"ConceptosMensual"), el desglose por
+  Profesional Historia (médico que atendió/recetó) acumulado Ene-Ago 2026:
+  Ingresos, Atenciones (# líneas de cargo) y Uds. Se usa en el detalle
+  "evolutivo por concepto" para mostrar qué médico usa más cada producto/
+  servicio (tabla "Por médico"). Filas: [Sede, Concepto, Medico, Ingresos,
+  Atenciones, Uds].
+*/
+function buildConceptosPorMedicoMetric(rows) {
+  const out = {};
+  for (const [sede, concepto, medico, ingresosRaw, atRaw, udsRaw] of rows) {
+    if (!concepto || !medico) continue;
+    out[sede] = out[sede] || {};
+    out[sede][concepto] = out[sede][concepto] || [];
+    out[sede][concepto].push({ medico, ingresos: num(ingresosRaw), atenciones: num(atRaw), uds: num(udsRaw) });
+  }
+  return out;
+}
+
 const SUBROGACION_ETAPAS = ["Valoración", "Programa Activo"];
 
 /**
@@ -579,15 +599,17 @@ function buildSubrogacionMetric(rows) {
 }
 
 async function fetchLiveConceptosYSubrogacion() {
-  const [concRows, subRows, concMensualRows] = await Promise.all([
+  const [concRows, subRows, concMensualRows, concPorMedicoRows] = await Promise.all([
     fetchSheetJson("Conceptos"),
     fetchSheetJson("SubrogacionPacientes"),
     fetchSheetJson("ConceptosMensual"),
+    fetchSheetJson("ConceptosPorMedico"),
   ]);
   return {
     conceptos: buildConceptosMetric(concRows),
     subrogacion: buildSubrogacionMetric(subRows),
     conceptosMensual: buildConceptosMensualMetric(concMensualRows),
+    conceptosPorMedico: buildConceptosPorMedicoMetric(concPorMedicoRows),
   };
 }
 
@@ -694,6 +716,7 @@ async function loadLiveDataIntoDashboard() {
     window.DATA.conceptos = cs.conceptos;
     window.DATA.subrogacion = cs.subrogacion;
     window.DATA.conceptosMensual = cs.conceptosMensual;
+    window.DATA.conceptosPorMedico = cs.conceptosPorMedico;
     window.DATA._liveOkConceptos = true;
   } catch (e) {
     window.DATA._liveOkConceptos = false;
