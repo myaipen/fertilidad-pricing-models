@@ -479,12 +479,12 @@ async function fetchLiveHubspot() {
 
 function buildConceptosMetric(rows) {
   const out = { total: {}, CDMX: {}, GDL: {}, MTP: {} };
-  for (const [scope, serv, subclasRaw, subclas2Raw, concepto, agoRaw, julRaw] of rows) {
+  for (const [scope, serv, subclasRaw, subclas2Raw, concepto, agoRaw, julRaw, countRaw, udsRaw] of rows) {
     if (!out[scope] || !serv || !concepto) continue;
     out[scope][serv] = out[scope][serv] || [];
     const subclas = String(subclasRaw ?? "").trim() || null;
     const subclas2 = String(subclas2Raw ?? "").trim() || null;
-    out[scope][serv].push({ subclas, subclas2, concepto, ago: num(agoRaw), jul: num(julRaw) });
+    out[scope][serv].push({ subclas, subclas2, concepto, ago: num(agoRaw), jul: num(julRaw), count: num(countRaw), uds: num(udsRaw) });
   }
   for (const scope of Object.keys(out)) {
     for (const serv of Object.keys(out[scope])) {

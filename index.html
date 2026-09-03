@@ -89,7 +89,7 @@
     align-items:center; justify-content:center; padding:24px;
   }
   .modal-box{
-    background:var(--white); border-radius:14px; max-width:640px; width:100%; max-height:80vh;
+    background:var(--white); border-radius:14px; max-width:760px; width:100%; max-height:80vh;
     overflow-y:auto; padding:22px 24px; box-shadow:0 10px 40px rgba(0,0,0,.25);
   }
   .modal-header{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:6px; }
@@ -800,7 +800,9 @@ function conceptRowsAtPath(path){
 
 function conceptVsLMHtml(ago, jul){
   const v = pctOrNull(ago, jul);
-  return v === null ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : pctBadge(v,"").replace(": ","");
+  if (v === null) return '<span style="color:var(--axis); font-weight:700;">Nuevo</span>';
+  const nomStr = fmtSignedFn(ago - jul, x => `$${fmt(x,0)}`);
+  return miniPct(v, nomStr);
 }
 
 function renderConceptModalLevel(){
@@ -820,6 +822,8 @@ function renderConceptModalLevel(){
   }
   const totalAgo = sum(rowsHere.map(r=>r.ago));
   const totalJul = sum(rowsHere.map(r=>r.jul));
+  const totalCount = sum(rowsHere.map(r=>r.count||0));
+  const totalUds = sum(rowsHere.map(r=>r.uds||0));
 
   const backBtn = conceptModalPath.length
     ? `<div class="concept-back" style="cursor:pointer; color:var(--blue); font-size:12px; font-weight:700; margin-bottom:10px;">‹ volver</div>` : '';
@@ -828,26 +832,27 @@ function renderConceptModalLevel(){
   const nextField = conceptModalPath.length === 0 ? 'subclas' : (conceptModalPath.length === 1 ? 'subclas2' : null);
   const canGroup = nextField && rowsHere.some(r => r[nextField]);
 
-  const summaryHtml = `<div style="font-size:12px; color:var(--axis); margin-bottom:10px;">Total: <b style="color:var(--text);">$${fmt(totalAgo,0)}</b> · vs LM ${conceptVsLMHtml(totalAgo,totalJul)} · ${rowsHere.length} concepto${rowsHere.length===1?'':'s'} en este nivel${canGroup?'':' · ordenado de mayor a menor'}</div>`;
+  const summaryHtml = `<div style="font-size:12px; color:var(--axis); margin-bottom:10px;">Total: <b style="color:var(--text);">$${fmt(totalAgo,0)}</b> · vs LM ${conceptVsLMHtml(totalAgo,totalJul)} · ${fmt(totalCount,0)} atenciones · ${fmt(totalUds,0)} UDS · ${rowsHere.length} concepto${rowsHere.length===1?'':'s'} en este nivel${canGroup?'':' · ordenado de mayor a menor'}</div>`;
 
   let tableHtml;
   if (canGroup){
     const groups = {};
     for (const r of rowsHere){
       const key = r[nextField] || "(sin subclasificar)";
-      groups[key] = groups[key] || { ago:0, jul:0, count:0 };
-      groups[key].ago += r.ago; groups[key].jul += r.jul; groups[key].count += 1;
+      groups[key] = groups[key] || { ago:0, jul:0, n:0, count:0, uds:0 };
+      groups[key].ago += r.ago; groups[key].jul += r.jul; groups[key].n += 1;
+      groups[key].count += (r.count||0); groups[key].uds += (r.uds||0);
     }
     const groupEntries = Object.entries(groups).sort((a,b)=>b[1].ago-a[1].ago);
     const colLabel = nextField === 'subclas' ? 'Subclasificación' : 'Subclasificación 2';
-    tableHtml = `<table><thead><tr><th>${colLabel}</th><th class="num">MDP</th><th class="num">vs LM</th></tr></thead><tbody>` +
+    tableHtml = `<table><thead><tr><th>${colLabel}</th><th class="num">MDP</th><th class="num">Atenciones</th><th class="num">UDS</th><th class="num">vs LM</th></tr></thead><tbody>` +
       groupEntries.map(([name,g])=>
-        `<tr class="servicio-row concept-group-row" data-key="${name}"><td>${name} <span class="drill-hint">▸ ${g.count} concepto${g.count===1?'':'s'}</span></td><td class="num">$${fmt(g.ago,0)}</td><td class="num">${conceptVsLMHtml(g.ago,g.jul)}</td></tr>`
+        `<tr class="servicio-row concept-group-row" data-key="${name}"><td>${name} <span class="drill-hint">▸ ${g.n} concepto${g.n===1?'':'s'}</span></td><td class="num">$${fmt(g.ago,0)}</td><td class="num">${fmt(g.count,0)}</td><td class="num">${fmt(g.uds,0)}</td><td class="num">${conceptVsLMHtml(g.ago,g.jul)}</td></tr>`
       ).join("") + `</tbody></table>`;
   } else {
     const sorted = [...rowsHere].sort((a,b)=>b.ago-a.ago);
-    tableHtml = `<table><thead><tr><th>Concepto</th><th class="num">MDP (pesos)</th><th class="num">vs LM</th></tr></thead><tbody>` +
-      sorted.map(r=>`<tr><td>${r.concepto}</td><td class="num">$${fmt(r.ago,0)}</td><td class="num">${conceptVsLMHtml(r.ago,r.jul)}</td></tr>`).join("") + `</tbody></table>`;
+    tableHtml = `<table><thead><tr><th>Concepto</th><th class="num">MDP (pesos)</th><th class="num">Atenciones</th><th class="num">UDS</th><th class="num">vs LM</th></tr></thead><tbody>` +
+      sorted.map(r=>`<tr><td>${r.concepto}</td><td class="num">$${fmt(r.ago,0)}</td><td class="num">${fmt(r.count||0,0)}</td><td class="num">${fmt(r.uds||0,0)}</td><td class="num">${conceptVsLMHtml(r.ago,r.jul)}</td></tr>`).join("") + `</tbody></table>`;
   }
 
   body.innerHTML = backBtn + summaryHtml + tableHtml;
