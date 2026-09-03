@@ -83,6 +83,10 @@
   .concept-crumb:hover{ text-decoration:underline !important; }
   .concept-back{ display:inline-block; }
   .concept-back:hover{ text-decoration:underline; }
+  .concept-detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0 4px; }
+  @media (max-width:520px){ .concept-detail-grid{ grid-template-columns:1fr; } }
+  .concept-detail-box{ position:relative; height:130px; }
+  .concept-detail-title{ font-weight:700; font-size:12px; color:var(--axis); margin-bottom:4px; }
 
   .modal-overlay{
     display:none; position:fixed; inset:0; background:rgba(31,41,55,.45); z-index:1000;
@@ -782,11 +786,13 @@ function buildServicios(){
 let conceptModalRows = [];   // filas hoja del servicio+sede actual: {subclas, subclas2, concepto, ago, jul}
 let conceptModalPath = [];   // ej. ["Laboratorio Clínico", "Hormonas, Sangre y Perfiles"]
 let conceptModalServNombre = "";
+let conceptModalDetail = null;  // nombre del concepto hoja cuyo evolutivo mensual se está viendo, o null
 
 function openConceptModal(servKey, servNombre){
   conceptModalRows = (D.conceptos && D.conceptos[currentScope] && D.conceptos[currentScope][servKey]) || [];
   conceptModalServNombre = servNombre;
   conceptModalPath = [];
+  conceptModalDetail = null;
   renderConceptModalLevel();
   document.getElementById("concept-modal").style.display = "flex";
 }
@@ -805,15 +811,44 @@ function conceptVsLMHtml(ago, jul){
   return miniPct(v, nomStr);
 }
 
+// UDS solo tiene sentido como métrica en Farmacia (unidades de medicamento);
+// en el resto de servicios (consultas, procedimientos, laboratorio...) cada
+// atención ya ES la unidad, así que la columna/():dato se oculta fuera de
+// Farmacia para no duplicar información.
+function conceptModalShowUds(){
+  return conceptModalServNombre === "Farmacia";
+}
+
 function renderConceptModalLevel(){
   const title = document.getElementById("concept-modal-title");
   const body = document.getElementById("concept-modal-body");
+  const showUds = conceptModalShowUds();
 
   const crumbs = [conceptModalServNombre, ...conceptModalPath];
+  if (conceptModalDetail) crumbs.push(conceptModalDetail);
   title.innerHTML = crumbs.map((c,i)=>{
     if (i === crumbs.length-1) return `<span style="color:var(--text);">${c}</span>`;
     return `<a href="#" class="concept-crumb" data-depth="${i}" style="color:var(--blue); text-decoration:none;">${c}</a> <span style="color:var(--axis); font-weight:400;">›</span> `;
   }).join("");
+
+  const backBtn = (conceptModalPath.length || conceptModalDetail)
+    ? `<div class="concept-back" style="cursor:pointer; color:var(--blue); font-size:12px; font-weight:700; margin-bottom:10px;">‹ volver</div>` : '';
+
+  if (conceptModalDetail){
+    body.innerHTML = backBtn + renderConceptDetailHtml(conceptModalDetail, showUds);
+    const back = body.querySelector(".concept-back");
+    if (back) back.addEventListener("click", ()=>{ conceptModalDetail = null; renderConceptModalLevel(); });
+    title.querySelectorAll(".concept-crumb").forEach(a=>{
+      a.addEventListener("click", (e)=>{
+        e.preventDefault();
+        conceptModalDetail = null;
+        conceptModalPath = conceptModalPath.slice(0, Number(a.dataset.depth));
+        renderConceptModalLevel();
+      });
+    });
+    drawConceptDetailCharts(conceptModalDetail, showUds);
+    return;
+  }
 
   const rowsHere = conceptRowsAtPath(conceptModalPath);
   if (!rowsHere.length){
@@ -825,14 +860,11 @@ function renderConceptModalLevel(){
   const totalCount = sum(rowsHere.map(r=>r.count||0));
   const totalUds = sum(rowsHere.map(r=>r.uds||0));
 
-  const backBtn = conceptModalPath.length
-    ? `<div class="concept-back" style="cursor:pointer; color:var(--blue); font-size:12px; font-weight:700; margin-bottom:10px;">‹ volver</div>` : '';
-
   // ¿el siguiente nivel es agrupable (Subclas / Subclas2), o ya estamos a nivel Concepto?
   const nextField = conceptModalPath.length === 0 ? 'subclas' : (conceptModalPath.length === 1 ? 'subclas2' : null);
   const canGroup = nextField && rowsHere.some(r => r[nextField]);
 
-  const summaryHtml = `<div style="font-size:12px; color:var(--axis); margin-bottom:10px;">Total: <b style="color:var(--text);">$${fmt(totalAgo,0)}</b> · vs LM ${conceptVsLMHtml(totalAgo,totalJul)} · ${fmt(totalCount,0)} atenciones · ${fmt(totalUds,0)} UDS · ${rowsHere.length} concepto${rowsHere.length===1?'':'s'} en este nivel${canGroup?'':' · ordenado de mayor a menor'}</div>`;
+  const summaryHtml = `<div style="font-size:12px; color:var(--axis); margin-bottom:10px;">Total: <b style="color:var(--text);">$${fmt(totalAgo,0)}</b> · vs LM ${conceptVsLMHtml(totalAgo,totalJul)} · ${fmt(totalCount,0)} atenciones${showUds?` · ${fmt(totalUds,0)} UDS`:''} · ${rowsHere.length} concepto${rowsHere.length===1?'':'s'} en este nivel${canGroup?'':' · ordenado de mayor a menor'}</div>`;
 
   let tableHtml;
   if (canGroup){
@@ -845,20 +877,23 @@ function renderConceptModalLevel(){
     }
     const groupEntries = Object.entries(groups).sort((a,b)=>b[1].ago-a[1].ago);
     const colLabel = nextField === 'subclas' ? 'Subclasificación' : 'Subclasificación 2';
-    tableHtml = `<table><thead><tr><th>${colLabel}</th><th class="num">MDP</th><th class="num">Atenciones</th><th class="num">UDS</th><th class="num">vs LM</th></tr></thead><tbody>` +
+    tableHtml = `<table><thead><tr><th>${colLabel}</th><th class="num">MDP</th><th class="num">Atenciones</th>${showUds?'<th class="num">UDS</th>':''}<th class="num">vs LM</th></tr></thead><tbody>` +
       groupEntries.map(([name,g])=>
-        `<tr class="servicio-row concept-group-row" data-key="${name}"><td>${name} <span class="drill-hint">▸ ${g.n} concepto${g.n===1?'':'s'}</span></td><td class="num">$${fmt(g.ago,0)}</td><td class="num">${fmt(g.count,0)}</td><td class="num">${fmt(g.uds,0)}</td><td class="num">${conceptVsLMHtml(g.ago,g.jul)}</td></tr>`
+        `<tr class="servicio-row concept-group-row" data-key="${name}"><td>${name} <span class="drill-hint">▸ ${g.n} concepto${g.n===1?'':'s'}</span></td><td class="num">$${fmt(g.ago,0)}</td><td class="num">${fmt(g.count,0)}</td>${showUds?`<td class="num">${fmt(g.uds,0)}</td>`:''}<td class="num">${conceptVsLMHtml(g.ago,g.jul)}</td></tr>`
       ).join("") + `</tbody></table>`;
   } else {
     const sorted = [...rowsHere].sort((a,b)=>b.ago-a.ago);
-    tableHtml = `<table><thead><tr><th>Concepto</th><th class="num">MDP (pesos)</th><th class="num">Atenciones</th><th class="num">UDS</th><th class="num">vs LM</th></tr></thead><tbody>` +
-      sorted.map(r=>`<tr><td>${r.concepto}</td><td class="num">$${fmt(r.ago,0)}</td><td class="num">${fmt(r.count||0,0)}</td><td class="num">${fmt(r.uds||0,0)}</td><td class="num">${conceptVsLMHtml(r.ago,r.jul)}</td></tr>`).join("") + `</tbody></table>`;
+    tableHtml = `<table><thead><tr><th>Concepto</th><th class="num">MDP (pesos)</th><th class="num">Atenciones</th>${showUds?'<th class="num">UDS</th>':''}<th class="num">vs LM</th></tr></thead><tbody>` +
+      sorted.map(r=>`<tr class="servicio-row concept-leaf-row" data-concepto="${r.concepto.replace(/"/g,'&quot;')}"><td>${r.concepto} <span class="drill-hint">▸ evolutivo</span></td><td class="num">$${fmt(r.ago,0)}</td><td class="num">${fmt(r.count||0,0)}</td>${showUds?`<td class="num">${fmt(r.uds||0,0)}</td>`:''}<td class="num">${conceptVsLMHtml(r.ago,r.jul)}</td></tr>`).join("") + `</tbody></table>`;
   }
 
   body.innerHTML = backBtn + summaryHtml + tableHtml;
 
   body.querySelectorAll(".concept-group-row").forEach(tr=>{
     tr.addEventListener("click", ()=>{ conceptModalPath.push(tr.dataset.key); renderConceptModalLevel(); });
+  });
+  body.querySelectorAll(".concept-leaf-row").forEach(tr=>{
+    tr.addEventListener("click", ()=>{ conceptModalDetail = tr.dataset.concepto; renderConceptModalLevel(); });
   });
   const back = body.querySelector(".concept-back");
   if (back) back.addEventListener("click", ()=>{ conceptModalPath.pop(); renderConceptModalLevel(); });
@@ -869,6 +904,71 @@ function renderConceptModalLevel(){
       renderConceptModalLevel();
     });
   });
+}
+
+// ------------------------------------------------------------- evolutivo por concepto (detalle al hacer clic en una hoja)
+// Ingresos/Atenciones/Ticket medio siempre; UDS solo si el servicio es
+// Farmacia. Fuente: D.conceptosMensual[currentScope][concepto] (Ene-Ago,
+// cargado desde la hoja "ConceptosMensual"). Ago/Jul de Ingresos ya vienen
+// pisados con el valor validado de "Conceptos" desde data-live.js, así que
+// coinciden exactamente con lo que se ve en la fila de la tabla.
+function renderConceptDetailHtml(concepto, showUds){
+  const row = conceptModalRows.find(r => r.concepto === concepto);
+  const series = D.conceptosMensual && D.conceptosMensual[currentScope] && D.conceptosMensual[currentScope][concepto];
+
+  const summaryHtml = row
+    ? `<div style="font-size:12px; color:var(--axis); margin-bottom:6px;">Mes vigente: <b style="color:var(--text);">$${fmt(row.ago,0)}</b> · vs LM ${conceptVsLMHtml(row.ago,row.jul)} · ${fmt(row.count||0,0)} atenciones${showUds?` · ${fmt(row.uds||0,0)} UDS`:''}</div>`
+    : '';
+
+  if (!series){
+    return summaryHtml + `<div class="unavailable" style="height:auto; padding:20px;">No hay histórico mensual disponible para este concepto en esta sede.</div>`;
+  }
+
+  const panels = [
+    { id:"ingresos", title:"Ingresos — MDP (pesos)" },
+    { id:"atenciones", title:"Atenciones (#)" },
+    { id:"ticket", title:"Ticket medio (pesos)" },
+  ];
+  if (showUds) panels.push({ id:"uds", title:"UDS (#)" });
+
+  const panelsHtml = panels.map(p =>
+    `<div><div class="concept-detail-title">${p.title}</div><div class="concept-detail-box"><canvas id="concept-detail-chart-${p.id}"></canvas></div></div>`
+  ).join("");
+
+  const rows8 = MESES_8.map((mes,i)=>{
+    const ing = series.ingresos[i], at = series.atenciones[i];
+    const ticket = at ? Math.round(ing/at) : null;
+    return `<tr><td>${mes}</td><td class="num">$${fmt(ing,0)}</td><td class="num">${fmt(at,0)}</td>${showUds?`<td class="num">${fmt(series.uds[i],0)}</td>`:''}<td class="num">${ticket===null?'—':`$${fmt(ticket,0)}`}</td></tr>`;
+  }).join("");
+  const tableHtml = `<table style="margin-top:6px;"><thead><tr><th>Mes</th><th class="num">Ingresos</th><th class="num">Atenciones</th>${showUds?'<th class="num">UDS</th>':''}<th class="num">Ticket medio</th></tr></thead><tbody>${rows8}</tbody></table>`;
+
+  return summaryHtml + `<div class="concept-detail-grid">${panelsHtml}</div>` + tableHtml;
+}
+
+function drawMiniMonthBarChart(canvasId, values, valueFmt){
+  destroyChart(canvasId);
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const bg = values.map((_,i)=> i === values.length-1 ? COLORS.blue : COLORS.gray);
+  charts[canvasId] = new Chart(canvas.getContext("2d"), {
+    type:"bar",
+    data:{ labels: MESES_8, datasets:[{ data: values, backgroundColor: bg, borderRadius:4, maxBarThickness:22 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(c)=> valueFmt(c.raw) } } },
+      scales:{ y:{ display:false, beginAtZero:true, grace:"12%" }, x:{ grid:{display:false}, ticks:{font:{size:9.5}} } },
+    },
+  });
+}
+
+function drawConceptDetailCharts(concepto, showUds){
+  const series = D.conceptosMensual && D.conceptosMensual[currentScope] && D.conceptosMensual[currentScope][concepto];
+  if (!series) return;
+  const ticket = series.ingresos.map((ing,i)=> series.atenciones[i] ? Math.round(ing/series.atenciones[i]) : 0);
+  drawMiniMonthBarChart("concept-detail-chart-ingresos", series.ingresos, v=>`$${fmt(v,0)}`);
+  drawMiniMonthBarChart("concept-detail-chart-atenciones", series.atenciones, v=>`${fmt(v,0)}`);
+  drawMiniMonthBarChart("concept-detail-chart-ticket", ticket, v=>`$${fmt(v,0)}`);
+  if (showUds) drawMiniMonthBarChart("concept-detail-chart-uds", series.uds, v=>`${fmt(v,0)}`);
 }
 
 function closeConceptModal(){

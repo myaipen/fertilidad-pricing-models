@@ -494,6 +494,37 @@ function buildConceptosMetric(rows) {
   return out;
 }
 
+const MESES_8 = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago"];
+
+/*
+  "ConceptosMensual" trae, por Sede ("CDMX"/"GDL"/"MTP"/"total") y Concepto
+  (mismo texto exacto que en "Conceptos" — la combinación Sede+Concepto es
+  única), el histórico Ene-Ago de Ingresos/Atenciones/UDS de esa línea de
+  cargo. Se usa para el detalle "evolutivo por concepto" que se abre al dar
+  clic en un concepto hoja dentro del modal de desglose (Ingresos y
+  Atenciones/UDS vienen de Cargos_y_Facturas mes a mes; Ago y Jul de Ingresos
+  se pisan con el valor ya validado de "Conceptos" para que ambas vistas
+  siempre coincidan en esos dos meses — el resto de meses no tiene una fuente
+  reclasificada manualmente, así que usa el cálculo directo). Filas: [Sede,
+  Concepto, MesNum, Ingresos, Atenciones, Uds].
+*/
+function buildConceptosMensualMetric(rows) {
+  const out = {};
+  for (const [sede, concepto, mesNumRaw, ingresosRaw, atRaw, udsRaw] of rows) {
+    if (!concepto) continue;
+    out[sede] = out[sede] || {};
+    out[sede][concepto] = out[sede][concepto] || {
+      labels: MESES_8, ingresos: Array(8).fill(0), atenciones: Array(8).fill(0), uds: Array(8).fill(0),
+    };
+    const idx = Number(mesNumRaw) - 1;
+    if (idx < 0 || idx > 7) continue;
+    out[sede][concepto].ingresos[idx] = num(ingresosRaw);
+    out[sede][concepto].atenciones[idx] = num(atRaw);
+    out[sede][concepto].uds[idx] = num(udsRaw);
+  }
+  return out;
+}
+
 const SUBROGACION_ETAPAS = ["Valoración", "Programa Activo"];
 
 /**
@@ -548,13 +579,15 @@ function buildSubrogacionMetric(rows) {
 }
 
 async function fetchLiveConceptosYSubrogacion() {
-  const [concRows, subRows] = await Promise.all([
+  const [concRows, subRows, concMensualRows] = await Promise.all([
     fetchSheetJson("Conceptos"),
     fetchSheetJson("SubrogacionPacientes"),
+    fetchSheetJson("ConceptosMensual"),
   ]);
   return {
     conceptos: buildConceptosMetric(concRows),
     subrogacion: buildSubrogacionMetric(subRows),
+    conceptosMensual: buildConceptosMensualMetric(concMensualRows),
   };
 }
 
@@ -660,6 +693,7 @@ async function loadLiveDataIntoDashboard() {
     const cs = await fetchLiveConceptosYSubrogacion();
     window.DATA.conceptos = cs.conceptos;
     window.DATA.subrogacion = cs.subrogacion;
+    window.DATA.conceptosMensual = cs.conceptosMensual;
     window.DATA._liveOkConceptos = true;
   } catch (e) {
     window.DATA._liveOkConceptos = false;
