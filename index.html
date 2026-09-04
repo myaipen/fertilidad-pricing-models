@@ -77,6 +77,11 @@
   .servicio-row:hover{ background:var(--card-bg); }
   .drill-hint{ font-size:10.5px; color:var(--blue); font-weight:700; margin-left:6px; opacity:.75; }
   .servicio-row:hover .drill-hint{ opacity:1; text-decoration:underline; }
+  /* Concepto sin venta en el mes vigente: se muestra igual (no se omite),
+     pero atenuado, para que la ausencia de venta salte a la vista sin
+     tener que leer la columna "vs LM" fila por fila. */
+  .concept-zero-row td:first-child{ color:var(--axis); }
+  .concept-zero-row td.num{ opacity:.7; }
   .concept-group-row{ cursor:pointer; }
   .concept-group-row:hover{ background:var(--card-bg); }
   .concept-crumb{ font-size:14px; }
@@ -807,6 +812,11 @@ function conceptRowsAtPath(path){
 }
 
 function conceptVsLMHtml(ago, jul){
+  // Un concepto con $0 este mes (aunque sí haya vendido en algún momento de
+  // Ene-Ago, que es la única razón por la que aparece en esta tabla) se
+  // marca como alerta explícita — no se confunde con "Nuevo" (que es cuando
+  // el mes anterior fue $0 pero el vigente sí tiene venta).
+  if (!ago) return '<span style="color:var(--red); font-weight:700;" title="Sin cargos registrados este mes para este concepto">⚠ Sin venta</span>';
   const v = pctOrNull(ago, jul);
   if (v === null) return '<span style="color:var(--axis); font-weight:700;">Nuevo</span>';
   const nomStr = fmtSignedFn(ago - jul, x => `$${fmt(x,0)}`);
@@ -886,7 +896,7 @@ function renderConceptModalLevel(){
   } else {
     const sorted = [...rowsHere].sort((a,b)=>b.ago-a.ago);
     tableHtml = `<table><thead><tr><th>Concepto</th><th class="num">MDP (pesos)</th><th class="num">Atenciones</th>${showUds?'<th class="num">UDS</th>':''}<th class="num">vs LM</th></tr></thead><tbody>` +
-      sorted.map(r=>`<tr class="servicio-row concept-leaf-row" data-concepto="${r.concepto.replace(/"/g,'&quot;')}"><td>${r.concepto} <span class="drill-hint">▸ evolutivo</span></td><td class="num">$${fmt(r.ago,0)}</td><td class="num">${fmt(r.count||0,0)}</td>${showUds?`<td class="num">${fmt(r.uds||0,0)}</td>`:''}<td class="num">${conceptVsLMHtml(r.ago,r.jul)}</td></tr>`).join("") + `</tbody></table>`;
+      sorted.map(r=>`<tr class="servicio-row concept-leaf-row${r.ago?'':' concept-zero-row'}" data-concepto="${r.concepto.replace(/"/g,'&quot;')}"><td>${r.concepto} <span class="drill-hint">▸ evolutivo</span></td><td class="num">$${fmt(r.ago,0)}</td><td class="num">${fmt(r.count||0,0)}</td>${showUds?`<td class="num">${fmt(r.uds||0,0)}</td>`:''}<td class="num">${conceptVsLMHtml(r.ago,r.jul)}</td></tr>`).join("") + `</tbody></table>`;
   }
 
   body.innerHTML = backBtn + summaryHtml + tableHtml;
