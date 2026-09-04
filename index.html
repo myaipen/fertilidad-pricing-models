@@ -140,6 +140,10 @@
       <span class="filter-label">Periodo</span>
       <div id="tabs-periodo"></div>
     </div>
+    <div class="filter-group">
+      <span class="filter-label">Mes vigente</span>
+      <select id="mes-vigente-select" style="font-size:12.5px; font-weight:700; padding:5px 8px; border-radius:6px; border:1px solid var(--gray); background:#fff; color:var(--text); cursor:pointer;"></select>
+    </div>
   </div>
 
   <div class="kpi-row" id="kpi-row"></div>
@@ -505,6 +509,27 @@ function buildTabs(){
   perEl.querySelectorAll(".tab-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{ currentPeriod = btn.dataset.period; renderAll(); });
   });
+
+  buildMesVigenteSelect();
+}
+
+// Selector Ene-Dic que cambia MES_VIGENTE (definida en data-live.js) y
+// recalcula todo el tablero desde la cache de filas ya descargadas — no
+// vuelve a pedirle nada a Google Sheets, solo reacomoda "mes vigente" / "LM".
+// Los meses sin datos todavía (ej. Oct-Dic recién empezando el año) se
+// pueden elegir igual: las vistas simplemente muestran $0 / "sin venta".
+function buildMesVigenteSelect(){
+  const sel = document.getElementById("mes-vigente-select");
+  if (!sel) return;
+  const mesActual = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 8;
+  const meses = (window.MESES_12 || ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]);
+  sel.innerHTML = meses.map((label, i) => `<option value="${i+1}" ${i+1===mesActual?'selected':''}>${label}</option>`).join("");
+  sel.onchange = () => {
+    const nuevoMes = Number(sel.value);
+    if (typeof window.changeMesVigente === "function") {
+      window.changeMesVigente(nuevoMes);
+    }
+  };
 }
 
 // ---------------------------------------------------------------- KPI row
@@ -978,8 +1003,10 @@ function renderConceptDoctorsHtml(concepto, showUds){
     rowsHtml += `<tr style="font-style:italic; color:var(--axis);"><td>Otros médicos (${rest.length})</td><td class="num">${fmt(agg.atenciones,0)}</td>${showUds?`<td class="num">${fmt(agg.uds,0)}</td>`:''}<td class="num">${fmtKPesos(agg.ingresos)}</td></tr>`;
   }
 
+  const mesVig = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 8;
+  const mesesTxt = "Ene–" + (window.MESES_12 || [])[mesVig-1];
   return `<div class="concept-doctors-title">Por médico (Profesional Historia)</div>` +
-    `<div class="concept-doctors-sub">Acumulado Ene–Ago 2026 · ${list.length} médico${list.length===1?'':'s'} en total · ordenado por ${showUds?'UDS':'atenciones'}</div>` +
+    `<div class="concept-doctors-sub">Acumulado ${mesesTxt} 2026 · ${list.length} médico${list.length===1?'':'s'} en total · ordenado por ${showUds?'UDS':'atenciones'}</div>` +
     `<table><thead><tr><th>Médico</th><th class="num">Atenciones</th>${showUds?'<th class="num">UDS</th>':''}<th class="num">Ingresos</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
 }
 
@@ -990,7 +1017,7 @@ function drawMiniMonthBarChart(canvasId, values, valueFmt){
   const bg = values.map((_,i)=> i === values.length-1 ? COLORS.blue : COLORS.gray);
   charts[canvasId] = new Chart(canvas.getContext("2d"), {
     type:"bar",
-    data:{ labels: MESES_8, datasets:[{ data: values, backgroundColor: bg, borderRadius:4, maxBarThickness:22, _fmt: valueFmt }] },
+    data:{ labels: MESES_12.slice(0, values.length), datasets:[{ data: values, backgroundColor: bg, borderRadius:4, maxBarThickness:22, _fmt: valueFmt }] },
     options:{
       responsive:true, maintainAspectRatio:false,
       layout:{ padding:{ top:18 } },

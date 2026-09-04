@@ -59,15 +59,56 @@ const SERVICIO_LABEL = {
   "Otros": "Otros",
   "Sin clasificar": "Sin clasificar",
 };
-const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul"];
+const MESES_12 = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
-// El mes vigente (agosto) ya cerró (llegó a su último día): Real = cierre
-// final, no queda ningún día pendiente que proyectar para Atenciones ni
-// Pacientes Únicos (Ingresos y Consultas ya reflejan esto solos, porque su
-// "Proyectado"/"Agendado" vienen directo del Sheet). Cambiar a false en el
-// próximo corte, en cuanto vuelva a haber un mes en curso con días por
-// transcurrir.
-const MES_VIGENTE_CERRADO = true;
+// Mes vigente: seleccionable desde la UI (selector Ene-Dic junto a Sede y
+// Periodo en index.html). Arranca en 8 (Ago) como valor por default, pero
+// loadLiveDataIntoDashboard() lo autodetecta al último mes con datos reales
+// apenas carga (ver detectarMesVigente), y cambiar el selector dispara un
+// re-render completo con el nuevo mes como "vigente" y el anterior como LM.
+let MES_VIGENTE = 8;
+
+// Un mes se considera "cerrado" (ya no quedan días por transcurrir que
+// proyectar para Atenciones/Pacientes Únicos) si es estrictamente anterior
+// al mes calendario real de hoy. Si el usuario selecciona el mes en curso
+// (el mismo mes calendario que hoy), se sigue proyectando con la regla
+// Real + Real/30 como antes.
+function mesVigenteCerrado(mesVigente) {
+  const hoy = new Date();
+  return mesVigente < (hoy.getMonth() + 1);
+}
+
+// [1, 2, ..., mesVigente-1] — el histórico de meses previos al vigente.
+function rangoHist(mesVigente) {
+  const arr = [];
+  for (let m = 1; m < mesVigente; m++) arr.push(m);
+  return arr;
+}
+
+// Promedio de los últimos 3 meses disponibles en hist (U3M). Si hay menos
+// de 3 (ej. estamos viendo Febrero como vigente y solo hay 1 mes de
+// histórico), promedia los que haya en vez de tronar.
+function avgUlt3(hist) {
+  const n = hist.length;
+  if (!n) return 0;
+  const k = Math.min(3, n);
+  return hist.slice(n - k).reduce((a, b) => a + b, 0) / k;
+}
+
+// Último mes (1-12) con datos reales (Ingresos "total" > 0) dentro de
+// conceptosMensual. Se usa como default de MES_VIGENTE apenas carga la
+// data en vivo, para no quedar pegado en Agosto para siempre.
+function detectarMesVigente(conceptosMensual) {
+  const porConcepto = (conceptosMensual && conceptosMensual.total) || {};
+  let ultimo = 0;
+  for (const concepto of Object.keys(porConcepto)) {
+    const ing = porConcepto[concepto].ingresos || [];
+    for (let i = 0; i < ing.length; i++) {
+      if (ing[i] > 0 && (i + 1) > ultimo) ultimo = i + 1;
+    }
+  }
+  return ultimo || 8;
+}
 
 function num(v) {
   return Number(String(v ?? "").replace(/[^0-9.-]/g, "")) || 0;
@@ -98,11 +139,19 @@ async function fetchLiveIngresos() {
   if (!res.ok) throw new Error(`Apps Script HTTP ${res.status}`);
   const json = await res.json();
   const rows = json.values || [];
+  _rawCache["Base"] = rows;
+  return buildIngresosMetric(rows);
+}
+
+// Extraída de fetchLiveIngresos para poder recalcular desde _rawCache["Base"]
+// cuando cambia el selector de mes, sin volver a pedirle nada al Sheet.
+function buildIngresosMetric(rows) {
+  const meses = rangoHist(MES_VIGENTE); // [1..MES_VIGENTE-1]
 
   // rows[i] = [Sede, Servicio, MesNum, MesLabel, Real, Proyectado, TasaDiariaU3M, AjustePipelineComercial]
-  // por (sede, servicio) -> { [mesNum]: real }, y proyAgo por (sede, servicio)
+  // por (sede, servicio) -> { [mesNum]: real }, y proyVigente por (sede, servicio)
   const bySedeServicio = {};
-  const proyAgo = {};
+  const proyVigente = {};
   for (const r of rows) {
     const [sede, serv, mesNumRaw, , realRaw, proyRaw] = r;
     if (!sede || !serv) continue;
@@ -111,14 +160,17 @@ async function fetchLiveIngresos() {
     const key = sede + "||" + serv;
     bySedeServicio[key] = bySedeServicio[key] || {};
     bySedeServicio[key][mesNum] = real;
-    if (mesNum === 8) proyAgo[key] = num(proyRaw);
+    if (mesNum === MES_VIGENTE) proyVigente[key] = num(proyRaw);
   }
 
   function seriesFor(sedeNombre, servicio) {
     const key = sedeNombre + "||" + servicio;
     const m = bySedeServicio[key] || {};
-    return { m1: m[1]||0, m2: m[2]||0, m3: m[3]||0, m4: m[4]||0, m5: m[5]||0, m6: m[6]||0, m7: m[7]||0, m8: m[8]||0,
-              proy: proyAgo[key] || 0 };
+    return {
+      hist: meses.map(n => m[n] || 0),
+      actual: m[MES_VIGENTE] || 0,
+      proy: proyVigente[key] || 0,
+    };
   }
 
   const sedeNombres = Object.keys(SEDE_CODE);
@@ -131,79 +183,80 @@ async function fetchLiveIngresos() {
 
   for (const sedeNombre of sedeNombres) {
     const code = SEDE_CODE[sedeNombre];
-    let hist = [0,0,0,0,0,0,0], real8 = 0, proy8 = 0;
+    let hist = meses.map(() => 0), realVigente = 0, proyVig = 0;
     const servRows = [];
     for (const serv of servicios) {
       const s = seriesFor(sedeNombre, serv);
-      for (let i = 0; i < 7; i++) hist[i] += [s.m1,s.m2,s.m3,s.m4,s.m5,s.m6,s.m7][i];
-      real8 += s.m8; proy8 += s.proy;
-      companyByServ[serv] = companyByServ[serv] || {jul:0,u3m:0,proy:0};
-      companyByServ[serv].jul += s.m7;
-      companyByServ[serv].u3m += (s.m5+s.m6+s.m7)/3;
+      s.hist.forEach((v, i) => hist[i] += v);
+      realVigente += s.actual; proyVig += s.proy;
+      const lm = s.hist[s.hist.length - 1] || 0;
+      const servU3M = avgUlt3(s.hist);
+      companyByServ[serv] = companyByServ[serv] || {lm:0,u3m:0,proy:0};
+      companyByServ[serv].lm += lm;
+      companyByServ[serv].u3m += servU3M;
       companyByServ[serv].proy += s.proy;
-      if (s.proy > 0 || s.m8 > 0) {
-        const servU3M = (s.m5+s.m6+s.m7)/3;
+      if (s.proy > 0 || s.actual > 0) {
         servRows.push({
           nombre: SERVICIO_LABEL[serv],
           servKey: serv,
           valor: Math.round((s.proy/1e6)*10)/10,
-          vsLM: pctOrNull(s.proy, s.m7),
+          vsLM: pctOrNull(s.proy, lm),
           vsU3M: pctOrNull(s.proy, servU3M),
-          nomLM: Math.round(((s.proy - s.m7)/1e6)*100)/100,
+          nomLM: Math.round(((s.proy - lm)/1e6)*100)/100,
           nomU3M: Math.round(((s.proy - servU3M)/1e6)*100)/100,
-          nuevo: s.m7 === 0,
+          nuevo: lm === 0,
         });
       }
     }
     serviciosOut[code] = servRows.sort((a, b) => b.valor - a.valor).slice(0, 7);
 
-    const jul = hist[6];
-    const u3m = (hist[4]+hist[5]+hist[6])/3;
+    const lm = hist[hist.length - 1] || 0;
+    const u3m = avgUlt3(hist);
     sedesOut[code] = {
       ingresos: {
         hist: hist.map(v => Math.round((v/1e6)*10)/10),
-        actual: Math.round((real8/1e6)*10)/10,
-        proy: Math.round((proy8/1e6)*10)/10,
-        vsLM: pctOrNull(proy8, jul),
-        vsU3M: pctOrNull(proy8, u3m),
-        nomLM: Math.round(((proy8 - jul)/1e6)*10)/10,
-        nomU3M: Math.round(((proy8 - u3m)/1e6)*10)/10,
+        actual: Math.round((realVigente/1e6)*10)/10,
+        proy: Math.round((proyVig/1e6)*10)/10,
+        vsLM: pctOrNull(proyVig, lm),
+        vsU3M: pctOrNull(proyVig, u3m),
+        nomLM: Math.round(((proyVig - lm)/1e6)*10)/10,
+        nomU3M: Math.round(((proyVig - u3m)/1e6)*10)/10,
       },
     };
   }
 
   // ---- compañía (suma 3 sedes) ----
-  let histTotal = [0,0,0,0,0,0,0], real8Total = 0, proy8Total = 0;
+  let histTotal = meses.map(() => 0), realVigenteTotal = 0, proyVigTotal = 0;
   for (const code of Object.keys(sedesOut)) {
     sedesOut[code].ingresos.hist.forEach((v,i) => histTotal[i] += v);
-    real8Total += sedesOut[code].ingresos.actual;
-    proy8Total += sedesOut[code].ingresos.proy;
+    realVigenteTotal += sedesOut[code].ingresos.actual;
+    proyVigTotal += sedesOut[code].ingresos.proy;
   }
-  const julTotal = histTotal[6];
-  const u3mTotal = (histTotal[4]+histTotal[5]+histTotal[6])/3;
+  const lmTotal = histTotal[histTotal.length - 1] || 0;
+  const u3mTotal = avgUlt3(histTotal);
   const totalIngresos = {
     hist: histTotal.map(v => Math.round(v*10)/10),
-    actual: Math.round(real8Total*10)/10,
-    proy: Math.round(proy8Total*10)/10,
-    vsLM: pctOrNull(proy8Total, julTotal),
-    vsU3M: pctOrNull(proy8Total, u3mTotal),
-    nomLM: Math.round((proy8Total-julTotal)*10)/10,
-    nomU3M: Math.round((proy8Total-u3mTotal)*10)/10,
-    nota: `$${(proy8Total-julTotal).toFixed(1)}M vs LM, $${(proy8Total-u3mTotal).toFixed(1)}M vs U3M`,
+    actual: Math.round(realVigenteTotal*10)/10,
+    proy: Math.round(proyVigTotal*10)/10,
+    vsLM: pctOrNull(proyVigTotal, lmTotal),
+    vsU3M: pctOrNull(proyVigTotal, u3mTotal),
+    nomLM: Math.round((proyVigTotal-lmTotal)*10)/10,
+    nomU3M: Math.round((proyVigTotal-u3mTotal)*10)/10,
+    nota: `$${(proyVigTotal-lmTotal).toFixed(1)}M vs LM, $${(proyVigTotal-u3mTotal).toFixed(1)}M vs U3M`,
   };
 
   for (const serv of Object.keys(companyByServ)) {
     const c = companyByServ[serv];
-    if (c.proy > 0 || c.jul > 0) {
+    if (c.proy > 0 || c.lm > 0) {
       serviciosOut.total.push({
         nombre: SERVICIO_LABEL[serv],
         servKey: serv,
         valor: Math.round((c.proy/1e6)*10)/10,
-        vsLM: pctOrNull(c.proy, c.jul),
+        vsLM: pctOrNull(c.proy, c.lm),
         vsU3M: pctOrNull(c.proy, c.u3m),
-        nomLM: Math.round(((c.proy - c.jul)/1e6)*100)/100,
+        nomLM: Math.round(((c.proy - c.lm)/1e6)*100)/100,
         nomU3M: Math.round(((c.proy - c.u3m)/1e6)*100)/100,
-        nuevo: c.jul === 0,
+        nuevo: c.lm === 0,
       });
     }
   }
@@ -230,19 +283,22 @@ async function fetchLiveIngresos() {
   ============================================================================
 */
 
+// Cache de las filas crudas de cada hoja ya descargada, para poder
+// recalcular todo el tablero cuando cambia el selector de mes (Ene-Dic) sin
+// tener que volver a pedirle nada a Google Sheets — ver changeMesVigente().
+let _rawCache = {};
+
 async function fetchSheetJson(sheetName) {
   const res = await fetch(`${WEB_APP_URL}?sheet=${encodeURIComponent(sheetName)}`);
   if (!res.ok) throw new Error(`Apps Script HTTP ${res.status} (${sheetName})`);
   const json = await res.json();
   if (json.error) throw new Error(`Apps Script error (${sheetName}): ${json.error}`);
-  return json.values || [];
+  const rows = json.values || [];
+  _rawCache[sheetName] = rows;
+  return rows;
 }
 
 const SEDES = ["CDMX", "GDL", "MTP"];
-
-function avg3(hist) {
-  return (hist[4] + hist[5] + hist[6]) / 3;
-}
 
 /**
  * Atenciones / Pacientes comparten forma: filas [Sede, MesNum, MesLabel, Real].
@@ -256,19 +312,23 @@ function buildMonthlyRealMetric(rows) {
     bySede[sede] = bySede[sede] || {};
     bySede[sede][mesNum] = real;
   }
+  const meses = rangoHist(MES_VIGENTE);
+  const cerrado = mesVigenteCerrado(MES_VIGENTE);
   const out = {};
-  let histTotal = [0,0,0,0,0,0,0], actualTotal = 0;
+  let histTotal = meses.map(() => 0), actualTotal = 0;
   for (const sede of SEDES) {
     const m = bySede[sede] || {};
-    const hist = [1,2,3,4,5,6,7].map(n => m[n] || 0);
-    const actual = m[8] || 0;
-    const proy = MES_VIGENTE_CERRADO ? actual : actual + actual / 30;
+    const hist = meses.map(n => m[n] || 0);
+    const actual = m[MES_VIGENTE] || 0;
+    const proy = cerrado ? actual : actual + actual / 30;
     hist.forEach((v,i) => histTotal[i] += v);
     actualTotal += actual;
-    out[sede] = { hist, actual, proy: Math.round(proy), vsLM: pctOrNull(proy, hist[6]), vsU3M: pctOrNull(proy, avg3(hist)) };
+    const lm = hist[hist.length-1] || 0;
+    out[sede] = { hist, actual, proy: Math.round(proy), vsLM: pctOrNull(proy, lm), vsU3M: pctOrNull(proy, avgUlt3(hist)) };
   }
-  const proyTotal = MES_VIGENTE_CERRADO ? actualTotal : actualTotal + actualTotal / 30;
-  out.total = { hist: histTotal, actual: actualTotal, proy: Math.round(proyTotal), vsLM: pctOrNull(proyTotal, histTotal[6]), vsU3M: pctOrNull(proyTotal, avg3(histTotal)) };
+  const proyTotal = cerrado ? actualTotal : actualTotal + actualTotal / 30;
+  const lmTotal = histTotal[histTotal.length-1] || 0;
+  out.total = { hist: histTotal, actual: actualTotal, proy: Math.round(proyTotal), vsLM: pctOrNull(proyTotal, lmTotal), vsU3M: pctOrNull(proyTotal, avgUlt3(histTotal)) };
   return out;
 }
 
@@ -283,20 +343,23 @@ function buildConsultasMetric(rows) {
     bySede[sede] = bySede[sede] || {};
     bySede[sede][mesNum] = { real: num(realRaw), agendado: num(agendadoRaw) };
   }
+  const meses = rangoHist(MES_VIGENTE);
   const out = {};
-  let histTotal = [0,0,0,0,0,0,0], real8Total = 0, agen8Total = 0;
+  let histTotal = meses.map(() => 0), realVigTotal = 0, agenVigTotal = 0;
   for (const sede of SEDES) {
     const m = bySede[sede] || {};
-    const hist = [1,2,3,4,5,6,7].map(n => (m[n] && m[n].real) || 0);
-    const real8 = (m[8] && m[8].real) || 0;
-    const agendado8 = (m[8] && m[8].agendado) || 0;
-    const proy = real8 + agendado8;
+    const hist = meses.map(n => (m[n] && m[n].real) || 0);
+    const realVig = (m[MES_VIGENTE] && m[MES_VIGENTE].real) || 0;
+    const agendadoVig = (m[MES_VIGENTE] && m[MES_VIGENTE].agendado) || 0;
+    const proy = realVig + agendadoVig;
     hist.forEach((v,i) => histTotal[i] += v);
-    real8Total += real8; agen8Total += agendado8;
-    out[sede] = { hist, real: real8, agendado: agendado8, vsLM: pctOrNull(proy, hist[6]), vsU3M: pctOrNull(proy, avg3(hist)) };
+    realVigTotal += realVig; agenVigTotal += agendadoVig;
+    const lm = hist[hist.length-1] || 0;
+    out[sede] = { hist, real: realVig, agendado: agendadoVig, vsLM: pctOrNull(proy, lm), vsU3M: pctOrNull(proy, avgUlt3(hist)) };
   }
-  const proyTotal = real8Total + agen8Total;
-  out.total = { hist: histTotal, real: real8Total, agendado: agen8Total, vsLM: pctOrNull(proyTotal, histTotal[6]), vsU3M: pctOrNull(proyTotal, avg3(histTotal)) };
+  const proyTotal = realVigTotal + agenVigTotal;
+  const lmTotal = histTotal[histTotal.length-1] || 0;
+  out.total = { hist: histTotal, real: realVigTotal, agendado: agenVigTotal, vsLM: pctOrNull(proyTotal, lmTotal), vsU3M: pctOrNull(proyTotal, avgUlt3(histTotal)) };
   return out;
 }
 
@@ -344,13 +407,14 @@ function buildMonthlyMetaMetric(rows) {
     if (v != null) anyData = true;
   }
   const toMDP = v => (v == null ? null : Math.round((v / 1e6) * 10) / 10);
+  const meses = rangoHist(MES_VIGENTE);
   const out = {};
-  const histTotal = [null, null, null, null, null, null, null];
+  const histTotal = meses.map(() => null);
   let actualTotal = null;
   for (const sede of SEDES) {
     const m = bySede[sede] || {};
-    const hist = [1, 2, 3, 4, 5, 6, 7].map(n => (m[n] == null ? null : m[n]));
-    const actual = m[8] == null ? null : m[8];
+    const hist = meses.map(n => (m[n] == null ? null : m[n]));
+    const actual = m[MES_VIGENTE] == null ? null : m[MES_VIGENTE];
     hist.forEach((v, i) => { if (v != null) histTotal[i] = (histTotal[i] || 0) + v; });
     if (actual != null) actualTotal = (actualTotal || 0) + actual;
     out[sede] = { hist: hist.map(toMDP), actual: toMDP(actual) };
@@ -402,8 +466,12 @@ function buildHubspotMetric(rows) {
     leadsArr.push(num(leadsRaw));
     citasArr.push(num(citasRaw));
   }
-  const leadsHist = leadsArr.slice(0, 7), citasHist = citasArr.slice(0, 7);
-  const leadsActual = leadsArr[7] || 0, citasActual = citasArr[7] || 0;
+  // rows[i] = mes i+1 (Ene=0, ..., Dic=11). El mes vigente es el que haya
+  // cargado HubSpot más recientemente — si ese pull todavía no llega al mes
+  // que el selector tiene seleccionado, esta vista simplemente muestra 0
+  // (HubSpot se refresca manual y por separado, no viene del pipeline de Cargos).
+  const leadsHist = leadsArr.slice(0, MES_VIGENTE - 1), citasHist = citasArr.slice(0, MES_VIGENTE - 1);
+  const leadsActual = leadsArr[MES_VIGENTE - 1] || 0, citasActual = citasArr[MES_VIGENTE - 1] || 0;
   const convHist = leadsHist.map((l, i) => pct(citasHist[i], l));
   return {
     leads: { hist: leadsHist, actual: leadsActual },
@@ -413,6 +481,10 @@ function buildHubspotMetric(rows) {
 }
 
 function buildHubspotSedeMetric(rows) {
+  // Nota: esta hoja trae una sola foto (mes vigente + YTD), no un valor por
+  // cada uno de los 12 meses — así que "agosto" aquí es un nombre heredado,
+  // en realidad significa "el mes vigente al momento del último refresh de
+  // HubSpot" y no se mueve solo con el selector de mes del tablero.
   const out = {};
   for (const [sede, leadsAgoRaw, citasAgoRaw, leadsYtdRaw, citasYtdRaw] of rows) {
     if (!SEDES.includes(sede)) continue;
@@ -477,36 +549,21 @@ async function fetchLiveHubspot() {
   ============================================================================
 */
 
-function buildConceptosMetric(rows) {
-  const out = { total: {}, CDMX: {}, GDL: {}, MTP: {} };
-  for (const [scope, serv, subclasRaw, subclas2Raw, concepto, agoRaw, julRaw, countRaw, udsRaw] of rows) {
-    if (!out[scope] || !serv || !concepto) continue;
-    out[scope][serv] = out[scope][serv] || [];
-    const subclas = String(subclasRaw ?? "").trim() || null;
-    const subclas2 = String(subclas2Raw ?? "").trim() || null;
-    out[scope][serv].push({ subclas, subclas2, concepto, ago: num(agoRaw), jul: num(julRaw), count: num(countRaw), uds: num(udsRaw) });
-  }
-  for (const scope of Object.keys(out)) {
-    for (const serv of Object.keys(out[scope])) {
-      out[scope][serv].sort((a, b) => b.ago - a.ago);
-    }
-  }
-  return out;
-}
-
-const MESES_8 = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago"];
+// (La vieja buildConceptosMetric, que leía una hoja "Conceptos" con columnas
+// fijas Ago/Jul, se retiró — la vista se deriva ahora con computeConceptosView
+// a partir de conceptosMensual + conceptosHier, reactiva al selector de mes.)
 
 /*
   "ConceptosMensual" trae, por Sede ("CDMX"/"GDL"/"MTP"/"total") y Concepto
-  (mismo texto exacto que en "Conceptos" — la combinación Sede+Concepto es
-  única), el histórico Ene-Ago de Ingresos/Atenciones/UDS de esa línea de
-  cargo. Se usa para el detalle "evolutivo por concepto" que se abre al dar
-  clic en un concepto hoja dentro del modal de desglose (Ingresos y
-  Atenciones/UDS vienen de Cargos_y_Facturas mes a mes; Ago y Jul de Ingresos
-  se pisan con el valor ya validado de "Conceptos" para que ambas vistas
-  siempre coincidan en esos dos meses — el resto de meses no tiene una fuente
-  reclasificada manualmente, así que usa el cálculo directo). Filas: [Sede,
-  Concepto, MesNum, Ingresos, Atenciones, Uds].
+  (mismo texto exacto que en "ConceptosHier"/"ConceptosPorMedico" — la
+  combinación Sede+Concepto es única), el histórico Ene-Dic de
+  Ingresos/Atenciones/UDS de esa línea de cargo (12 casillas siempre, se van
+  llenando conforme se cargan más meses — los que no tienen datos todavía
+  quedan en 0). Se usa para el detalle "evolutivo por concepto" Y para
+  derivar la vista "Mezcla de servicios" (antes venía de una hoja "Conceptos"
+  separada con columnas fijas Ago/Jul — ahora ambas vistas se calculan aquí
+  mismo según el mes que elija el selector, ver computeConceptosView).
+  Filas: [Sede, Concepto, MesNum, Ingresos, Atenciones, Uds].
 */
 function buildConceptosMensualMetric(rows) {
   const out = {};
@@ -514,13 +571,71 @@ function buildConceptosMensualMetric(rows) {
     if (!concepto) continue;
     out[sede] = out[sede] || {};
     out[sede][concepto] = out[sede][concepto] || {
-      labels: MESES_8, ingresos: Array(8).fill(0), atenciones: Array(8).fill(0), uds: Array(8).fill(0),
+      labels: MESES_12, ingresos: Array(12).fill(0), atenciones: Array(12).fill(0), uds: Array(12).fill(0),
     };
     const idx = Number(mesNumRaw) - 1;
-    if (idx < 0 || idx > 7) continue;
+    if (idx < 0 || idx > 11) continue;
     out[sede][concepto].ingresos[idx] = num(ingresosRaw);
     out[sede][concepto].atenciones[idx] = num(atRaw);
     out[sede][concepto].uds[idx] = num(udsRaw);
+  }
+  return out;
+}
+
+/*
+  "ConceptosHier" es la jerarquía ESTÁTICA Concepto -> Servicio/Subclas/
+  Subclas2 (no cambia mes a mes, solo cuando aparece un concepto nuevo).
+  Reemplaza a la vieja hoja "Conceptos" (que traía una foto fija de Ago/Jul):
+  ahora la vista "Mezcla de servicios" se arma en vivo combinando esta
+  jerarquía con conceptosMensual + el mes que el selector tenga activo.
+  Filas: [Concepto, Servicio, Subclas, Subclas2].
+*/
+function buildConceptosHierMetric(rows) {
+  const out = {};
+  for (const [concepto, servicio, subclas, subclas2] of rows) {
+    if (!concepto || !servicio) continue;
+    out[concepto] = {
+      servicio,
+      subclas: String(subclas ?? "").trim() || null,
+      subclas2: String(subclas2 ?? "").trim() || null,
+    };
+  }
+  return out;
+}
+
+/**
+ * Deriva la vista "Mezcla de servicios" (D.conceptos[scope][servKey] = [{
+ * subclas, subclas2, concepto, ago, jul, count, uds }]) directamente de
+ * conceptosMensual + conceptosHier, para el mes que MES_VIGENTE tenga en ese
+ * momento — "ago"/"jul" son nombres heredados de cuando Agosto era el mes
+ * fijo, pero ya significan simplemente "mes vigente" / "mes anterior".
+ * Se recalcula cada vez que cambia el selector de mes (no requiere volver a
+ * pedir nada al Sheet).
+ */
+function computeConceptosView(conceptosMensual, conceptosHier) {
+  const out = { total: {}, CDMX: {}, GDL: {}, MTP: {} };
+  const idxVig = MES_VIGENTE - 1, idxLM = MES_VIGENTE - 2;
+  for (const scope of Object.keys(out)) {
+    const porConcepto = (conceptosMensual && conceptosMensual[scope]) || {};
+    for (const concepto of Object.keys(porConcepto)) {
+      const serie = porConcepto[concepto];
+      const ago = serie.ingresos[idxVig] || 0;
+      const jul = idxLM >= 0 ? (serie.ingresos[idxLM] || 0) : 0;
+      const count = serie.atenciones[idxVig] || 0;
+      const uds = serie.uds[idxVig] || 0;
+      // si ni el mes vigente ni ningún mes anterior tienen dato, no tiene
+      // caso listar el concepto en este scope (ej. concepto que solo vende
+      // en otra sede) — pero si tuvo venta en CUALQUIER mes ya cargado, se
+      // incluye aunque el mes vigente esté en 0 (esa es la alerta de "sin venta").
+      const tuvoAlgunaVenta = serie.ingresos.some(v => v > 0);
+      if (!tuvoAlgunaVenta) continue;
+      const hier = (conceptosHier && conceptosHier[concepto]) || { servicio: "Otros", subclas: null, subclas2: null };
+      out[scope][hier.servicio] = out[scope][hier.servicio] || [];
+      out[scope][hier.servicio].push({ subclas: hier.subclas, subclas2: hier.subclas2, concepto, ago, jul, count, uds });
+    }
+    for (const serv of Object.keys(out[scope])) {
+      out[scope][serv].sort((a, b) => b.ago - a.ago);
+    }
   }
   return out;
 }
@@ -555,7 +670,7 @@ const SUBROGACION_ETAPAS = ["Valoración", "Programa Activo"];
  */
 function buildSubrogacionForScope(rows, scope) {
   const byMes = {};
-  for (let m = 1; m <= 8; m++) {
+  for (let m = 1; m <= 12; m++) {
     byMes[m] = { "Valoración": { pacientes: 0, ingreso: 0 }, "Programa Activo": { pacientes: 0, ingreso: 0 } };
   }
   for (const [mesNumRaw, , sede, etapa, pacientesRaw, ingresoRaw] of rows) {
@@ -565,22 +680,23 @@ function buildSubrogacionForScope(rows, scope) {
     byMes[mesNum][etapa].pacientes += num(pacientesRaw);
     byMes[mesNum][etapa].ingreso += num(ingresoRaw);
   }
+  const meses = rangoHist(MES_VIGENTE);
   const hist = {};
-  for (const etapa of SUBROGACION_ETAPAS) hist[etapa] = [1,2,3,4,5,6,7].map(m => byMes[m][etapa].pacientes);
+  for (const etapa of SUBROGACION_ETAPAS) hist[etapa] = meses.map(m => byMes[m][etapa].pacientes);
   const actual = {};
   for (const etapa of SUBROGACION_ETAPAS) {
-    const a = byMes[8][etapa];
+    const a = byMes[MES_VIGENTE][etapa];
     actual[etapa] = { pacientes: a.pacientes, ingreso: a.ingreso, ticket: a.pacientes ? Math.round(a.ingreso / a.pacientes) : 0 };
   }
   const totalPacientesYTD = {}, ingresoYTDByEtapa = {};
   let ingresoYTD = 0;
   for (const etapa of SUBROGACION_ETAPAS) {
     totalPacientesYTD[etapa] = hist[etapa].reduce((a,b)=>a+b,0) + actual[etapa].pacientes;
-    const ingEtapa = [1,2,3,4,5,6,7,8].reduce((a,m)=>a+byMes[m][etapa].ingreso, 0);
+    const ingEtapa = [...meses, MES_VIGENTE].reduce((a,m)=>a+byMes[m][etapa].ingreso, 0);
     ingresoYTDByEtapa[etapa] = ingEtapa;
     ingresoYTD += ingEtapa;
   }
-  return { labels: MESES, hist, actual, totalPacientesYTD, ingresoYTD, byMes };
+  return { labels: MESES_12.slice(0, meses.length), hist, actual, totalPacientesYTD, ingresoYTD, byMes };
 }
 
 // El cálculo de vs LM / vs U3M / nominal por periodo para Subrogación se
@@ -599,16 +715,23 @@ function buildSubrogacionMetric(rows) {
 }
 
 async function fetchLiveConceptosYSubrogacion() {
-  const [concRows, subRows, concMensualRows, concPorMedicoRows] = await Promise.all([
-    fetchSheetJson("Conceptos"),
+  const [hierRows, subRows, concMensualRows, concPorMedicoRows] = await Promise.all([
+    fetchSheetJson("ConceptosHier"),
     fetchSheetJson("SubrogacionPacientes"),
     fetchSheetJson("ConceptosMensual"),
     fetchSheetJson("ConceptosPorMedico"),
   ]);
+  const conceptosHier = buildConceptosHierMetric(hierRows);
+  const conceptosMensual = buildConceptosMensualMetric(concMensualRows);
+  // MES_VIGENTE se autodetecta aquí (último mes con datos reales) ANTES de
+  // derivar la vista de Conceptos, para que el primer render ya arranque en
+  // el mes correcto en vez de quedarse en el default de Agosto.
+  MES_VIGENTE = detectarMesVigente(conceptosMensual);
   return {
-    conceptos: buildConceptosMetric(concRows),
+    conceptosHier,
+    conceptosMensual,
+    conceptos: computeConceptosView(conceptosMensual, conceptosHier),
     subrogacion: buildSubrogacionMetric(subRows),
-    conceptosMensual: buildConceptosMensualMetric(concMensualRows),
     conceptosPorMedico: buildConceptosPorMedicoMetric(concPorMedicoRows),
   };
 }
@@ -633,26 +756,27 @@ function buildDoctoresMetric(rows) {
   for (const [sede, prof, mesNumRaw, , ingresoRaw, atRaw, pacRaw] of rows) {
     if (!SEDES.includes(sede) || !prof) continue;
     const mesNum = Number(mesNumRaw);
-    if (mesNum < 1 || mesNum > 8) continue;
+    if (mesNum < 1 || mesNum > 12) continue;
     const key = sede + "||" + prof;
-    bySedeDoc[key] = bySedeDoc[key] || { sede, prof, ingreso: Array(8).fill(0), atenciones: Array(8).fill(0), pacientes: Array(8).fill(0) };
+    bySedeDoc[key] = bySedeDoc[key] || { sede, prof, ingreso: Array(12).fill(0), atenciones: Array(12).fill(0), pacientes: Array(12).fill(0) };
     bySedeDoc[key].ingreso[mesNum-1] += num(ingresoRaw);
     bySedeDoc[key].atenciones[mesNum-1] += num(atRaw);
     bySedeDoc[key].pacientes[mesNum-1] += num(pacRaw);
   }
-  function mk(){ return { ingreso:{hist:Array(7).fill(0),actual:0}, atenciones:{hist:Array(7).fill(0),actual:0}, pacientes:{hist:Array(7).fill(0),actual:0} }; }
+  const nHist = MES_VIGENTE - 1;
+  function mk(){ return { ingreso:{hist:Array(nHist).fill(0),actual:0}, atenciones:{hist:Array(nHist).fill(0),actual:0}, pacientes:{hist:Array(nHist).fill(0),actual:0} }; }
   const out = { total: {}, CDMX: {}, GDL: {}, MTP: {} };
   for (const key of Object.keys(bySedeDoc)) {
     const d = bySedeDoc[key];
     const entry = {
-      ingreso: { hist: d.ingreso.slice(0,7).map(v=>Math.round(v)), actual: Math.round(d.ingreso[7]) },
-      atenciones: { hist: d.atenciones.slice(0,7), actual: d.atenciones[7] },
-      pacientes: { hist: d.pacientes.slice(0,7), actual: d.pacientes[7] },
+      ingreso: { hist: d.ingreso.slice(0,nHist).map(v=>Math.round(v)), actual: Math.round(d.ingreso[MES_VIGENTE-1]) },
+      atenciones: { hist: d.atenciones.slice(0,nHist), actual: d.atenciones[MES_VIGENTE-1] },
+      pacientes: { hist: d.pacientes.slice(0,nHist), actual: d.pacientes[MES_VIGENTE-1] },
     };
     out[d.sede][d.prof] = entry;
     out.total[d.prof] = out.total[d.prof] || mk();
     for (const metric of ["ingreso","atenciones","pacientes"]) {
-      for (let i=0;i<7;i++) out.total[d.prof][metric].hist[i] += entry[metric].hist[i];
+      for (let i=0;i<nHist;i++) out.total[d.prof][metric].hist[i] += entry[metric].hist[i];
       out.total[d.prof][metric].actual += entry[metric].actual;
     }
   }
@@ -669,6 +793,18 @@ async function fetchLiveDoctores() {
  * trae los valores del último corte como respaldo (fallback).
  */
 async function loadLiveDataIntoDashboard() {
+  // Se autodetecta MES_VIGENTE ANTES que cualquier otro fetch (todos los
+  // builders de abajo lo leen como variable global), para que el primer
+  // render ya arranque en el último mes con datos reales y no en el default
+  // de Agosto. Si falla (sin conexión), se queda en el default y el selector
+  // de mes de la UI lo puede corregir a mano.
+  try {
+    const preRows = await fetchSheetJson("ConceptosMensual");
+    MES_VIGENTE = detectarMesVigente(buildConceptosMensualMetric(preRows));
+  } catch (e) {
+    console.warn("No se pudo autodetectar el mes vigente, usando default:", e);
+  }
+
   try {
     const live = await fetchLiveIngresos();
     window.DATA.total.ingresos = live.totalIngresos;
@@ -716,6 +852,7 @@ async function loadLiveDataIntoDashboard() {
     window.DATA.conceptos = cs.conceptos;
     window.DATA.subrogacion = cs.subrogacion;
     window.DATA.conceptosMensual = cs.conceptosMensual;
+    window.DATA.conceptosHier = cs.conceptosHier;
     window.DATA.conceptosPorMedico = cs.conceptosPorMedico;
     window.DATA._liveOkConceptos = true;
   } catch (e) {
@@ -746,3 +883,87 @@ async function loadLiveDataIntoDashboard() {
     console.warn("No se pudo cargar Metas en vivo desde Sheets (opcional, sin fallback):", e);
   }
 }
+
+/**
+ * Recalcula TODO el tablero a partir de las filas ya cacheadas en _rawCache
+ * (sin volver a llamar a Google Sheets) para el MES_VIGENTE actual. La usa
+ * changeMesVigente() cuando el selector de mes (Ene-Dic) cambia — cada hoja
+ * que no se haya podido cargar todavía simplemente se salta (deja lo que ya
+ * había en window.DATA), igual que loadLiveDataIntoDashboard.
+ */
+function rebuildAllFromCache() {
+  if (_rawCache["Base"]) {
+    const live = buildIngresosMetric(_rawCache["Base"]);
+    window.DATA.total.ingresos = live.totalIngresos;
+    for (const code of Object.keys(live.sedesOut)) {
+      window.DATA.sedes[code].ingresos = live.sedesOut[code].ingresos;
+    }
+    window.DATA.servicios = live.serviciosOut;
+  }
+
+  if (_rawCache["Atenciones"] || _rawCache["Pacientes"] || _rawCache["Consultas"]) {
+    const atenciones = buildMonthlyRealMetric(_rawCache["Atenciones"] || []);
+    const pacientes = buildMonthlyRealMetric(_rawCache["Pacientes"] || []);
+    const consultas = buildConsultasMetric(_rawCache["Consultas"] || []);
+    window.DATA.total.atenciones = { ...window.DATA.total.atenciones, ...atenciones.total };
+    window.DATA.total.pacientes = { ...window.DATA.total.pacientes, ...pacientes.total };
+    window.DATA.total.consultas = { ...window.DATA.total.consultas, ...consultas.total };
+    for (const code of SEDES) {
+      window.DATA.sedes[code].atenciones = { ...window.DATA.sedes[code].atenciones, ...atenciones[code] };
+      window.DATA.sedes[code].pacientes = { ...window.DATA.sedes[code].pacientes, ...pacientes[code] };
+      window.DATA.sedes[code].consultas = { ...window.DATA.sedes[code].consultas, ...consultas[code] };
+    }
+  }
+  if (_rawCache["ConsultasRanking"]) {
+    window.DATA.consultas_ranking = buildConsultasRanking(_rawCache["ConsultasRanking"]);
+  }
+
+  if (_rawCache["Hubspot"]) {
+    const base = buildHubspotMetric(_rawCache["Hubspot"]);
+    window.DATA.hubspot = {
+      ...window.DATA.hubspot, ...base,
+      conversion_por_sede: _rawCache["HubspotSede"] ? buildHubspotSedeMetric(_rawCache["HubspotSede"]) : (window.DATA.hubspot || {}).conversion_por_sede,
+      cohortes: _rawCache["HubspotCohortes"] ? buildHubspotCohortes(_rawCache["HubspotCohortes"]) : (window.DATA.hubspot || {}).cohortes,
+    };
+  }
+
+  if (_rawCache["ConceptosMensual"]) {
+    const conceptosMensual = buildConceptosMensualMetric(_rawCache["ConceptosMensual"]);
+    const conceptosHier = _rawCache["ConceptosHier"] ? buildConceptosHierMetric(_rawCache["ConceptosHier"]) : window.DATA.conceptosHier;
+    window.DATA.conceptosMensual = conceptosMensual;
+    window.DATA.conceptosHier = conceptosHier;
+    window.DATA.conceptos = computeConceptosView(conceptosMensual, conceptosHier);
+  }
+  if (_rawCache["SubrogacionPacientes"]) {
+    window.DATA.subrogacion = buildSubrogacionMetric(_rawCache["SubrogacionPacientes"]);
+  }
+  if (_rawCache["ConceptosPorMedico"]) {
+    window.DATA.conceptosPorMedico = buildConceptosPorMedicoMetric(_rawCache["ConceptosPorMedico"]);
+  }
+  if (_rawCache["PorMedico"]) {
+    window.DATA.doctores = buildDoctoresMetric(_rawCache["PorMedico"]);
+  }
+  if (_rawCache["Metas"]) {
+    const metas = buildMonthlyMetaMetric(_rawCache["Metas"]);
+    if (metas._hasData) {
+      window.DATA.total.meta = metas.total;
+      for (const code of SEDES) window.DATA.sedes[code].meta = metas[code];
+    }
+  }
+}
+
+/**
+ * Punto de entrada del selector de mes (Ene-Dic) en index.html. Cambia
+ * MES_VIGENTE, recalcula todo desde la cache y vuelve a dibujar el tablero.
+ * Ningún panel cuya hoja fuente todavía no tenga ese mes cargado va a
+ * tronar — simplemente muestra 0 / "sin venta" para ese mes, como cualquier
+ * otro mes sin datos.
+ */
+function changeMesVigente(nuevoMes) {
+  MES_VIGENTE = nuevoMes;
+  rebuildAllFromCache();
+  if (typeof renderAll === "function") renderAll();
+}
+window.changeMesVigente = changeMesVigente;
+window.getMesVigente = () => MES_VIGENTE;
+window.MESES_12 = MESES_12;
