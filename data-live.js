@@ -738,10 +738,11 @@ async function fetchLiveConceptosYSubrogacion() {
   ]);
   const conceptosHier = buildConceptosHierMetric(hierRows);
   const conceptosMensual = buildConceptosMensualMetric(concMensualRows);
-  // MES_VIGENTE se autodetecta aquí (último mes con datos reales) ANTES de
-  // derivar la vista de Conceptos, para que el primer render ya arranque en
-  // el mes correcto en vez de quedarse en el default de Agosto.
-  MES_VIGENTE = detectarMesVigente(conceptosMensual);
+  // OJO: MES_VIGENTE NO se reasigna aquí — ya se autodetectó (con el clamp
+  // contra la hoja "Base", ver loadLiveDataIntoDashboard) antes de que
+  // corra cualquier fetch, incluido este. Reasignarlo aquí sin el clamp
+  // adelantaría el mes vigente en cuanto Conceptos tenga un mes que Base
+  // todavía no, rompiendo los KPIs principales (quedarían en $0).
   return {
     conceptosHier,
     conceptosMensual,
