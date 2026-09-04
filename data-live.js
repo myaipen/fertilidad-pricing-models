@@ -110,6 +110,21 @@ function detectarMesVigente(conceptosMensual) {
   return ultimo || 8;
 }
 
+// Último mes (1-12) con datos reales (columna "Real" > 0 en alguna fila)
+// dentro de la hoja "Base" (Evolutivo 2026) — la fuente de los KPIs
+// principales (Ingresos/Servicios). rows[i] = [Sede, Servicio, MesNum, ...].
+// Se usa para no dejar que MES_VIGENTE se adelante a Conceptos cuando esa
+// hoja ya trae un mes nuevo pero Base todavía no (ver loadLiveDataIntoDashboard).
+function detectarMesVigenteBase(rows) {
+  let ultimo = 0;
+  for (const r of (rows || [])) {
+    const mesNum = Number(r[2]);
+    const real = num(r[4]);
+    if (real > 0 && mesNum > ultimo) ultimo = mesNum;
+  }
+  return ultimo;
+}
+
 function num(v) {
   return Number(String(v ?? "").replace(/[^0-9.-]/g, "")) || 0;
 }
@@ -799,8 +814,19 @@ async function loadLiveDataIntoDashboard() {
   // de Agosto. Si falla (sin conexión), se queda en el default y el selector
   // de mes de la UI lo puede corregir a mano.
   try {
-    const preRows = await fetchSheetJson("ConceptosMensual");
-    MES_VIGENTE = detectarMesVigente(buildConceptosMensualMetric(preRows));
+    const [preRows, baseRows] = await Promise.all([
+      fetchSheetJson("ConceptosMensual"),
+      fetchSheetJson("Base"),
+    ]);
+    const mesConceptos = detectarMesVigente(buildConceptosMensualMetric(preRows));
+    const mesBase = detectarMesVigenteBase(baseRows);
+    // Nunca adelantar el mes vigente más allá de lo que "Base" (Evolutivo
+    // 2026, fuente de los KPIs principales de Ingresos/Servicios) ya tiene
+    // real. Si Conceptos ya trae un mes nuevo pero Base todavía no se
+    // actualizó ese mes, nos quedamos en el último mes que Base sí tiene,
+    // para no mostrar $0 en los KPIs mientras Marite termina de actualizar
+    // Base. El selector de mes de la UI siempre permite adelantarlo a mano.
+    MES_VIGENTE = mesBase > 0 ? Math.min(mesConceptos, mesBase) : mesConceptos;
   } catch (e) {
     console.warn("No se pudo autodetectar el mes vigente, usando default:", e);
   }
