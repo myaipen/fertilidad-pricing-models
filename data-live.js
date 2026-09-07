@@ -71,11 +71,40 @@ let MES_VIGENTE = 8;
 // Un mes se considera "cerrado" (ya no quedan días por transcurrir que
 // proyectar para Atenciones/Pacientes Únicos) si es estrictamente anterior
 // al mes calendario real de hoy. Si el usuario selecciona el mes en curso
-// (el mismo mes calendario que hoy), se sigue proyectando con la regla
-// Real + Real/30 como antes.
+// (el mismo mes calendario que hoy), se proyecta por tendencia (ver
+// diasTranscurridosEnMes/diasEnMes abajo).
 function mesVigenteCerrado(mesVigente) {
   const hoy = new Date();
   return mesVigente < (hoy.getMonth() + 1);
+}
+
+// Días calendario que tiene un mes dado (1-12) en el año en curso.
+function diasEnMes(mesVigente) {
+  const hoy = new Date();
+  return new Date(hoy.getFullYear(), mesVigente, 0).getDate();
+}
+
+// Días ya transcurridos (con datos reales) del mes vigente, cuando éste es
+// el mes calendario actual. Se asume que el corte de datos del Sheet es de
+// "ayer" (hoy - 1 día): si hoy es 7-sep, el Real reportado corresponde a
+// 1-6 sep, es decir 6 días transcurridos.
+//
+// ARREGLO (sep-2026): antes se usaba una fórmula fija "Real + Real/30" que
+// asumía implícitamente ~29-30 días ya transcurridos (pensada para cuando
+// el mes vigente está casi cerrado). Aplicada a un mes recién iniciado
+// (ej. día 6 de 30) subestimaba brutalmente la proyección (solo sumaba
+// Real/30, un día de más, en vez de extrapolar los ~24 días restantes).
+// Ahora se proyecta por tendencia: Proyectado = Real x (díasDelMes /
+// díasTranscurridos), igual que se corrigió Ingresos en el Sheet.
+function diasTranscurridosEnMes(mesVigente) {
+  const hoy = new Date();
+  if (mesVigente === hoy.getMonth() + 1) {
+    return Math.max(hoy.getDate() - 1, 0);
+  }
+  // Mes vigente distinto al calendario actual (ej. seleccionado a mano) y
+  // no cerrado (futuro): no hay corte de datos conocido, se asume 0 y el
+  // llamador cae de vuelta a "actual" sin proyectar.
+  return 0;
 }
 
 // [1, 2, ..., mesVigente-1] — el histórico de meses previos al vigente.
@@ -329,19 +358,29 @@ function buildMonthlyRealMetric(rows) {
   }
   const meses = rangoHist(MES_VIGENTE);
   const cerrado = mesVigenteCerrado(MES_VIGENTE);
+  const diasTot = diasEnMes(MES_VIGENTE);
+  const diasTr = diasTranscurridosEnMes(MES_VIGENTE);
+  // proyectarPorTendencia(actual): si hay días transcurridos conocidos,
+  // Proyectado = Real x (díasDelMes / díasTranscurridos); si no (mes
+  // recién seleccionado sin corte de datos, o actual=0), se deja el real
+  // tal cual en vez de inventar una proyección.
+  function proyectarPorTendencia(actual) {
+    if (cerrado || diasTr <= 0 || actual <= 0) return actual;
+    return actual * (diasTot / diasTr);
+  }
   const out = {};
   let histTotal = meses.map(() => 0), actualTotal = 0;
   for (const sede of SEDES) {
     const m = bySede[sede] || {};
     const hist = meses.map(n => m[n] || 0);
     const actual = m[MES_VIGENTE] || 0;
-    const proy = cerrado ? actual : actual + actual / 30;
+    const proy = proyectarPorTendencia(actual);
     hist.forEach((v,i) => histTotal[i] += v);
     actualTotal += actual;
     const lm = hist[hist.length-1] || 0;
     out[sede] = { hist, actual, proy: Math.round(proy), vsLM: pctOrNull(proy, lm), vsU3M: pctOrNull(proy, avgUlt3(hist)) };
   }
-  const proyTotal = cerrado ? actualTotal : actualTotal + actualTotal / 30;
+  const proyTotal = proyectarPorTendencia(actualTotal);
   const lmTotal = histTotal[histTotal.length-1] || 0;
   out.total = { hist: histTotal, actual: actualTotal, proy: Math.round(proyTotal), vsLM: pctOrNull(proyTotal, lmTotal), vsU3M: pctOrNull(proyTotal, avgUlt3(histTotal)) };
   return out;
