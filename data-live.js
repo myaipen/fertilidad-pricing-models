@@ -831,6 +831,7 @@ async function loadLiveDataIntoDashboard() {
   } catch (e) {
     console.warn("No se pudo autodetectar el mes vigente, usando default:", e);
   }
+  syncMesesHistYActual();
 
   try {
     const live = await fetchLiveIngresos();
@@ -919,6 +920,7 @@ async function loadLiveDataIntoDashboard() {
  * había en window.DATA), igual que loadLiveDataIntoDashboard.
  */
 function rebuildAllFromCache() {
+  syncMesesHistYActual();
   if (_rawCache["Base"]) {
     const live = buildIngresosMetric(_rawCache["Base"]);
     window.DATA.total.ingresos = live.totalIngresos;
@@ -994,3 +996,19 @@ function changeMesVigente(nuevoMes) {
 window.changeMesVigente = changeMesVigente;
 window.getMesVigente = () => MES_VIGENTE;
 window.MESES_12 = MESES_12;
+
+/**
+ * Las gráficas "Evolutivo con proyección" (buildSeries() en index.html)
+ * arman sus labels con [...D.meses_hist, D.mes_actual, "Proy."] — esos dos
+ * campos venían fijos en data.js (Ene-Jul / "Ago") y nunca se recalculaban
+ * al cambiar MES_VIGENTE, por lo que al pasar a septiembre las labels (9)
+ * dejaban de cuadrar con los values (10) y Chart.js recortaba la última
+ * barra: la etiqueta "Proy." terminaba mostrando el valor REAL del mes en
+ * vez de la proyección. Se recalculan aquí para que labels y values de
+ * buildSeries() siempre queden alineados, sin importar el mes vigente.
+ */
+function syncMesesHistYActual() {
+  window.DATA.meses_hist = MESES_12.slice(0, MES_VIGENTE - 1);
+  window.DATA.mes_actual = MESES_12[MES_VIGENTE - 1];
+}
+window.syncMesesHistYActual = syncMesesHistYActual;
