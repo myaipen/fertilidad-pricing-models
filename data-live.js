@@ -61,6 +61,22 @@ const SERVICIO_LABEL = {
 };
 const MESES_12 = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
+// Snapshot del mes al que corresponden los Highlights (y demás campos 100%
+// manuales) redactados a mano en data.js — se debe leer AQUÍ, en cuanto carga
+// este script y ANTES de que syncMesesHistYActual() empiece a pisar
+// window.DATA.mes_actual cada vez que cambia el selector de Mes Vigente. (Fix
+// sep-2026: antes buildServicios() en index.html comparaba el mes vigente
+// contra window.MES_CORTE_ORIGINAL —el mes con el que el tablero autodetectó
+// arrancar según Base—, pero ese valor avanza solo en cuanto Base ya trae
+// ALGO de Real del mes siguiente, sin que nadie haya actualizado a mano los
+// Highlights de data.js todavía. Resultado: en cuanto Base empezó a traer
+// unos días de Real de septiembre, el tablero mostraba los Highlights viejos
+// de Agosto como si fueran los del mes vigente — bug reportado por Marite:
+// "pongo filtro de septiembre y me sale en mezcla de servicios y highlights
+// agosto". window.MES_HIGHLIGHTS_CURADOS es el ancla correcta: solo cambia
+// cuando de verdad se edita data.js a mano en el próximo corte de mes.)
+window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
+
 // Mes vigente: seleccionable desde la UI (selector Ene-Dic junto a Sede y
 // Periodo en index.html). Arranca en 8 (Ago) como valor por default, pero
 // loadLiveDataIntoDashboard() lo autodetecta al último mes con datos reales

@@ -158,7 +158,7 @@
   <p class="section-sub" id="evolutivo-sub"></p>
   <div class="grid-3" id="evolutivos"></div>
 
-  <div class="section-title">Mezcla de servicios (mes vigente: agosto)</div>
+  <div class="section-title">Mezcla de servicios (mes vigente: <span id="mezcla-mes-label">agosto</span>)</div>
   <p class="section-sub">Ingresos proyectados por servicio (MDP) del mes en curso — no varía con el filtro de Periodo, sí con Sede</p>
   <div class="grid-2" id="servicios-section"></div>
 
@@ -815,7 +815,7 @@ function buildConsultas(){
 // ---------------------------------------------------------------- servicios + highlights (siempre mes vigente)
 // Highlights automáticos: se usan cuando el selector de mes se mueve fuera
 // del mes con el que se redactaron a mano los de data.js (ver
-// window.MES_CORTE_ORIGINAL en data-live.js). Arma frases cortas con lo que
+// window.MES_HIGHLIGHTS_CURADOS en data-live.js). Arma frases cortas con lo que
 // ya está calculado para currentScope en ese mes vigente — no reemplaza la
 // curaduría manual del corte vigente, solo evita dejar el texto de Agosto
 // pegado cuando se está viendo otro mes.
@@ -849,12 +849,28 @@ function buildHighlightsAuto(scope){
   }
   return out;
 }
+const MES_NOMBRES_LARGOS = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+function nombreMesLargo(num){ return MES_NOMBRES_LARGOS[num-1] || ""; }
+
 function buildServicios(){
   const rows = D.servicios[currentScope];
   const mesVigenteNum = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 8;
-  const esMesCorteOriginal = (typeof window.MES_CORTE_ORIGINAL !== "number") || mesVigenteNum === window.MES_CORTE_ORIGINAL;
+  // Mes al que corresponden los Highlights redactados A MANO en data.js — window.
+  // MES_HIGHLIGHTS_CURADOS es un snapshot tomado por data-live.js al cargar, ANTES de que
+  // D.mes_actual empiece a pisarse solo con cada cambio de selector (ver
+  // syncMesesHistYActual en data-live.js), así que sigue apuntando al corte real aunque el
+  // mes vigente ya haya avanzado. (Fix sep-2026: antes se comparaba contra
+  // window.MES_CORTE_ORIGINAL —el mes con el que el tablero autodetectó arrancar según
+  // Base—, que avanza solo en cuanto Base trae ALGO de Real del mes siguiente, sin que
+  // alguien haya actualizado a mano los Highlights de data.js todavía. Bug reportado por
+  // Marite: "pongo filtro de septiembre y me sale en mezcla de servicios y highlights
+  // agosto".)
+  const mesHighlightsCurados = (typeof window.MES_HIGHLIGHTS_CURADOS === "number") ? window.MES_HIGHLIGHTS_CURADOS : mesVigenteNum;
+  const esMesCorteOriginal = mesVigenteNum === mesHighlightsCurados;
   const hi = esMesCorteOriginal ? (D.highlights[currentScope] || []) : buildHighlightsAuto(currentScope);
-  const highlightsNota = esMesCorteOriginal ? "" : `<div style="font-size:10.5px; color:var(--axis); margin-bottom:8px;">Highlights automáticos para ${D.mes_actual} — los redactados a mano son del corte de ${(window.MESES_12||[])[window.MES_CORTE_ORIGINAL-1] || ""}.</div>`;
+  const highlightsNota = esMesCorteOriginal ? "" : `<div style="font-size:10.5px; color:var(--axis); margin-bottom:8px;">Highlights automáticos para ${nombreMesLargo(mesVigenteNum)} — los redactados a mano son del corte de ${nombreMesLargo(mesHighlightsCurados)}.</div>`;
+  const mesLabelEl = document.getElementById("mezcla-mes-label");
+  if (mesLabelEl) mesLabelEl.textContent = nombreMesLargo(mesVigenteNum);
   const el = document.getElementById("servicios-section");
   const rowsHtml = rows.map(r=>{
     const nomLMStr = fmtSignedFn(r.nomLM, v=>`$${fmt(v,1)}M`);
