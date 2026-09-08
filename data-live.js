@@ -154,9 +154,14 @@ function detectarMesVigente(conceptosMensual) {
 // principales (Ingresos/Servicios). rows[i] = [Sede, Servicio, MesNum, ...].
 // Se usa para no dejar que MES_VIGENTE se adelante a Conceptos cuando esa
 // hoja ya trae un mes nuevo pero Base todavía no (ver loadLiveDataIntoDashboard).
-function detectarMesVigenteBase(rows) {
+function detectarMesVigenteBase(rows, anio) {
   let ultimo = 0;
   for (const r of (rows || [])) {
+    const filaAnio = Number(r[8]);
+    // Filas sin Año (hojas viejas, antes de que existiera 2025 en Base) se
+    // tratan como del año pedido para no romper compatibilidad; si la fila
+    // sí trae Año, debe coincidir con el año que se está autodetectando.
+    if (r[8] !== "" && r[8] != null && filaAnio !== anio) continue;
     const mesNum = Number(r[2]);
     const real = num(r[4]);
     if (real > 0 && mesNum > ultimo) ultimo = mesNum;
@@ -194,21 +199,33 @@ async function fetchLiveIngresos() {
   const json = await res.json();
   const rows = json.values || [];
   _rawCache["Base"] = rows;
-  return buildIngresosMetric(rows);
+  return buildIngresosMetric(rows, ANIO_VIGENTE);
 }
 
 // Extraída de fetchLiveIngresos para poder recalcular desde _rawCache["Base"]
-// cuando cambia el selector de mes, sin volver a pedirle nada al Sheet.
-function buildIngresosMetric(rows) {
+// cuando cambia el selector de mes o de año, sin volver a pedirle nada al Sheet.
+//
+// ARREGLO (sep-2026): "Base" ahora trae 2025 Y 2026 en la misma hoja (columna
+// Año, col. I) — antes esta función ignoraba esa columna y agrupaba solo por
+// (Sede,Servicio,MesNum), así que para cualquier mes que existiera en ambos
+// años (Ene-Sep) la fila de un año pisaba silenciosamente a la del otro
+// (gana la que venga después en el orden de filas de la hoja). Esto causó
+// que Agosto mostrara $11.4M (mezcla, en realidad casi todo 2025) en vez de
+// los $16.1M reales de Agosto 2026. Ahora se filtra explícitamente por el
+// año pedido (anio, default ANIO_VIGENTE) antes de agregar nada.
+function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
   const meses = rangoHist(MES_VIGENTE); // [1..MES_VIGENTE-1]
 
-  // rows[i] = [Sede, Servicio, MesNum, MesLabel, Real, Proyectado, TasaDiariaU3M, AjustePipelineComercial]
+  // rows[i] = [Sede, Servicio, MesNum, MesLabel, Real, Proyectado, TasaDiariaU3M, AjustePipelineComercial, Año]
   // por (sede, servicio) -> { [mesNum]: real }, y proyVigente por (sede, servicio)
   const bySedeServicio = {};
   const proyVigente = {};
   for (const r of rows) {
-    const [sede, serv, mesNumRaw, , realRaw, proyRaw] = r;
+    const [sede, serv, mesNumRaw, , realRaw, proyRaw, , , anioRaw] = r;
     if (!sede || !serv) continue;
+    // Compatibilidad: filas sin Año (hojas antiguas) se tratan como del año
+    // pedido; si la fila sí trae Año, debe coincidir exactamente.
+    if (anioRaw !== "" && anioRaw != null && Number(anioRaw) !== anio) continue;
     const mesNum = Number(mesNumRaw);
     const real = num(realRaw);
     const key = sede + "||" + serv;
@@ -944,7 +961,7 @@ async function loadLiveDataIntoDashboard() {
       fetchSheetJson("Base"),
     ]);
     const mesConceptos = detectarMesVigente(buildConceptosMensualMetric(preRows));
-    const mesBase = detectarMesVigenteBase(baseRows);
+    const mesBase = detectarMesVigenteBase(baseRows, ANIO_VIGENTE);
     // Nunca adelantar el mes vigente más allá de lo que "Base" (Evolutivo
     // 2026, fuente de los KPIs principales de Ingresos/Servicios) ya tiene
     // real. Si Conceptos ya trae un mes nuevo pero Base todavía no se
@@ -1053,7 +1070,7 @@ async function loadLiveDataIntoDashboard() {
 function rebuildAllFromCache() {
   syncMesesHistYActual();
   if (_rawCache["Base"]) {
-    const live = buildIngresosMetric(_rawCache["Base"]);
+    const live = buildIngresosMetric(_rawCache["Base"], ANIO_VIGENTE);
     window.DATA.total.ingresos = live.totalIngresos;
     for (const code of Object.keys(live.sedesOut)) {
       window.DATA.sedes[code].ingresos = live.sedesOut[code].ingresos;
