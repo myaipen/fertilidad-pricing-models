@@ -456,7 +456,7 @@ function anioDeFila(anioRaw) {
  * del mismo mes en (anio-1); si no hay datos de ese año anterior, vsLY/nomLY
  * quedan en null (ej. viendo 2025, no hay 2024).
  */
-function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE) {
+function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false) {
   function bySedeParaAnio(targetAnio) {
     const bySede = {};
     for (const r of rows) {
@@ -475,27 +475,57 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE) {
   const cerrado = mesVigenteCerrado(MES_VIGENTE);
   const diasTot = diasEnMes(MES_VIGENTE);
   const diasTr = diasTranscurridosEnMes(MES_VIGENTE);
-  // proyectarPorTendencia(actual): si hay días transcurridos conocidos,
-  // Proyectado = Real x (díasDelMes / díasTranscurridos); si no (mes
-  // recién seleccionado sin corte de datos, o actual=0), se deja el real
-  // tal cual en vez de inventar una proyección.
-  function proyectarPorTendencia(actual) {
+  // SHARE_HASTA_CORTE[sede]: qué fracción del Real de un mes CERRADO ya se
+  // observa en los primeros CORTE_REAL_DIA días de ese mes, calculado con
+  // datos reales de facturación (fuente "Cargos y Facturas", hoja "Cargos",
+  // columna AF=Delegación) de jun/jul/ago 2026 — los 3 meses cerrados más
+  // recientes al momento de este cálculo (sep-2026). Se suman los primeros
+  // 7 días y el mes completo de los 3 meses antes de dividir (ponderado por
+  // volumen, no promedio simple de razones) para que la baja volumetría de
+  // Metepec no meta ruido:
+  //   CDMX: (477+478+509) / (1717+1910+2069) = 0.2570
+  //   GDL:  (120+ 76+200) / ( 507+ 428+ 751) = 0.2349
+  //   MTP:  ( 43+ 23+ 87) / ( 107+ 223+ 286) = 0.2484
+  //   total:(640+577+796) / (2331+2561+3106) = 0.2517
+  // Esto reemplaza la extrapolación lineal por fracción de días
+  // (proy = actual x díasDelMes/díasTranscurridos), que asume que la
+  // actividad se reparte parejo entre los días del mes y por eso no tiene
+  // techo: con el Real de los primeros 7 días de sep-2026 ya corregido
+  // (847), esa fórmula proyectaba 3,630 atenciones — por encima de
+  // CUALQUIER mes histórico real (máximo ago-2026 = 3,109), inconsistente
+  // con que Ingresos (que ya usa MTD + tendencia, ver hoja "Ratio
+  // Atenciones") proyectara ese mismo mes por DEBAJO de agosto. En vez de
+  // un tope artificial, se usa la distribución real observada del mes:
+  // proy = actual / SHARE_HASTA_CORTE[sede]. IMPORTANTE: recalcular estos
+  // valores cada vez que se mueva CORTE_REAL_DIA, o cuando haya 3+ meses
+  // cerrados nuevos que valga la pena incorporar al cálculo.
+  const SHARE_HASTA_CORTE = { CDMX: 0.2570, GDL: 0.2349, MTP: 0.2484, total: 0.2517 };
+  // proyectarPorTendencia(actual, hist, sede): si el mes está cerrado, no
+  // hay días transcurridos, o actual=0, se deja el real tal cual en vez de
+  // inventar una proyección. Si hay un share calibrado para la sede, se usa
+  // ese (real / share observado hasta el corte); si no (sede sin calibrar),
+  // cae de vuelta a la extrapolación lineal por fracción de días.
+  function proyectarPorTendencia(actual, hist, sede) {
     if (cerrado || diasTr <= 0 || actual <= 0) return actual;
+    const share = SHARE_HASTA_CORTE[sede];
+    if (share > 0) return actual / share;
     return actual * (diasTot / diasTr);
   }
   const out = {};
+  const lyPorSede = {};
   let histTotal = meses.map(() => 0), actualTotal = 0, lyTotal = 0, tieneLYTotal = false;
   for (const sede of SEDES) {
     const m = bySede[sede] || {};
     const hist = meses.map(n => m[n] || 0);
     const actual = m[MES_VIGENTE] || 0;
-    const proy = proyectarPorTendencia(actual);
+    const proy = proyectarPorTendencia(actual, hist, sede);
     hist.forEach((v,i) => histTotal[i] += v);
     actualTotal += actual;
     const lm = hist[hist.length-1] || 0;
     const ly = (bySedeLY[sede] || {})[MES_VIGENTE];
     const tieneLY = ly != null && ly > 0;
     if (tieneLY) { lyTotal += ly; tieneLYTotal = true; }
+    lyPorSede[sede] = tieneLY ? ly : null;
     out[sede] = {
       hist, actual, proy: Math.round(proy),
       vsLM: pctOrNull(proy, lm), vsU3M: pctOrNull(proy, avgUlt3(hist)),
@@ -503,7 +533,7 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE) {
       nomLY: tieneLY ? Math.round(proy - ly) : null,
     };
   }
-  const proyTotal = proyectarPorTendencia(actualTotal);
+  const proyTotal = proyectarPorTendencia(actualTotal, histTotal, "total");
   const lmTotal = histTotal[histTotal.length-1] || 0;
   out.total = {
     hist: histTotal, actual: actualTotal, proy: Math.round(proyTotal),
@@ -511,6 +541,57 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE) {
     vsLY: tieneLYTotal ? pctOrNull(proyTotal, lyTotal) : null,
     nomLY: tieneLYTotal ? Math.round(proyTotal - lyTotal) : null,
   };
+
+  // CASTIGO MANUAL, TEMPORAL, sep-2026 (Atenciones únicamente — no toca
+  // Pacientes): Marite pidió validar por qué Atenciones proyecta arriba de
+  // agosto mientras Ingresos proyecta ~$2M por debajo, y "si no [se puede
+  // validar], castiga un poco las atenciones para que no pase de los 3k".
+  // Validación real hecha (8-sep-2026):
+  //   - Subrogación SÍ se confirmó con datos duros: hoja "SubrogacionPacientes"
+  //     muestra 7 pacientes en "Programa Activo" ($1.48M) en agosto vs CERO en
+  //     septiembre (solo 9 en "Valoración", ~$12.8K) -- la caída de esa línea
+  //     de servicio es real, no un artefacto de proyección.
+  //   - Tratamientos FIV/ICSI (el mayor driver, -$0.77M vs LM) NO se pudo
+  //     validar de la misma forma: el mapeo "Concepto->Servicio" corresponde
+  //     a los conceptos de las hojas "Agendamiento"/"Agendamiento (conceptos
+  //     terminados)" del Sheet "Cargos y Facturas", no a los de
+  //     RAW_CitasAgendadas (taxonomías distintas, no cruzan), y esas hojas de
+  //     Agendamiento siguen sin poder abrirse en el navegador (mismo cuelgue
+  //     ya reportado antes). Sin poder confirmar la agenda real de arranques
+  //     de FIV para lo que resta de septiembre, no hay manera de saber si el
+  //     conteo de Atenciones (847 reales + proyección por share) sigue siendo
+  //     representativo del mes completo.
+  // Mientras esa validación de FIV/ICSI queda pendiente, se aplica el
+  // castigo pedido: si la proyección total supera 2,990, se escala hacia
+  // abajo (mismo factor en total y en cada sede, para que se mantengan
+  // consistentes entre sí) para no pasar de los 3k. Quitar este bloque en
+  // cuanto se pueda validar la agenda de FIV/ICSI de sep-2026 (o en cuanto
+  // cierre el mes y ya no aplique ninguna proyección).
+  const CASTIGO_ATENCIONES_SEP2026 = 2990;
+  if (esAtenciones && anio === 2026 && MES_VIGENTE === 9 && out.total.proy > CASTIGO_ATENCIONES_SEP2026) {
+    const factor = CASTIGO_ATENCIONES_SEP2026 / out.total.proy;
+    for (const sede of SEDES) {
+      const lm = out[sede].hist[out[sede].hist.length - 1] || 0;
+      const proyCastigado = out[sede].proy * factor;
+      out[sede].proy = Math.round(proyCastigado);
+      out[sede].vsLM = pctOrNull(proyCastigado, lm);
+      out[sede].vsU3M = pctOrNull(proyCastigado, avgUlt3(out[sede].hist));
+      const ly = lyPorSede[sede];
+      if (ly != null) {
+        out[sede].vsLY = pctOrNull(proyCastigado, ly);
+        out[sede].nomLY = Math.round(proyCastigado - ly);
+      }
+    }
+    const proyTotalCastigado = out.total.proy * factor;
+    out.total.proy = Math.round(proyTotalCastigado);
+    out.total.vsLM = pctOrNull(proyTotalCastigado, lmTotal);
+    out.total.vsU3M = pctOrNull(proyTotalCastigado, avgUlt3(histTotal));
+    if (out.total.vsLY != null) {
+      out.total.vsLY = pctOrNull(proyTotalCastigado, lyTotal);
+      out.total.nomLY = Math.round(proyTotalCastigado - lyTotal);
+    }
+  }
+
   return out;
 }
 
@@ -752,7 +833,7 @@ async function fetchLiveOperativos() {
     fetchSheetJson("ConsultasRankingLive2025"),
   ]);
   return {
-    atenciones: buildMonthlyRealMetric(atRows),
+    atenciones: buildMonthlyRealMetric(atRows, ANIO_VIGENTE, true),
     pacientes: buildMonthlyRealMetric(puRows),
     consultas: buildConsultasMetric(consRows),
     ranking: buildRankingFromCache(),
@@ -1252,7 +1333,7 @@ function rebuildAllFromCache() {
   }
 
   if (_rawCache["Atenciones"] || _rawCache["Pacientes"] || _rawCache["Consultas"]) {
-    const atenciones = buildMonthlyRealMetric(_rawCache["Atenciones"] || []);
+    const atenciones = buildMonthlyRealMetric(_rawCache["Atenciones"] || [], ANIO_VIGENTE, true);
     const pacientes = buildMonthlyRealMetric(_rawCache["Pacientes"] || []);
     const consultas = buildConsultasMetric(_rawCache["Consultas"] || []);
     window.DATA.total.atenciones = { ...window.DATA.total.atenciones, ...atenciones.total };
