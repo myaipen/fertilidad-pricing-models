@@ -233,7 +233,7 @@ function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
   const bySedeServicio = {};
   const proyVigente = {};
   for (const r of rows) {
-    const [sede, serv, mesNumRaw, , realRaw, proyRaw, , , anioRaw] = r;
+    const [sede, serv, mesNumRaw, , realRaw, proyRaw, , ajusteRaw, anioRaw] = r;
     if (!sede || !serv) continue;
     // Compatibilidad: filas sin Año (hojas antiguas) se tratan como del año
     // pedido; si la fila sí trae Año, debe coincidir exactamente.
@@ -243,7 +243,10 @@ function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
     const key = sede + "||" + serv;
     bySedeServicio[key] = bySedeServicio[key] || {};
     bySedeServicio[key][mesNum] = real;
-    if (mesNum === MES_VIGENTE) proyVigente[key] = num(proyRaw);
+    // Proyectado + AjustePipelineComercial (columna H de "Base"): el mismo
+    // mecanismo vivo que ya aplica Evolutivo 2026 (Marite ajusta H a mano y
+    // el total se mueve automáticamente aquí también).
+    if (mesNum === MES_VIGENTE) proyVigente[key] = num(proyRaw) + num(ajusteRaw);
   }
 
   function seriesFor(sedeNombre, servicio) {
