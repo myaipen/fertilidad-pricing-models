@@ -531,15 +531,50 @@ const DELEGACION_CODE = {
   "FERTILIDAD INTEGRAL Guadalajara": "GDL",
   "FERTILIDAD INTEGRAL Metepec": "MTP",
 };
+
+// Mapa Concepto (crudo, tal como llega de Cargos/CitasAgendadas) -> Agrupación
+// de consulta, tomado de "Clasificación de productos 17.xlsx" hoja
+// "consultas" (Marite, sep-2026): el ranking debe agrupar varias variantes de
+// "Consulta primera vez" (online, gratis, 30min, "Consulta médica", etc.) en
+// una sola fila, no mostrarlas por separado. Cualquier Concepto que NO
+// aparezca aquí (ej. "Check up Integral", que no estaba en su archivo) se
+// deja tal cual (mapea a sí mismo) para no perder filas nuevas o no
+// contempladas.
+const CONSULTA_AGRUPACION = {
+  "(Ex) Consulta primera vez": "(Ex) Consulta primera vez",
+  "Check up Ginecologico": "Check up Ginecologico",
+  "Check-up SOP": "Check-up SOP",
+  "Consulta de Primera Vez IP's": "Consulta de Primera Vez IP's",
+  "Consulta ginecológica": "Consulta ginecológica",
+  "Consulta médica": "Consulta primera vez",
+  "Consulta Obstetricia": "Consulta Obstetricia",
+  "Consulta primera vez": "Consulta primera vez",
+  "Consulta primera vez 30min": "Consulta primera vez",
+  "Consulta primera vez gratis": "Consulta primera vez",
+  "Consulta primera vez online": "Consulta primera vez",
+  "Consulta primera vez online gratis": "Consulta primera vez",
+  "Fertility Check up Hombres": "Fertility Check up Hombres",
+  "Fertility Check up Mujeres": "Fertility Check up Mujeres",
+  "Fertility Check up Parejas": "Fertility Check up Parejas",
+  "Fertility Check up Virtual": "Fertility Check up Virtual",
+};
+function agruparConsulta(conceptoRaw) {
+  return CONSULTA_AGRUPACION[conceptoRaw] || conceptoRaw;
+}
 function parseConsultasRankingRows(rows) {
   const out = { CDMX: {}, GDL: {}, MTP: {} };
   for (const r of (rows || [])) {
     const code = DELEGACION_CODE[r[0]];
-    const concepto = r[1];
-    if (!code || !concepto) continue;
+    const conceptoRaw = r[1];
+    if (!code || !conceptoRaw) continue;
+    const concepto = agruparConsulta(conceptoRaw);
     const meses = [];
     for (let m = 1; m <= 12; m++) meses.push(num(r[m + 1]));
-    out[code][concepto] = meses;
+    if (out[code][concepto]) {
+      for (let i = 0; i < 12; i++) out[code][concepto][i] += meses[i];
+    } else {
+      out[code][concepto] = meses;
+    }
   }
   return out;
 }
