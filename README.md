@@ -13,7 +13,11 @@ Este paquete tiene 6 archivos:
 
 Los 5 primeros archivos van juntos siempre, en la misma carpeta.
 
-**Filtros del dashboard:** arriba tienes dos filtros independientes — **Sede** (Todas / CDMX / Guadalajara / Metepec) y **Periodo** (Año / Trimestre / Mes / Semana / Día). Ambos afectan Ingresos, Pacientes Únicos y Consultas. Atenciones solo está disponible a nivel Mes/Trimestre/Año porque no existe una fuente día a día confiable para esa métrica (se explica en la nota dentro del propio dashboard). La sección de Servicios y Highlights siempre muestra el mes vigente (agosto), no cambia con el filtro de Periodo. HubSpot siempre es a nivel compañía completa, no cambia con el filtro de Sede.
+**Filtros del dashboard:** arriba tienes dos filtros independientes — **Sede** (Todas / CDMX / Guadalajara / Metepec) y **Periodo** (Año / Trimestre / Mes / Semana / Día), más el selector de **Mes vigente** (Ene-Dic) junto a ellos. Sede y Periodo afectan Ingresos, Pacientes Únicos y Consultas. Atenciones solo está disponible a nivel Mes/Trimestre/Año porque no existe una fuente día a día confiable para esa métrica (se explica en la nota dentro del propio dashboard). HubSpot siempre es a nivel compañía completa, no cambia con el filtro de Sede.
+
+La sección de **Servicios** siempre muestra el mes vigente que tengas seleccionado arriba. **Highlights** muestra el texto redactado a mano (ver sección 7) solo cuando el mes vigente coincide con el mes de ese corte; si mueves el selector de mes a otro mes, Highlights arma automáticamente unas frases cortas con lo que ya está calculado para ese mes (Ingresos, Atenciones, Pacientes, Consultas y el motivo de consulta más frecuente) y lo marca como "automático" — no pierde ni sobrescribe lo que redactaste a mano, solo evita dejarlo pegado mostrando un mes que ya no es el que estás viendo.
+
+El panel **"Ranking por agrupación de consulta"** (dentro de la sección Consultas) trae su propio selector de **Año** (2025/2026), independiente de todo lo anterior: cambia solo ese panel entre ver el ranking del año en curso (con **vs LY** = variación contra el mismo mes de 2025) o el ranking completo de 2025 (sin vs LY, porque no hay 2024 con qué compararlo). La leyenda LM/LY/U3M aparece justo arriba de ese ranking.
 
 ---
 
@@ -25,7 +29,7 @@ Estas ocho secciones vienen directo de tu Google Sheet **"Proyeccion_Venta_Sede_
 - **Base** (Sede, Servicio, MesNum, MesLabel, Real, Proyectado) → Ingresos y Servicios.
 - **Atenciones** y **Pacientes** (Sede, MesNum, MesLabel, Real) → el dashboard calcula la proyección solo (Real + Real/30, un día promedio más).
 - **Consultas** (Sede, MesNum, MesLabel, Real, Agendado) → proyección = Real + Agendado (usa tu agenda real de citas).
-- **ConsultasRanking** (Sede, Categoria, Valor, VsLM) → el top de motivos de consulta que se ve en el ranking. Deja `VsLM` en blanco para una categoría nueva (sin dato del mes anterior); el dashboard la marca como "Nuevo" automáticamente.
+- **ConsultasRankingLive** y **ConsultasRankingLive2025** (Delegación, Concepto, mes 1-12) → el ranking de motivos de consulta, ya **100% en vivo**: son un `QUERY`/`PIVOT` sobre `RAW_Consultas` + `RAW_CitasAgendadas` (2026) y sobre el archivo de consultas 2025 que me compartiste, así que no hay nada que llenar a mano aquí — se recalculan solas al abrir el Sheet, igual que "Base". El dashboard arma vs LM, vs LY (contra 2025) y el "Nuevo" automáticamente a partir de estas dos hojas; la vieja hoja `ConsultasRanking` (estática, Ago/Jul a mano) ya no la usa el dashboard y puede archivarse.
 - **Hubspot** (MesNum, MesLabel, Leads, Citas), **HubspotSede** (Sede, LeadsAgo, CitasAgo, LeadsYTD, CitasYTD) y **HubspotCohortes** (MesNum, MesLabel, Leads, M0, M1, M2) → leads y citas agendadas del pipeline "Interesa2". A diferencia de lo anterior, estas tres hojas **no las llenas tú a mano**: pídeme (a Claude) que las actualice cada corte de mes — jalo los números directo de HubSpot vía API y los subo al Sheet. No es posible conectar HubSpot en vivo directo desde el navegador de quien ve el dashboard sin exponer credenciales, así que este es el punto intermedio seguro: HubSpot → yo actualizo el Sheet una vez al mes → el dashboard lee el Sheet en vivo en cada visita.
 - **Conceptos** (Sede, Servicio, Subclas, Subclas2, Concepto, Ago, Jul) → alimenta el clic en cada renglón de "Mezcla de servicios" (ver 0.1). Igual que HubSpot, **no la llenas tú a mano**: pídeme que la actualice cada corte de mes con el desglose de cargos por concepto. Subclas y Subclas2 vienen vacíos cuando ese servicio no tiene ese nivel de detalle (ej. Farmacia no tiene subclasificación).
 - **SubrogacionPacientes** (MesNum, MesLabel, Etapa, Pacientes, Ingreso, TicketProm) → alimenta la sección "Subrogación — pacientes" (ver 0.2). Tampoco la llenas tú a mano — te la actualizo yo cada corte.
@@ -118,6 +122,7 @@ Si tu repo es público en vez de privado, este mismo proceso es gratis — pero 
 ### Fórmulas de referencia (por si necesitas recalcular algo)
 
 - **vs LM** = `(Proyección ÷ Real del mes anterior) − 1`, en %.
+- **vs LY** (solo en el ranking de consultas) = `(Valor del mes ÷ Valor del mismo mes, año anterior) − 1`, en %.
 - **vs U3M** = `(Proyección ÷ Promedio de los 3 meses cerrados anteriores) − 1`, en %.
 - **vs trimestre anterior / vs semana anterior / vs día anterior** = misma lógica que vs LM, pero comparando contra el bloque de tiempo inmediato anterior.
 - **% conversión HubSpot** = `Citas agendadas del periodo ÷ Leads del periodo`.

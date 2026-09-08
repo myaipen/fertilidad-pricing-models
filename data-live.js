@@ -68,6 +68,16 @@ const MESES_12 = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","N
 // re-render completo con el nuevo mes como "vigente" y el anterior como LM.
 let MES_VIGENTE = 8;
 
+// Año vigente SOLO para el "Ranking por agrupación de consulta" (2025/2026 —
+// selector propio dentro de ese panel, ver buildConsultas() en index.html).
+// No afecta Ingresos/Atenciones/Pacientes/Consultas/HubSpot/etc.: esas
+// secciones no tienen fuente 2025 comparable todavía, solo el ranking de
+// consultas (hojas ConsultasRankingLive / ConsultasRankingLive2025). Cuando
+// ANIO_VIGENTE=2026 el ranking usa 2026 como "actual" y 2025 como base de
+// "vs LY"; cuando ANIO_VIGENTE=2025, 2025 es el "actual" y no hay "vs LY"
+// (no tenemos 2024).
+let ANIO_VIGENTE = 2026;
+
 // Un mes se considera "cerrado" (ya no quedan días por transcurrir que
 // proyectar para Atenciones/Pacientes Únicos) si es estrictamente anterior
 // al mes calendario real de hoy. Si el usuario selecciona el mes en curso
@@ -418,27 +428,94 @@ function buildConsultasMetric(rows) {
 }
 
 /**
- * ConsultasRanking: filas [Sede, Categoria, Ago, Jul]. Sede ya viene como
- * "total"/"CDMX"/"GDL"/"MTP" (coincide con las llaves de currentScope).
- * Categoria = Concepto de agenda tal cual (sin agrupar) para no dejar fuera
- * ninguna categoría real. vs LM y el nominal se calculan aquí mismo a partir
- * de Ago y Jul (Jul=0 -> "Nuevo", sin vs LM). Se ordena de mayor a menor Ago.
+ * ConsultasRankingLive / ConsultasRankingLive2025: filas crudas tal como las
+ * regresa el Apps Script (fila 0 = nota, fila 1 = encabezado de meses, filas
+ * siguientes = Delegación, Concepto, mes1..mes12 — pivot en vivo de
+ * RAW_Consultas + RAW_CitasAgendadas, ver Código.gs). Reemplaza la vieja
+ * hoja estática "ConsultasRanking" (fija a Ago/Jul, sin selector de mes).
+ * Regresa { CDMX:{concepto:[v1..v12]}, GDL:{...}, MTP:{...} }, ignorando
+ * cualquier fila sin Delegación reconocida (nota, encabezado, o algún
+ * renglón con Delegación en blanco en la fuente).
  */
-function buildConsultasRanking(rows) {
-  const out = { total: [], CDMX: [], GDL: [], MTP: [] };
-  for (const [scope, nombre, agoRaw, julRaw] of rows) {
-    if (!out[scope]) continue;
-    const ago = num(agoRaw), jul = num(julRaw);
-    const nuevo = jul === 0;
-    out[scope].push({
-      nombre, valor: ago, valorLM: jul,
-      vsLM: nuevo ? null : pctOrNull(ago, jul),
-      nomLM: ago - jul,
-      ...(nuevo ? { nuevo: true } : {}),
-    });
+const DELEGACION_CODE = {
+  "FERTILIDAD INTEGRAL Ciudad de México": "CDMX",
+  "FERTILIDAD INTEGRAL Guadalajara": "GDL",
+  "FERTILIDAD INTEGRAL Metepec": "MTP",
+};
+function parseConsultasRankingRows(rows) {
+  const out = { CDMX: {}, GDL: {}, MTP: {} };
+  for (const r of (rows || [])) {
+    const code = DELEGACION_CODE[r[0]];
+    const concepto = r[1];
+    if (!code || !concepto) continue;
+    const meses = [];
+    for (let m = 1; m <= 12; m++) meses.push(num(r[m + 1]));
+    out[code][concepto] = meses;
   }
+  return out;
+}
+
+/**
+ * Ranking "en vivo" por agrupación de consulta, por Delegación y Concepto,
+ * para el mes vigente (mesVigente, 1-12). rowsActual/rowsLY = filas crudas
+ * de la hoja "actual" (según ANIO_VIGENTE) y la de "año anterior" (para vs
+ * LY) — rowsLY puede venir null si no hay año anterior disponible (ej.
+ * viendo 2025, no existe 2024). vs LM sale de mesVigente-1 dentro de la
+ * misma hoja "actual"; nuevo = true si ese mes anterior fue 0 (igual que
+ * antes). "total" suma las 3 delegaciones concepto por concepto.
+ */
+function buildConsultasRankingLive(rowsActual, rowsLY, mesVigente) {
+  const actual = parseConsultasRankingRows(rowsActual);
+  const ly = rowsLY ? parseConsultasRankingRows(rowsLY) : { CDMX: {}, GDL: {}, MTP: {} };
+  const out = { total: [], CDMX: [], GDL: [], MTP: [] };
+  const totalMap = {};
+  for (const code of SEDES) {
+    for (const concepto of Object.keys(actual[code])) {
+      const serie = actual[code][concepto];
+      const valor = serie[mesVigente - 1] || 0;
+      const valorLM = mesVigente > 1 ? (serie[mesVigente - 2] || 0) : 0;
+      const nuevo = valorLM === 0;
+      const serieLY = ly[code][concepto];
+      const valorLY = serieLY ? (serieLY[mesVigente - 1] || 0) : 0;
+      out[code].push({
+        nombre: concepto, valor, valorLM,
+        vsLM: nuevo ? null : pctOrNull(valor, valorLM),
+        nomLM: valor - valorLM,
+        vsLY: valorLY ? pctOrNull(valor, valorLY) : null,
+        nomLY: valorLY ? (valor - valorLY) : null,
+        ...(nuevo ? { nuevo: true } : {}),
+      });
+      const t = totalMap[concepto] = totalMap[concepto] || { valor: 0, valorLM: 0, valorLY: 0, tieneLY: false };
+      t.valor += valor;
+      t.valorLM += valorLM;
+      if (valorLY) { t.valorLY += valorLY; t.tieneLY = true; }
+    }
+  }
+  out.total = Object.keys(totalMap).map(concepto => {
+    const t = totalMap[concepto];
+    const nuevo = t.valorLM === 0;
+    return {
+      nombre: concepto, valor: t.valor, valorLM: t.valorLM,
+      vsLM: nuevo ? null : pctOrNull(t.valor, t.valorLM),
+      nomLM: t.valor - t.valorLM,
+      vsLY: t.tieneLY ? pctOrNull(t.valor, t.valorLY) : null,
+      nomLY: t.tieneLY ? (t.valor - t.valorLY) : null,
+      ...(nuevo ? { nuevo: true } : {}),
+    };
+  });
   for (const scope of Object.keys(out)) out[scope].sort((a, b) => b.valor - a.valor);
   return out;
+}
+
+// Arma el ranking según ANIO_VIGENTE (2026: 2026=actual, 2025=LY · 2025:
+// 2025=actual, sin LY) a partir de lo que ya esté en _rawCache — la usan
+// tanto fetchLiveOperativos() (primera carga) como rebuildAllFromCache()
+// (cambio de selector de mes o de año) para no duplicar esta lógica.
+function buildRankingFromCache() {
+  const rows2026 = _rawCache["ConsultasRankingLive"] || [];
+  const rows2025 = _rawCache["ConsultasRankingLive2025"] || [];
+  if (ANIO_VIGENTE === 2025) return buildConsultasRankingLive(rows2025, null, MES_VIGENTE);
+  return buildConsultasRankingLive(rows2026, rows2025, MES_VIGENTE);
 }
 
 /**
@@ -484,17 +561,25 @@ async function fetchLiveMetas() {
 }
 
 async function fetchLiveOperativos() {
-  const [atRows, puRows, consRows, rankRows] = await Promise.all([
+  const [atRows, puRows, consRows] = await Promise.all([
     fetchSheetJson("Atenciones"),
     fetchSheetJson("Pacientes"),
     fetchSheetJson("Consultas"),
-    fetchSheetJson("ConsultasRanking"),
+  ]);
+  // ConsultasRankingLive (2026) y ConsultasRankingLive2025 se piden siempre
+  // los dos (aunque ANIO_VIGENTE arranque en 2026): el selector de año del
+  // panel de ranking cambia de vista sin volver a pedirle nada a Sheets (ver
+  // buildRankingFromCache/changeAnioVigente), igual que ya hace el selector
+  // de mes.
+  await Promise.all([
+    fetchSheetJson("ConsultasRankingLive"),
+    fetchSheetJson("ConsultasRankingLive2025"),
   ]);
   return {
     atenciones: buildMonthlyRealMetric(atRows),
     pacientes: buildMonthlyRealMetric(puRows),
     consultas: buildConsultasMetric(consRows),
-    ranking: buildConsultasRanking(rankRows),
+    ranking: buildRankingFromCache(),
   };
 }
 
@@ -870,6 +955,13 @@ async function loadLiveDataIntoDashboard() {
   } catch (e) {
     console.warn("No se pudo autodetectar el mes vigente, usando default:", e);
   }
+  // Se guarda UNA sola vez el mes con el que arrancó el tablero (autodetectado
+  // arriba, o el default si falló) — es el mes al que corresponden los
+  // Highlights redactados a mano en data.js. buildServicios() en index.html
+  // lo compara contra el mes que el selector tenga elegido en cada momento:
+  // si coinciden, muestra los Highlights curados; si no, arma unos
+  // automáticos a partir de los datos de ese otro mes (ver buildHighlightsAuto).
+  window.MES_CORTE_ORIGINAL = MES_VIGENTE;
   syncMesesHistYActual();
 
   try {
@@ -982,8 +1074,8 @@ function rebuildAllFromCache() {
       window.DATA.sedes[code].consultas = { ...window.DATA.sedes[code].consultas, ...consultas[code] };
     }
   }
-  if (_rawCache["ConsultasRanking"]) {
-    window.DATA.consultas_ranking = buildConsultasRanking(_rawCache["ConsultasRanking"]);
+  if (_rawCache["ConsultasRankingLive"]) {
+    window.DATA.consultas_ranking = buildRankingFromCache();
   }
 
   if (_rawCache["Hubspot"]) {
@@ -1035,6 +1127,22 @@ function changeMesVigente(nuevoMes) {
 window.changeMesVigente = changeMesVigente;
 window.getMesVigente = () => MES_VIGENTE;
 window.MESES_12 = MESES_12;
+
+/**
+ * Punto de entrada del selector de año (2025/2026) del panel "Ranking por
+ * agrupación de consulta". Solo afecta ese panel (ver nota junto a
+ * ANIO_VIGENTE arriba) — recalcula el ranking desde _rawCache (ya tiene
+ * ConsultasRankingLive y ConsultasRankingLive2025 descargados desde el
+ * primer load, no vuelve a pedirle nada a Sheets) y vuelve a dibujar todo el
+ * tablero, igual que changeMesVigente.
+ */
+function changeAnioVigente(nuevoAnio) {
+  ANIO_VIGENTE = Number(nuevoAnio);
+  rebuildAllFromCache();
+  if (typeof renderAll === "function") renderAll();
+}
+window.changeAnioVigente = changeAnioVigente;
+window.getAnioVigente = () => ANIO_VIGENTE;
 
 /**
  * Las gráficas "Evolutivo con proyección" (buildSeries() en index.html)

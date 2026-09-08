@@ -532,6 +532,25 @@ function buildMesVigenteSelect(){
   };
 }
 
+// Selector 2025/2026 dentro del panel "Ranking por agrupación de consulta"
+// (buildConsultas() reconstruye este <select> cada vez que redibuja el
+// panel, igual que buildMesVigenteSelect). Cambia ANIO_VIGENTE (definida en
+// data-live.js) SOLO para ese panel — ver nota junto a ANIO_VIGENTE en
+// data-live.js sobre por qué no afecta el resto del tablero.
+function buildAnioRankingSelect(){
+  const sel = document.getElementById("anio-ranking-select");
+  if (!sel) return;
+  const anioActual = (typeof window.getAnioVigente === "function") ? window.getAnioVigente() : 2026;
+  const anios = [2026, 2025];
+  sel.innerHTML = anios.map(a => `<option value="${a}" ${a===anioActual?'selected':''}>${a}</option>`).join("");
+  sel.onchange = () => {
+    const nuevoAnio = Number(sel.value);
+    if (typeof window.changeAnioVigente === "function") {
+      window.changeAnioVigente(nuevoAnio);
+    }
+  };
+}
+
 // ---------------------------------------------------------------- KPI row
 function buildKPIs(){
   const items = [
@@ -734,8 +753,9 @@ function drawRanking(){
     options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:(c)=>{
         const r = rows[c.dataIndex];
-        const pct = r.nuevo ? "Nuevo" : (r.vsLM===null||r.vsLM===undefined ? "—" : `${r.vsLM>=0?'+':''}${r.vsLM}% (${r.nomLM>=0?'+':''}${fmt(r.nomLM,0)}) vs LM`);
-        return `${c.raw} — ${pct}`;
+        const pctLM = r.nuevo ? "Nuevo" : (r.vsLM===null||r.vsLM===undefined ? "—" : `${r.vsLM>=0?'+':''}${r.vsLM}% (${r.nomLM>=0?'+':''}${fmt(r.nomLM,0)}) vs LM`);
+        const pctLY = (r.vsLY===null||r.vsLY===undefined) ? null : `${r.vsLY>=0?'+':''}${r.vsLY}% (${r.nomLY>=0?'+':''}${fmt(r.nomLY,0)}) vs LY`;
+        return `${c.raw} — ${pctLM}${pctLY ? " · "+pctLY : ""}`;
       }}}},
       scales:{ x:{ display:false, beginAtZero:true, grace:"70%" }, y:{ grid:{ display:false }, ticks:{ font:{ size:11.5 } } } } },
   });
@@ -756,10 +776,15 @@ function buildConsultas(){
       </div>
     </div>
     <div class="panel">
-      <div class="panel-title">Ranking por agrupación de consulta (agosto)</div>
+      <div class="panel-title" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <span>Ranking por agrupación de consulta — ${D.mes_actual} ${(typeof window.getAnioVigente==="function")?window.getAnioVigente():2026}</span>
+        <select id="anio-ranking-select" style="font-size:11.5px; font-weight:700; padding:4px 7px; border-radius:6px; border:1px solid var(--gray); background:#fff; color:var(--text); cursor:pointer;"></select>
+      </div>
+      <div style="font-size:10.5px; color:var(--axis); margin:0 0 8px;"><b>LM</b> = mes anterior · <b>LY</b> = mismo mes, año anterior · <b>U3M</b> = promedio de los últimos 3 meses cerrados</div>
       <div class="chart-box tall"><canvas id="chart-ranking"></canvas></div>
     </div>
   `;
+  buildAnioRankingSelect();
   const series = drawConsultasChart();
   const badgesEl = document.getElementById("consultas-badges");
   const intFmt = v=>fmt(v,0);
@@ -780,9 +805,48 @@ function buildConsultas(){
 }
 
 // ---------------------------------------------------------------- servicios + highlights (siempre mes vigente)
+// Highlights automáticos: se usan cuando el selector de mes se mueve fuera
+// del mes con el que se redactaron a mano los de data.js (ver
+// window.MES_CORTE_ORIGINAL en data-live.js). Arma frases cortas con lo que
+// ya está calculado para currentScope en ese mes vigente — no reemplaza la
+// curaduría manual del corte vigente, solo evita dejar el texto de Agosto
+// pegado cuando se está viendo otro mes.
+function buildHighlightsAuto(scope){
+  const base = scope === "total" ? D.total : (D.sedes && D.sedes[scope]);
+  if (!base) return [];
+  const out = [];
+  function pctStr(v){ return (v===null||v===undefined) ? null : `${v>=0?'+':''}${v}% vs LM`; }
+  if (base.ingresos){
+    const p = pctStr(base.ingresos.vsLM);
+    out.push(`Ingresos proyectados: $${fmt(base.ingresos.proy,1)}M${p?` (${p})`:""}.`);
+  }
+  if (base.atenciones){
+    const p = pctStr(base.atenciones.vsLM);
+    out.push(`Atenciones proyectadas: ${fmt(base.atenciones.proy,0)}${p?` (${p})`:""}.`);
+  }
+  if (base.pacientes){
+    const p = pctStr(base.pacientes.vsLM);
+    out.push(`Pacientes únicos proyectados: ${fmt(base.pacientes.proy,0)}${p?` (${p})`:""}.`);
+  }
+  if (base.consultas){
+    const proy = (base.consultas.real||0) + (base.consultas.agendado||0);
+    const p = pctStr(base.consultas.vsLM);
+    out.push(`Consultas proyectadas: ${fmt(proy,0)}${p?` (${p})`:""}.`);
+  }
+  const ranking = (D.consultas_ranking && D.consultas_ranking[scope]) || [];
+  if (ranking.length){
+    const top = ranking[0];
+    const p = top.nuevo ? " (nuevo este mes)" : (pctStr(top.vsLM) ? ` (${pctStr(top.vsLM)})` : "");
+    out.push(`Motivo de consulta más frecuente: "${top.nombre}" con ${fmt(top.valor,0)}${p}.`);
+  }
+  return out;
+}
 function buildServicios(){
   const rows = D.servicios[currentScope];
-  const hi = D.highlights[currentScope] || [];
+  const mesVigenteNum = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 8;
+  const esMesCorteOriginal = (typeof window.MES_CORTE_ORIGINAL !== "number") || mesVigenteNum === window.MES_CORTE_ORIGINAL;
+  const hi = esMesCorteOriginal ? (D.highlights[currentScope] || []) : buildHighlightsAuto(currentScope);
+  const highlightsNota = esMesCorteOriginal ? "" : `<div style="font-size:10.5px; color:var(--axis); margin-bottom:8px;">Highlights automáticos para ${D.mes_actual} — los redactados a mano son del corte de ${(window.MESES_12||[])[window.MES_CORTE_ORIGINAL-1] || ""}.</div>`;
   const el = document.getElementById("servicios-section");
   const rowsHtml = rows.map(r=>{
     const nomLMStr = fmtSignedFn(r.nomLM, v=>`$${fmt(v,1)}M`);
@@ -802,6 +866,7 @@ function buildServicios(){
     </div>
     <div class="panel">
       <div class="panel-title">Highlights</div>
+      ${highlightsNota}
       <ul class="highlights">${hi.map(h=>`<li>${h}</li>`).join("") || '<li>Sin highlights registrados para esta sede.</li>'}</ul>
     </div>
   `;
