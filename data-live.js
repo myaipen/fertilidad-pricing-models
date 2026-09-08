@@ -77,6 +77,19 @@ const MESES_12 = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","N
 // cuando de verdad se edita data.js a mano en el próximo corte de mes.)
 window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 
+// Día del mes vigente hasta el que Base!E ("Real") está acumulado (sep-2026:
+// Marite pidió una nota bajo "Subrogación — pacientes" aclarando que el mes en
+// curso es un acumulado parcial, no un cierre — ver también buildHighlightsAuto
+// en index.html, que usa el mismo dato para el highlight de Ingresos). ACTUALIZAR
+// A MANO cada vez que se refresca Base!E con un nuevo corte de Cargos y
+// Facturas (ej. si el próximo corte de octubre llega hasta el día 12, cambiar
+// este valor a 12). Solo aplica al mes vigente EN CURSO (no cerrado) — para
+// meses ya cerrados (Real = mes completo) no se muestra ninguna nota de corte,
+// ver mesVigenteCerrado().
+let CORTE_REAL_DIA = 7;
+window.getCorteRealDia = () => CORTE_REAL_DIA;
+window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
+
 // Mes vigente: seleccionable desde la UI (selector Ene-Dic junto a Sede y
 // Periodo en index.html). Arranca en 8 (Ago) como valor por default, pero
 // loadLiveDataIntoDashboard() lo autodetecta al último mes con datos reales
@@ -248,21 +261,29 @@ function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
   // por (sede, servicio) -> { [mesNum]: real }, y proyVigente por (sede, servicio)
   const bySedeServicio = {};
   const proyVigente = {};
+  // vs LY (sep-2026): Real del MES_VIGENTE pero del año anterior (anio-1),
+  // por (sede,servicio) — mismo criterio que buildMonthlyRealMetric: se
+  // compara el Proyectado del año pedido contra el Real (ya cerrado) del
+  // mismo mes en anio-1; si no hay fila de ese año anterior, queda sin dato
+  // (vsLY/nomLY en null más abajo, nunca se inventa).
+  const realLYBySedeServicio = {};
   for (const r of rows) {
     const [sede, serv, mesNumRaw, , realRaw, proyRaw, , ajusteRaw, anioRaw] = r;
     if (!sede || !serv) continue;
-    // Compatibilidad: filas sin Año (hojas antiguas) se tratan como del año
-    // pedido; si la fila sí trae Año, debe coincidir exactamente.
-    if (anioRaw !== "" && anioRaw != null && Number(anioRaw) !== anio) continue;
     const mesNum = Number(mesNumRaw);
     const real = num(realRaw);
+    const filaAnio = (anioRaw !== "" && anioRaw != null) ? Number(anioRaw) : anio; // compat filas viejas sin Año
     const key = sede + "||" + serv;
-    bySedeServicio[key] = bySedeServicio[key] || {};
-    bySedeServicio[key][mesNum] = real;
-    // Proyectado + AjustePipelineComercial (columna H de "Base"): el mismo
-    // mecanismo vivo que ya aplica Evolutivo 2026 (Marite ajusta H a mano y
-    // el total se mueve automáticamente aquí también).
-    if (mesNum === MES_VIGENTE) proyVigente[key] = num(proyRaw) + num(ajusteRaw);
+    if (filaAnio === anio) {
+      bySedeServicio[key] = bySedeServicio[key] || {};
+      bySedeServicio[key][mesNum] = real;
+      // Proyectado + AjustePipelineComercial (columna H de "Base"): el mismo
+      // mecanismo vivo que ya aplica Evolutivo 2026 (Marite ajusta H a mano y
+      // el total se mueve automáticamente aquí también).
+      if (mesNum === MES_VIGENTE) proyVigente[key] = num(proyRaw) + num(ajusteRaw);
+    } else if (filaAnio === anio - 1 && mesNum === MES_VIGENTE) {
+      realLYBySedeServicio[key] = real;
+    }
   }
 
   function seriesFor(sedeNombre, servicio) {
@@ -282,15 +303,18 @@ function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
   const sedesOut = {};
   const serviciosOut = { total: [] };
   const companyByServ = {};
+  const lyVigRawByCode = {}; // pesos crudos (no millones) de Real LY por sede, para sumar en el total sin arrastrar redondeos
 
   for (const sedeNombre of sedeNombres) {
     const code = SEDE_CODE[sedeNombre];
-    let hist = meses.map(() => 0), realVigente = 0, proyVig = 0;
+    let hist = meses.map(() => 0), realVigente = 0, proyVig = 0, lyVig = 0, tieneLY = false;
     const servRows = [];
     for (const serv of servicios) {
       const s = seriesFor(sedeNombre, serv);
       s.hist.forEach((v, i) => hist[i] += v);
       realVigente += s.actual; proyVig += s.proy;
+      const lyServ = realLYBySedeServicio[sedeNombre + "||" + serv];
+      if (lyServ != null && lyServ > 0) { lyVig += lyServ; tieneLY = true; }
       const lm = s.hist[s.hist.length - 1] || 0;
       const servU3M = avgUlt3(s.hist);
       companyByServ[serv] = companyByServ[serv] || {lm:0,u3m:0,proy:0};
@@ -323,16 +347,20 @@ function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
         vsU3M: pctOrNull(proyVig, u3m),
         nomLM: Math.round(((proyVig - lm)/1e6)*10)/10,
         nomU3M: Math.round(((proyVig - u3m)/1e6)*10)/10,
+        vsLY: tieneLY ? pctOrNull(proyVig, lyVig) : null,
+        nomLY: tieneLY ? Math.round(((proyVig - lyVig)/1e6)*10)/10 : null,
       },
     };
+    if (tieneLY) lyVigRawByCode[code] = lyVig;
   }
 
   // ---- compañía (suma 3 sedes) ----
-  let histTotal = meses.map(() => 0), realVigenteTotal = 0, proyVigTotal = 0;
+  let histTotal = meses.map(() => 0), realVigenteTotal = 0, proyVigTotal = 0, lyVigTotalRaw = 0, tieneLYTotal = false;
   for (const code of Object.keys(sedesOut)) {
     sedesOut[code].ingresos.hist.forEach((v,i) => histTotal[i] += v);
     realVigenteTotal += sedesOut[code].ingresos.actual;
     proyVigTotal += sedesOut[code].ingresos.proy;
+    if (lyVigRawByCode[code] != null) { lyVigTotalRaw += lyVigRawByCode[code]; tieneLYTotal = true; }
   }
   const lmTotal = histTotal[histTotal.length - 1] || 0;
   const u3mTotal = avgUlt3(histTotal);
@@ -344,6 +372,8 @@ function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
     vsU3M: pctOrNull(proyVigTotal, u3mTotal),
     nomLM: Math.round((proyVigTotal-lmTotal)*10)/10,
     nomU3M: Math.round((proyVigTotal-u3mTotal)*10)/10,
+    vsLY: tieneLYTotal ? pctOrNull(proyVigTotal, lyVigTotalRaw/1e6) : null,
+    nomLY: tieneLYTotal ? Math.round((proyVigTotal-lyVigTotalRaw/1e6)*10)/10 : null,
     nota: `$${(proyVigTotal-lmTotal).toFixed(1)}M vs LM, $${(proyVigTotal-u3mTotal).toFixed(1)}M vs U3M`,
   };
 

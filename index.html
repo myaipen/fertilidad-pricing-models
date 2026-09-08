@@ -174,6 +174,7 @@
 
   <div class="section-title">Subrogación — pacientes</div>
   <p class="section-sub">Pipeline de candidatas gestantes en valoración vs. programas activos contratados (padres intencionales) · datos agregados, sin nombres · reacciona a Sede y Periodo</p>
+  <p class="section-sub" id="subrogacion-corte-nota"></p>
   <div class="grid-2" id="subrogacion-section"></div>
 
   <div class="section-title">Evolutivo por médico</div>
@@ -820,34 +821,114 @@ function buildConsultas(){
 // ya está calculado para currentScope en ese mes vigente — no reemplaza la
 // curaduría manual del corte vigente, solo evita dejar el texto de Agosto
 // pegado cuando se está viendo otro mes.
+//
+// Estructura/redacción (sep-2026, a pedido de Marite): se busca imitar el
+// tono de los Highlights redactados a mano — Ingresos primero, luego el
+// servicio con mayor movimiento del mes, Subrogación, y la sede más notable
+// — agregando "vs LY" (año anterior, mismo mes) en todo lo que ya trae ese
+// dato (Ingresos/Atenciones/Pacientes/Consultas/Ranking vienen de
+// buildIngresosMetric/buildMonthlyRealMetric/buildConsultasRankingLive en
+// data-live.js, que ya calculan vsLY comparando contra el Real cerrado del
+// mismo mes en anio-1; si esa hoja no tiene ese año todavía, vsLY llega en
+// null y el fragmento simplemente se omite, nunca se inventa un dato).
+//
+// LIMITACIÓN CONOCIDA: a diferencia de los Highlights manuales de Agosto
+// (que sí desglosan un servicio en sus subclasificaciones, ej. "Laboratorio
+// FI/Clínico/Externo"), esta versión automática se queda a nivel Servicio
+// (misma fuente que la tabla "Ingresos por servicio", ya con el ajuste de
+// Cargos al día aplicado) y NO baja a Subclasificación/Concepto — esa vista
+// ("ver conceptos") sale de la hoja ConceptosMensual, que todavía no se
+// actualiza en el mismo momento que Base!E y puede ir rezagada.
 function buildHighlightsAuto(scope){
   const base = scope === "total" ? D.total : (D.sedes && D.sedes[scope]);
   if (!base) return [];
   const out = [];
-  function pctStr(v){ return (v===null||v===undefined) ? null : `${v>=0?'+':''}${v}% vs LM`; }
+  const mesVigenteNum = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 8;
+  const mesLargo = nombreMesLargo(mesVigenteNum);
+  const cerrado = (typeof window.mesVigenteEstaCerrado === "function") ? window.mesVigenteEstaCerrado() : true;
+  const corteDia = (typeof window.getCorteRealDia === "function") ? window.getCorteRealDia() : null;
+
+  function pctFrag(v, label){ return (v===null||v===undefined) ? "" : `${v>=0?'+':''}${v}% ${label}`; }
+  function joinFrags(frags){ const f = frags.filter(Boolean); return f.length ? ` (${f.join(", ")})` : ""; }
+
+  // 1) Ingresos — proyección a cierre + vs LM/vs U3M/vs LY (cuando haya dato)
   if (base.ingresos){
-    const p = pctStr(base.ingresos.vsLM);
-    out.push(`Ingresos proyectados: $${fmt(base.ingresos.proy,1)}M${p?` (${p})`:""}.`);
+    const ing = base.ingresos;
+    const corteTxt = cerrado
+      ? `al cierre de ${mesLargo} (mes cerrado, Real = Proyectado)`
+      : `acumulado al ${corteDia || "?"} de ${mesLargo} (mes en curso, cifra proyectada a cierre)`;
+    const frags = [pctFrag(ing.vsLM,"vs LM"), pctFrag(ing.vsU3M,"vs U3M"), pctFrag(ing.vsLY,"vs LY")];
+    out.push(`Ingresos: $${fmt(ing.proy,1)}M ${corteTxt}${joinFrags(frags)}.`);
   }
-  if (base.atenciones){
-    const p = pctStr(base.atenciones.vsLM);
-    out.push(`Atenciones proyectadas: ${fmt(base.atenciones.proy,0)}${p?` (${p})`:""}.`);
+
+  // 2) Servicio con mayor movimiento NOMINAL del mes (mismo dato que la tabla
+  // "Ingresos por servicio", ya reactivo a Sede) — la variación en pesos suele
+  // ser más relevante para negocio que la variación %, sobre todo en
+  // servicios chicos donde un % grande no dice mucho en dinero real.
+  const servRows = (D.servicios && D.servicios[scope]) || [];
+  const conMovimiento = servRows.filter(r => !r.nuevo && r.nomLM != null && r.nomLM !== 0);
+  if (conMovimiento.length){
+    const top = conMovimiento.slice().sort((a,b)=>Math.abs(b.nomLM)-Math.abs(a.nomLM))[0];
+    const frags = [pctFrag(top.vsLM,"vs LM")];
+    if (top.vsU3M != null) frags.push(pctFrag(top.vsU3M,"vs U3M"));
+    out.push(`${top.nombre}: $${fmt(top.valor,1)}M${joinFrags(frags)} — el mayor movimiento en pesos del mes dentro de Ingresos por servicio.`);
   }
-  if (base.pacientes){
-    const p = pctStr(base.pacientes.vsLM);
-    out.push(`Pacientes únicos proyectados: ${fmt(base.pacientes.proy,0)}${p?` (${p})`:""}.`);
+
+  // 3) Subrogación — destacado aparte (línea de negocio propia, ticket alto,
+  // 100% CDMX históricamente) usando el pipeline de pacientes ya corregido
+  // con lo realmente facturado en Cargos (ver hoja SubrogacionPacientes).
+  const sub = D.subrogacion && D.subrogacion[scope];
+  if (sub && sub.actual){
+    const val = sub.actual["Valoración"] || {pacientes:0, ingreso:0};
+    const prog = sub.actual["Programa Activo"] || {pacientes:0, ingreso:0};
+    const totalIngSub = (val.ingreso||0) + (prog.ingreso||0);
+    if (val.pacientes || prog.pacientes || totalIngSub){
+      const corteTxt = cerrado ? `en ${mesLargo}` : `acumulado al ${corteDia || "?"} de ${mesLargo}`;
+      const progTxt = prog.pacientes
+        ? `${fmt(prog.pacientes,0)} programa(s) activo(s) nuevo(s) ($${fmt(prog.ingreso,0)})`
+        : "sin programas activos nuevos contratados en el periodo";
+      out.push(`Subrogación ${corteTxt}: $${fmt(totalIngSub,0)} — ${fmt(val.pacientes,0)} valoración(es) realizada(s) ($${fmt(val.ingreso,0)}), ${progTxt}.`);
+    }
   }
+
+  // 4) Sede con mayor variación % del mes (solo tiene sentido en la vista
+  // "Todas las sedes" — si ya se filtró a una sede específica, sería
+  // redundante con el bullet de Ingresos de arriba).
+  if (scope === "total" && D.sedes){
+    const nombreSede = { CDMX: "CDMX", GDL: "Guadalajara", MTP: "Metepec" };
+    const candidatos = Object.keys(D.sedes)
+      .map(code => (D.sedes[code].ingresos ? { code, ...D.sedes[code].ingresos } : null))
+      .filter(c => c && c.vsLM != null);
+    if (candidatos.length){
+      const top = candidatos.slice().sort((a,b)=>Math.abs(b.vsLM)-Math.abs(a.vsLM))[0];
+      const frags = [pctFrag(top.vsLM,"vs LM")];
+      if (top.vsLY != null) frags.push(pctFrag(top.vsLY,"vs LY"));
+      out.push(`${nombreSede[top.code] || top.code}: $${fmt(top.proy,1)}M${joinFrags(frags)} — la sede con mayor variación porcentual del mes.`);
+    }
+  }
+
+  // 5) Atenciones / Pacientes únicos / Consultas — proyección + vs LM + vs LY
+  function pushProyMetric(label, m, fmtDec){
+    if (!m) return;
+    const frags = [pctFrag(m.vsLM,"vs LM"), pctFrag(m.vsLY,"vs LY")];
+    out.push(`${label}: ${fmt(m.proy,fmtDec)}${joinFrags(frags)}.`);
+  }
+  pushProyMetric("Atenciones proyectadas", base.atenciones, 0);
+  pushProyMetric("Pacientes únicos proyectados", base.pacientes, 0);
   if (base.consultas){
     const proy = (base.consultas.real||0) + (base.consultas.agendado||0);
-    const p = pctStr(base.consultas.vsLM);
-    out.push(`Consultas proyectadas: ${fmt(proy,0)}${p?` (${p})`:""}.`);
+    const frags = [pctFrag(base.consultas.vsLM,"vs LM"), pctFrag(base.consultas.vsLY,"vs LY")];
+    out.push(`Consultas proyectadas: ${fmt(proy,0)}${joinFrags(frags)}.`);
   }
+
+  // 6) Motivo de consulta más frecuente (ranking agrupado, ya con vs LY)
   const ranking = (D.consultas_ranking && D.consultas_ranking[scope]) || [];
   if (ranking.length){
     const top = ranking[0];
-    const p = top.nuevo ? " (nuevo este mes)" : (pctStr(top.vsLM) ? ` (${pctStr(top.vsLM)})` : "");
-    out.push(`Motivo de consulta más frecuente: "${top.nombre}" con ${fmt(top.valor,0)}${p}.`);
+    const frags = top.nuevo ? [] : [pctFrag(top.vsLM,"vs LM"), pctFrag(top.vsLY,"vs LY")];
+    out.push(`Motivo de consulta más frecuente: "${top.nombre}" con ${fmt(top.valor,0)}${top.nuevo ? " (nuevo este mes)" : joinFrags(frags)}.`);
   }
+
   return out;
 }
 const MES_NOMBRES_LARGOS = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
@@ -1140,6 +1221,21 @@ function setupConceptModalHandlers(){
 // ---------------------------------------------------------------- Subrogación (pacientes) — reacciona a Sede y Periodo
 function buildSubrogacion(){
   const el = document.getElementById("subrogacion-section");
+  const notaEl = document.getElementById("subrogacion-corte-nota");
+  // Nota de corte (sep-2026): "Valoración"/"Programa activo" del mes vigente se
+  // llenan a mano en la hoja SubrogacionPacientes con lo YA REALIZADO en
+  // Cargos (facturado) hasta el día que se haya podido cargar — no es un
+  // cierre de mes. Se avisa igual que el resto del tablero ya avisa qué mes
+  // está viendo (ver mezcla-mes-label), para que nadie lea el número parcial
+  // como si fuera el total del mes.
+  if (notaEl){
+    const mesVigenteNum = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 8;
+    const cerrado = (typeof window.mesVigenteEstaCerrado === "function") ? window.mesVigenteEstaCerrado() : true;
+    const dia = (typeof window.getCorteRealDia === "function") ? window.getCorteRealDia() : null;
+    notaEl.textContent = (!cerrado && dia)
+      ? `Real acumulado al ${dia} de ${nombreMesLargo(mesVigenteNum)} (mes en curso, aún no cierra) — no es el total del mes.`
+      : "";
+  }
   const subAll = D.subrogacion;
   const sub = subAll && subAll[currentScope];
   if (!sub || !sub.labels || !sub.labels.length){
@@ -1178,7 +1274,7 @@ function buildSubrogacion(){
       </div>
       <div class="patient-note">
         Son dos poblaciones distintas de personas, no una tasa de conversión: "Valoración" cuenta candidatas gestantes evaluadas médicamente;
-        "Programa activo" cuenta padres intencionales con un paquete de subrogación ya contratado. Acumulado 2026 (Ene–Ago):
+        "Programa activo" cuenta padres intencionales con un paquete de subrogación ya contratado. Acumulado ${(typeof window.getAnioVigente==="function")?window.getAnioVigente():2026} (${D.meses_hist[0]||D.mes_actual}–${D.mes_actual}):
         ${fmt(sub.totalPacientesYTD["Valoración"],0)} valoraciones · ${fmt(sub.totalPacientesYTD["Programa Activo"],0)} programas activos ·
         $${fmt(sub.ingresoYTD,0)} en ingresos de Subrogación.
       </div>
