@@ -314,13 +314,15 @@ function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
       s.hist.forEach((v, i) => hist[i] += v);
       realVigente += s.actual; proyVig += s.proy;
       const lyServ = realLYBySedeServicio[sedeNombre + "||" + serv];
-      if (lyServ != null && lyServ > 0) { lyVig += lyServ; tieneLY = true; }
+      const tieneLYServ = lyServ != null && lyServ > 0;
+      if (tieneLYServ) { lyVig += lyServ; tieneLY = true; }
       const lm = s.hist[s.hist.length - 1] || 0;
       const servU3M = avgUlt3(s.hist);
-      companyByServ[serv] = companyByServ[serv] || {lm:0,u3m:0,proy:0};
+      companyByServ[serv] = companyByServ[serv] || {lm:0,u3m:0,proy:0,ly:0,tieneLY:false};
       companyByServ[serv].lm += lm;
       companyByServ[serv].u3m += servU3M;
       companyByServ[serv].proy += s.proy;
+      if (tieneLYServ) { companyByServ[serv].ly += lyServ; companyByServ[serv].tieneLY = true; }
       if (s.proy > 0 || s.actual > 0) {
         servRows.push({
           nombre: SERVICIO_LABEL[serv],
@@ -330,6 +332,8 @@ function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
           vsU3M: pctOrNull(s.proy, servU3M),
           nomLM: Math.round(((s.proy - lm)/1e6)*100)/100,
           nomU3M: Math.round(((s.proy - servU3M)/1e6)*100)/100,
+          vsLY: tieneLYServ ? pctOrNull(s.proy, lyServ) : null,
+          nomLY: tieneLYServ ? Math.round(((s.proy - lyServ)/1e6)*100)/100 : null,
           nuevo: lm === 0,
         });
       }
@@ -388,6 +392,8 @@ function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
         vsU3M: pctOrNull(c.proy, c.u3m),
         nomLM: Math.round(((c.proy - c.lm)/1e6)*100)/100,
         nomU3M: Math.round(((c.proy - c.u3m)/1e6)*100)/100,
+        vsLY: c.tieneLY ? pctOrNull(c.proy, c.ly) : null,
+        nomLY: c.tieneLY ? Math.round(((c.proy - c.ly)/1e6)*100)/100 : null,
         nuevo: c.lm === 0,
       });
     }

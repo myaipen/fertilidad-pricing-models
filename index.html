@@ -681,9 +681,13 @@ function buildEvolutivos(){
     if (!series){
       return `<div class="panel"><div class="panel-title">${title}</div><div class="unavailable">No disponible a nivel ${PERIOD_LABELS[currentPeriod].toLowerCase()}<br>(sin fuente día a día para esta métrica)</div></div>`;
     }
+    // vs LY solo existe a nivel Mes (mismo criterio que buildKPIs: null si no
+    // hay dato real del año anterior para esta métrica/sede).
+    const hasLY = currentPeriod === "mes" && series.vsLY != null;
+    const lyBadge = hasLY ? ` ${pctBadge(series.vsLY,"vs LY",fmtSignedFn(series.nomLY,valueFmt))}` : "";
     return `<div class="panel">
       <div class="panel-title">${title}</div>
-      <div class="panel-badges">${b1?pctBadge(series.badge1,b1,fmtSignedFn(series.nomLM,valueFmt)):""} ${b2?pctBadge(series.badge2,b2,fmtSignedFn(series.nomU3M,valueFmt)):""}${extraBadge||""}</div>
+      <div class="panel-badges">${b1?pctBadge(series.badge1,b1,fmtSignedFn(series.nomLM,valueFmt)):""} ${b2?pctBadge(series.badge2,b2,fmtSignedFn(series.nomU3M,valueFmt)):""}${extraBadge||""}${lyBadge}</div>
       <div class="chart-box"><canvas id="${id}"></canvas></div>
     </div>`;
   }
@@ -957,18 +961,20 @@ function buildServicios(){
   const rowsHtml = rows.map(r=>{
     const nomLMStr = fmtSignedFn(r.nomLM, v=>`$${fmt(v,1)}M`);
     const nomU3MStr = fmtSignedFn(r.nomU3M, v=>`$${fmt(v,1)}M`);
+    const nomLYStr = fmtSignedFn(r.nomLY, v=>`$${fmt(v,1)}M`);
     const lm = r.nuevo ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : miniPct(r.vsLM, nomLMStr);
     const u3m = (r.vsU3M===null || r.vsU3M===undefined) ? '<span style="color:var(--axis);">—</span>' : (r.nuevo ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : miniPct(r.vsU3M, nomU3MStr));
+    const ly = (r.vsLY===null || r.vsLY===undefined) ? '<span style="color:var(--axis);">—</span>' : miniPct(r.vsLY, nomLYStr);
     const clickable = !!r.servKey;
     return `<tr class="${clickable?'servicio-row':''}" ${clickable?`data-servkey="${r.servKey}" data-nombre="${r.nombre}"`:''}>
       <td>${r.nombre}${clickable?' <span class="drill-hint">▸ ver conceptos</span>':''}</td>
-      <td class="num">${fmt(r.valor,1)}</td><td class="num">${lm}</td><td class="num">${u3m}</td></tr>`;
+      <td class="num">${fmt(r.valor,1)}</td><td class="num">${lm}</td><td class="num">${u3m}</td><td class="num">${ly}</td></tr>`;
   }).join("");
   el.innerHTML = `
     <div class="panel">
       <div class="panel-title">Ingresos por servicio (MDP)</div>
       <div class="section-sub" style="margin:0 0 8px;">Clic en un servicio para ver el desglose por concepto (mes vigente)</div>
-      <table><thead><tr><th>Servicio</th><th class="num">MDP</th><th class="num">vs LM</th><th class="num">vs U3M</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+      <table><thead><tr><th>Servicio</th><th class="num">MDP</th><th class="num">vs LM</th><th class="num">vs U3M</th><th class="num">vs LY</th></tr></thead><tbody>${rowsHtml}</tbody></table>
     </div>
     <div class="panel">
       <div class="panel-title">Highlights</div>
