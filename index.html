@@ -144,7 +144,12 @@
       <span class="filter-label">Mes vigente</span>
       <select id="mes-vigente-select" style="font-size:12.5px; font-weight:700; padding:5px 8px; border-radius:6px; border:1px solid var(--gray); background:#fff; color:var(--text); cursor:pointer;"></select>
     </div>
+    <div class="filter-group">
+      <span class="filter-label">Año</span>
+      <select id="anio-vigente-select" style="font-size:12.5px; font-weight:700; padding:5px 8px; border-radius:6px; border:1px solid var(--gray); background:#fff; color:var(--text); cursor:pointer;"></select>
+    </div>
   </div>
+  <p style="font-size:11px; color:var(--axis); margin:-4px 0 12px;"><b>LM</b> = mes anterior · <b>LY</b> = mismo mes, año anterior · <b>U3M</b> = promedio de los últimos 3 meses cerrados</p>
 
   <div class="kpi-row" id="kpi-row"></div>
   <p class="period-note" id="period-note"></p>
@@ -375,6 +380,7 @@ function buildSeries(kind, scope, opts){
         currentIndex: s.hist.length, proyIndex: s.hist.length+1,
         badge1: s.vsLM, badge2: s.vsU3M,
         nomLM: s.proy - s.hist[6], nomU3M: s.proy - (s.hist[4]+s.hist[5]+s.hist[6])/3,
+        vsLY: s.vsLY != null ? s.vsLY : null, nomLY: s.nomLY != null ? s.nomLY : null,
       };
     }
     if (currentPeriod === "trimestre"){
@@ -511,6 +517,7 @@ function buildTabs(){
   });
 
   buildMesVigenteSelect();
+  buildAnioVigenteSelect();
 }
 
 // Selector Ene-Dic que cambia MES_VIGENTE (definida en data-live.js) y
@@ -532,13 +539,12 @@ function buildMesVigenteSelect(){
   };
 }
 
-// Selector 2025/2026 dentro del panel "Ranking por agrupación de consulta"
-// (buildConsultas() reconstruye este <select> cada vez que redibuja el
-// panel, igual que buildMesVigenteSelect). Cambia ANIO_VIGENTE (definida en
-// data-live.js) SOLO para ese panel — ver nota junto a ANIO_VIGENTE en
-// data-live.js sobre por qué no afecta el resto del tablero.
-function buildAnioRankingSelect(){
-  const sel = document.getElementById("anio-ranking-select");
+// Selector 2025/2026 GLOBAL, junto a Sede/Periodo/Mes vigente. Cambia
+// ANIO_VIGENTE (definida en data-live.js) y afecta TODO el tablero —
+// Ingresos, Atenciones, Pacientes, Consultas y el Ranking por agrupación de
+// consulta (HubSpot es la excepción: sin fuente 2025, se deja en 0).
+function buildAnioVigenteSelect(){
+  const sel = document.getElementById("anio-vigente-select");
   if (!sel) return;
   const anioActual = (typeof window.getAnioVigente === "function") ? window.getAnioVigente() : 2026;
   const anios = [2026, 2025];
@@ -569,12 +575,18 @@ function buildKPIs(){
     const real = s.values[s.currentIndex];
     const showReal = s.proyIndex != null;
     const [b1label, b2label] = PERIOD_BADGES[currentPeriod];
+    // vs LY solo existe a nivel Mes (data-live.js lo calcula comparando el
+    // mes vigente contra el mismo mes del año anterior) — y solo se muestra
+    // si hay dato real de ese año anterior (ver nota de HubSpot/2025 más
+    // arriba: si no hay fuente, s.vsLY llega en null y simplemente se omite).
+    const hasLY = currentPeriod === "mes" && s.vsLY != null;
     return `
       <div class="kpi-card">
         <div class="kpi-label">${it.label}</div>
         <div class="kpi-big">${it.prefix}${fmt(current, it.dec)}${it.suffix}${s.proyIndex!=null ? ' <span style="font-size:12px; font-weight:400; color:var(--axis);">proy.</span>' : ''}</div>
         ${showReal ? `<div class="kpi-sub">Real a la fecha: ${it.prefix}${fmt(real, it.dec)}${it.suffix}</div>` : ""}
         ${b1label ? `<div class="kpi-badges">${pctBadge(s.badge1,b1label,fmtSignedFn(s.nomLM,v=>`${it.prefix}${fmt(v,it.dec)}${it.suffix}`))} ${pctBadge(s.badge2,b2label,fmtSignedFn(s.nomU3M,v=>`${it.prefix}${fmt(v,it.dec)}${it.suffix}`))}</div>` : ""}
+        ${hasLY ? `<div class="kpi-badges">${pctBadge(s.vsLY,"vs LY",fmtSignedFn(s.nomLY,v=>`${it.prefix}${fmt(v,it.dec)}${it.suffix}`))}</div>` : ""}
       </div>`;
   }).join("");
 }
@@ -584,7 +596,8 @@ function buildConsultasSeries(scope){
   if (currentPeriod === "mes"){
     const proy = s.real+s.agendado;
     return { labels:[...D.meses_hist, D.mes_actual], values:[...s.hist, proy], currentIndex:s.hist.length, proyIndex:s.hist.length, badge1:s.vsLM, badge2:s.vsU3M,
-      nomLM: proy - s.hist[6], nomU3M: proy - (s.hist[4]+s.hist[5]+s.hist[6])/3 };
+      nomLM: proy - s.hist[6], nomU3M: proy - (s.hist[4]+s.hist[5]+s.hist[6])/3,
+      vsLY: s.vsLY != null ? s.vsLY : null, nomLY: s.nomLY != null ? s.nomLY : null };
   }
   if (currentPeriod === "trimestre"){
     const [e,f,m,a,my,j,jl] = s.hist;
@@ -776,15 +789,10 @@ function buildConsultas(){
       </div>
     </div>
     <div class="panel">
-      <div class="panel-title" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-        <span>Ranking por agrupación de consulta — ${D.mes_actual} ${(typeof window.getAnioVigente==="function")?window.getAnioVigente():2026}</span>
-        <select id="anio-ranking-select" style="font-size:11.5px; font-weight:700; padding:4px 7px; border-radius:6px; border:1px solid var(--gray); background:#fff; color:var(--text); cursor:pointer;"></select>
-      </div>
-      <div style="font-size:10.5px; color:var(--axis); margin:0 0 8px;"><b>LM</b> = mes anterior · <b>LY</b> = mismo mes, año anterior · <b>U3M</b> = promedio de los últimos 3 meses cerrados</div>
+      <div class="panel-title">Ranking por agrupación de consulta — ${D.mes_actual} ${(typeof window.getAnioVigente==="function")?window.getAnioVigente():2026}</div>
       <div class="chart-box tall"><canvas id="chart-ranking"></canvas></div>
     </div>
   `;
-  buildAnioRankingSelect();
   const series = drawConsultasChart();
   const badgesEl = document.getElementById("consultas-badges");
   const intFmt = v=>fmt(v,0);
@@ -1324,8 +1332,17 @@ function renderAll(){
 }
 
 (async function start(){
-  await loadLiveDataIntoDashboard();
   const banner = document.getElementById("live-status-banner");
+  // Mostrar de inmediato un aviso de "cargando": las hojas de Sheets pueden
+  // tardar varios segundos (Apps Script) y antes de este cambio la página se
+  // quedaba con los encabezados vacíos y SIN ningún aviso durante toda esa
+  // espera — parecía "no carga" cuando en realidad seguía cargando.
+  banner.style.display = "block";
+  banner.style.background = "#EFF6FF";
+  banner.style.color = "#1E3A8A";
+  banner.textContent = "⏳ Cargando datos en vivo desde Google Sheets… (puede tardar unos segundos)";
+
+  await loadLiveDataIntoDashboard();
   const flags = [
     ["Ingresos/Servicios", window.DATA._liveOk, window.DATA._liveError],
     ["Atenciones/Pacientes/Consultas", window.DATA._liveOkOperativos, window.DATA._liveErrorOperativos],

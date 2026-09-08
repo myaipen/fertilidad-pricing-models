@@ -68,14 +68,20 @@ const MESES_12 = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","N
 // re-render completo con el nuevo mes como "vigente" y el anterior como LM.
 let MES_VIGENTE = 8;
 
-// Año vigente SOLO para el "Ranking por agrupación de consulta" (2025/2026 —
-// selector propio dentro de ese panel, ver buildConsultas() en index.html).
-// No afecta Ingresos/Atenciones/Pacientes/Consultas/HubSpot/etc.: esas
-// secciones no tienen fuente 2025 comparable todavía, solo el ranking de
-// consultas (hojas ConsultasRankingLive / ConsultasRankingLive2025). Cuando
-// ANIO_VIGENTE=2026 el ranking usa 2026 como "actual" y 2025 como base de
-// "vs LY"; cuando ANIO_VIGENTE=2025, 2025 es el "actual" y no hay "vs LY"
-// (no tenemos 2024).
+// Año vigente — GLOBAL, selector único en la barra de filtros de arriba
+// (junto a Sede/Periodo/Mes Vigente en index.html). Afecta TODO el tablero:
+// Ingresos, Atenciones, Pacientes, Consultas y el Ranking por agrupación de
+// consulta. Cuando ANIO_VIGENTE=2026, cada sección usa 2026 como "actual" y
+// 2025 (donde exista) como base de "vs LY"; cuando ANIO_VIGENTE=2025, 2025
+// es el "actual" y no hay "vs LY" (no tenemos 2024). HubSpot es la única
+// excepción: no tiene fuente 2025, así que con ANIO_VIGENTE=2025 simplemente
+// muestra 0 en vez de romperse (ver rebuildAllFromCache/loadLiveDataIntoDashboard).
+//
+// ARREGLO (sep-2026): antes esta variable solo alimentaba el selector interno
+// del panel de Ranking; Ingresos/Atenciones/Pacientes/Consultas ni siquiera
+// filtraban por año (ver el fix de buildIngresosMetric más abajo — causó que
+// Agosto mostrara datos mezclados 2025/2026). Ahora es el único selector de
+// año de todo el tablero.
 let ANIO_VIGENTE = 2026;
 
 // Un mes se considera "cerrado" (ya no quedan días por transcurrir que
@@ -194,11 +200,17 @@ async function fetchLiveIngresos() {
   if (!WEB_APP_URL) {
     throw new Error("WEB_APP_URL no configurada");
   }
-  const res = await fetch(WEB_APP_URL);
-  if (!res.ok) throw new Error(`Apps Script HTTP ${res.status}`);
-  const json = await res.json();
-  const rows = json.values || [];
-  _rawCache["Base"] = rows;
+  // "Base" ya se descargó arriba en loadLiveDataIntoDashboard() (para
+  // autodetectar MES_VIGENTE) y quedó en _rawCache — se reusa esa copia en
+  // vez de volver a pedirle la misma hoja a Apps Script (ahorra ~2-3s).
+  let rows = _rawCache["Base"];
+  if (!rows) {
+    const res = await fetch(WEB_APP_URL);
+    if (!res.ok) throw new Error(`Apps Script HTTP ${res.status}`);
+    const json = await res.json();
+    rows = json.values || [];
+    _rawCache["Base"] = rows;
+  }
   return buildIngresosMetric(rows, ANIO_VIGENTE);
 }
 
@@ -371,18 +383,39 @@ async function fetchSheetJson(sheetName) {
 
 const SEDES = ["CDMX", "GDL", "MTP"];
 
+// Compat: hasta sep-2026 "Atenciones"/"Pacientes"/"Consultas" no tenían
+// columna de Año (una sola hoja = 2026 implícito). Ahora que pueden traer
+// filas 2025 (columna extra al final, mismo patrón que "Base"), una fila SIN
+// Año explícito se asume 2026 (nunca "coincide con lo que se pida"), para
+// que el histórico 2025 nunca se filtre por error dentro del cálculo de 2026
+// ni viceversa.
+function anioDeFila(anioRaw) {
+  return (anioRaw === undefined || anioRaw === "" || anioRaw == null) ? 2026 : Number(anioRaw);
+}
+
 /**
- * Atenciones / Pacientes comparten forma: filas [Sede, MesNum, MesLabel, Real].
- * Regresa { CDMX:{hist,actual,proy,vsLM,vsU3M}, GDL:{...}, MTP:{...}, total:{...} }
+ * Atenciones / Pacientes comparten forma: filas [Sede, MesNum, MesLabel,
+ * Real, Año?]. Regresa { CDMX:{hist,actual,proy,vsLM,vsU3M,vsLY,nomLY},
+ * GDL:{...}, MTP:{...}, total:{...} } para el año pedido (anio, default
+ * ANIO_VIGENTE) — vsLY compara la proyección del año pedido contra el Real
+ * del mismo mes en (anio-1); si no hay datos de ese año anterior, vsLY/nomLY
+ * quedan en null (ej. viendo 2025, no hay 2024).
  */
-function buildMonthlyRealMetric(rows) {
-  const bySede = {};
-  for (const [sede, mesNumRaw, , realRaw] of rows) {
-    const mesNum = Number(mesNumRaw);
-    const real = num(realRaw);
-    bySede[sede] = bySede[sede] || {};
-    bySede[sede][mesNum] = real;
+function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE) {
+  function bySedeParaAnio(targetAnio) {
+    const bySede = {};
+    for (const r of rows) {
+      const [sede, mesNumRaw, , realRaw, anioRaw] = r;
+      if (anioDeFila(anioRaw) !== targetAnio) continue;
+      const mesNum = Number(mesNumRaw);
+      const real = num(realRaw);
+      bySede[sede] = bySede[sede] || {};
+      bySede[sede][mesNum] = real;
+    }
+    return bySede;
   }
+  const bySede = bySedeParaAnio(anio);
+  const bySedeLY = bySedeParaAnio(anio - 1);
   const meses = rangoHist(MES_VIGENTE);
   const cerrado = mesVigenteCerrado(MES_VIGENTE);
   const diasTot = diasEnMes(MES_VIGENTE);
@@ -396,7 +429,7 @@ function buildMonthlyRealMetric(rows) {
     return actual * (diasTot / diasTr);
   }
   const out = {};
-  let histTotal = meses.map(() => 0), actualTotal = 0;
+  let histTotal = meses.map(() => 0), actualTotal = 0, lyTotal = 0, tieneLYTotal = false;
   for (const sede of SEDES) {
     const m = bySede[sede] || {};
     const hist = meses.map(n => m[n] || 0);
@@ -405,28 +438,50 @@ function buildMonthlyRealMetric(rows) {
     hist.forEach((v,i) => histTotal[i] += v);
     actualTotal += actual;
     const lm = hist[hist.length-1] || 0;
-    out[sede] = { hist, actual, proy: Math.round(proy), vsLM: pctOrNull(proy, lm), vsU3M: pctOrNull(proy, avgUlt3(hist)) };
+    const ly = (bySedeLY[sede] || {})[MES_VIGENTE];
+    const tieneLY = ly != null && ly > 0;
+    if (tieneLY) { lyTotal += ly; tieneLYTotal = true; }
+    out[sede] = {
+      hist, actual, proy: Math.round(proy),
+      vsLM: pctOrNull(proy, lm), vsU3M: pctOrNull(proy, avgUlt3(hist)),
+      vsLY: tieneLY ? pctOrNull(proy, ly) : null,
+      nomLY: tieneLY ? Math.round(proy - ly) : null,
+    };
   }
   const proyTotal = proyectarPorTendencia(actualTotal);
   const lmTotal = histTotal[histTotal.length-1] || 0;
-  out.total = { hist: histTotal, actual: actualTotal, proy: Math.round(proyTotal), vsLM: pctOrNull(proyTotal, lmTotal), vsU3M: pctOrNull(proyTotal, avgUlt3(histTotal)) };
+  out.total = {
+    hist: histTotal, actual: actualTotal, proy: Math.round(proyTotal),
+    vsLM: pctOrNull(proyTotal, lmTotal), vsU3M: pctOrNull(proyTotal, avgUlt3(histTotal)),
+    vsLY: tieneLYTotal ? pctOrNull(proyTotal, lyTotal) : null,
+    nomLY: tieneLYTotal ? Math.round(proyTotal - lyTotal) : null,
+  };
   return out;
 }
 
 /**
- * Consultas: filas [Sede, MesNum, MesLabel, Real, Agendado].
- * Regresa { CDMX:{hist,real,agendado,vsLM,vsU3M}, ..., total:{...} }
+ * Consultas: filas [Sede, MesNum, MesLabel, Real, Agendado, Año?].
+ * Regresa { CDMX:{hist,real,agendado,vsLM,vsU3M,vsLY,nomLY}, ..., total:{...} }
+ * para el año pedido (anio, default ANIO_VIGENTE) — mismo criterio de vsLY
+ * que buildMonthlyRealMetric (null si no hay dato del año anterior).
  */
-function buildConsultasMetric(rows) {
-  const bySede = {};
-  for (const [sede, mesNumRaw, , realRaw, agendadoRaw] of rows) {
-    const mesNum = Number(mesNumRaw);
-    bySede[sede] = bySede[sede] || {};
-    bySede[sede][mesNum] = { real: num(realRaw), agendado: num(agendadoRaw) };
+function buildConsultasMetric(rows, anio = ANIO_VIGENTE) {
+  function bySedeParaAnio(targetAnio) {
+    const bySede = {};
+    for (const r of rows) {
+      const [sede, mesNumRaw, , realRaw, agendadoRaw, anioRaw] = r;
+      if (anioDeFila(anioRaw) !== targetAnio) continue;
+      const mesNum = Number(mesNumRaw);
+      bySede[sede] = bySede[sede] || {};
+      bySede[sede][mesNum] = { real: num(realRaw), agendado: num(agendadoRaw) };
+    }
+    return bySede;
   }
+  const bySede = bySedeParaAnio(anio);
+  const bySedeLY = bySedeParaAnio(anio - 1);
   const meses = rangoHist(MES_VIGENTE);
   const out = {};
-  let histTotal = meses.map(() => 0), realVigTotal = 0, agenVigTotal = 0;
+  let histTotal = meses.map(() => 0), realVigTotal = 0, agenVigTotal = 0, lyTotal = 0, tieneLYTotal = false;
   for (const sede of SEDES) {
     const m = bySede[sede] || {};
     const hist = meses.map(n => (m[n] && m[n].real) || 0);
@@ -436,11 +491,25 @@ function buildConsultasMetric(rows) {
     hist.forEach((v,i) => histTotal[i] += v);
     realVigTotal += realVig; agenVigTotal += agendadoVig;
     const lm = hist[hist.length-1] || 0;
-    out[sede] = { hist, real: realVig, agendado: agendadoVig, vsLM: pctOrNull(proy, lm), vsU3M: pctOrNull(proy, avgUlt3(hist)) };
+    const lyEntry = (bySedeLY[sede] || {})[MES_VIGENTE];
+    const ly = lyEntry ? lyEntry.real : 0;
+    const tieneLY = ly > 0;
+    if (tieneLY) { lyTotal += ly; tieneLYTotal = true; }
+    out[sede] = {
+      hist, real: realVig, agendado: agendadoVig,
+      vsLM: pctOrNull(proy, lm), vsU3M: pctOrNull(proy, avgUlt3(hist)),
+      vsLY: tieneLY ? pctOrNull(proy, ly) : null,
+      nomLY: tieneLY ? Math.round(proy - ly) : null,
+    };
   }
   const proyTotal = realVigTotal + agenVigTotal;
   const lmTotal = histTotal[histTotal.length-1] || 0;
-  out.total = { hist: histTotal, real: realVigTotal, agendado: agenVigTotal, vsLM: pctOrNull(proyTotal, lmTotal), vsU3M: pctOrNull(proyTotal, avgUlt3(histTotal)) };
+  out.total = {
+    hist: histTotal, real: realVigTotal, agendado: agenVigTotal,
+    vsLM: pctOrNull(proyTotal, lmTotal), vsU3M: pctOrNull(proyTotal, avgUlt3(histTotal)),
+    vsLY: tieneLYTotal ? pctOrNull(proyTotal, lyTotal) : null,
+    nomLY: tieneLYTotal ? Math.round(proyTotal - lyTotal) : null,
+  };
   return out;
 }
 
@@ -981,22 +1050,40 @@ async function loadLiveDataIntoDashboard() {
   window.MES_CORTE_ORIGINAL = MES_VIGENTE;
   syncMesesHistYActual();
 
-  try {
-    const live = await fetchLiveIngresos();
+  // ARREGLO (sep-2026): antes estas 6 secciones se pedían una por una con
+  // "await" en fila -- cada llamada a Apps Script tarda ~2-3s (a veces más
+  // en frío), así que la carga completa tomaba 10-20+ segundos, Y la página
+  // no mostraba NINGÚN aviso de "cargando" mientras tanto (ver banner en
+  // index.html), por lo que el tablero parecía "no cargar" cuando en
+  // realidad seguía esperando. Ahora se piden las 6 en paralelo con
+  // Promise.allSettled: el tiempo total baja al de la más lenta de las 6 (no
+  // la suma de las 6), y cada una sigue teniendo su propio fallback
+  // independiente si falla (igual que antes).
+  const [ingresosR, operativosR, hubspotR, conceptosR, doctoresR, metasR] = await Promise.allSettled([
+    fetchLiveIngresos(),
+    fetchLiveOperativos(),
+    fetchLiveHubspot(),
+    fetchLiveConceptosYSubrogacion(),
+    fetchLiveDoctores(),
+    fetchLiveMetas(),
+  ]);
+
+  if (ingresosR.status === "fulfilled") {
+    const live = ingresosR.value;
     window.DATA.total.ingresos = live.totalIngresos;
     for (const code of Object.keys(live.sedesOut)) {
       window.DATA.sedes[code].ingresos = live.sedesOut[code].ingresos;
     }
     window.DATA.servicios = live.serviciosOut;
     window.DATA._liveOk = true;
-  } catch (e) {
+  } else {
     window.DATA._liveOk = false;
-    window.DATA._liveError = String(e.message || e);
-    console.warn("No se pudo cargar Ingresos/Servicios en vivo desde Sheets, usando último valor guardado:", e);
+    window.DATA._liveError = String(ingresosR.reason?.message || ingresosR.reason);
+    console.warn("No se pudo cargar Ingresos/Servicios en vivo desde Sheets, usando último valor guardado:", ingresosR.reason);
   }
 
-  try {
-    const op = await fetchLiveOperativos();
+  if (operativosR.status === "fulfilled") {
+    const op = operativosR.value;
     window.DATA.total.atenciones = { ...window.DATA.total.atenciones, ...op.atenciones.total };
     window.DATA.total.pacientes = { ...window.DATA.total.pacientes, ...op.pacientes.total };
     window.DATA.total.consultas = { ...window.DATA.total.consultas, ...op.consultas.total };
@@ -1007,56 +1094,52 @@ async function loadLiveDataIntoDashboard() {
     }
     window.DATA.consultas_ranking = op.ranking;
     window.DATA._liveOkOperativos = true;
-  } catch (e) {
+  } else {
     window.DATA._liveOkOperativos = false;
-    window.DATA._liveErrorOperativos = String(e.message || e);
-    console.warn("No se pudo cargar Atenciones/Pacientes/Consultas en vivo desde Sheets, usando último valor guardado:", e);
+    window.DATA._liveErrorOperativos = String(operativosR.reason?.message || operativosR.reason);
+    console.warn("No se pudo cargar Atenciones/Pacientes/Consultas en vivo desde Sheets, usando último valor guardado:", operativosR.reason);
   }
 
-  try {
-    const hs = await fetchLiveHubspot();
-    window.DATA.hubspot = { ...window.DATA.hubspot, ...hs };
+  if (hubspotR.status === "fulfilled") {
+    window.DATA.hubspot = { ...window.DATA.hubspot, ...hubspotR.value };
     window.DATA._liveOkHubspot = true;
-  } catch (e) {
+  } else {
     window.DATA._liveOkHubspot = false;
-    window.DATA._liveErrorHubspot = String(e.message || e);
-    console.warn("No se pudo cargar HubSpot en vivo desde Sheets, usando último valor guardado:", e);
+    window.DATA._liveErrorHubspot = String(hubspotR.reason?.message || hubspotR.reason);
+    console.warn("No se pudo cargar HubSpot en vivo desde Sheets, usando último valor guardado:", hubspotR.reason);
   }
 
-  try {
-    const cs = await fetchLiveConceptosYSubrogacion();
+  if (conceptosR.status === "fulfilled") {
+    const cs = conceptosR.value;
     window.DATA.conceptos = cs.conceptos;
     window.DATA.subrogacion = cs.subrogacion;
     window.DATA.conceptosMensual = cs.conceptosMensual;
     window.DATA.conceptosHier = cs.conceptosHier;
     window.DATA.conceptosPorMedico = cs.conceptosPorMedico;
     window.DATA._liveOkConceptos = true;
-  } catch (e) {
+  } else {
     window.DATA._liveOkConceptos = false;
-    window.DATA._liveErrorConceptos = String(e.message || e);
-    console.warn("No se pudo cargar Conceptos/Subrogación en vivo desde Sheets, usando último valor guardado:", e);
+    window.DATA._liveErrorConceptos = String(conceptosR.reason?.message || conceptosR.reason);
+    console.warn("No se pudo cargar Conceptos/Subrogación en vivo desde Sheets, usando último valor guardado:", conceptosR.reason);
   }
 
-  try {
-    window.DATA.doctores = await fetchLiveDoctores();
+  if (doctoresR.status === "fulfilled") {
+    window.DATA.doctores = doctoresR.value;
     window.DATA._liveOkDoctores = true;
-  } catch (e) {
+  } else {
     window.DATA._liveOkDoctores = false;
-    window.DATA._liveErrorDoctores = String(e.message || e);
-    console.warn("No se pudo cargar Por médico en vivo desde Sheets:", e);
+    window.DATA._liveErrorDoctores = String(doctoresR.reason?.message || doctoresR.reason);
+    console.warn("No se pudo cargar Por médico en vivo desde Sheets:", doctoresR.reason);
   }
 
   // Metas es opcional (hoja nueva, se llena poco a poco por sede/mes): si
   // falla o todavía no tiene datos, la gráfica de Ingresos simplemente no
   // dibuja la línea de meta — no rompe nada más del dashboard.
-  try {
-    const metas = await fetchLiveMetas();
-    if (metas._hasData) {
-      window.DATA.total.meta = metas.total;
-      for (const code of SEDES) window.DATA.sedes[code].meta = metas[code];
-    }
-  } catch (e) {
-    console.warn("No se pudo cargar Metas en vivo desde Sheets (opcional, sin fallback):", e);
+  if (metasR.status === "fulfilled" && metasR.value._hasData) {
+    window.DATA.total.meta = metasR.value.total;
+    for (const code of SEDES) window.DATA.sedes[code].meta = metasR.value[code];
+  } else if (metasR.status === "rejected") {
+    console.warn("No se pudo cargar Metas en vivo desde Sheets (opcional, sin fallback):", metasR.reason);
   }
 }
 
@@ -1095,12 +1178,26 @@ function rebuildAllFromCache() {
     window.DATA.consultas_ranking = buildRankingFromCache();
   }
 
-  if (_rawCache["Hubspot"]) {
+  // HubSpot no tiene fuente 2025 (pipeline "Interesa2" solo se ha estado
+  // subiendo para 2026) — con ANIO_VIGENTE=2025 se deja todo en 0 en vez de
+  // mostrar los números de 2026 disfrazados de 2025 (ver nota junto a
+  // ANIO_VIGENTE arriba; instrucción explícita: "Hubspot no hay información,
+  // dejalo en 0").
+  if (ANIO_VIGENTE !== 2026) {
+    const vacio = { hist: [], actual: 0 };
+    window.DATA.hubspot = {
+      ...window.DATA.hubspot,
+      leads: { ...vacio }, citas: { ...vacio }, conversion_pct: { ...vacio },
+      conversion_por_sede: {}, cohortes: [],
+      _sinDatosEsteAnio: true,
+    };
+  } else if (_rawCache["Hubspot"]) {
     const base = buildHubspotMetric(_rawCache["Hubspot"]);
     window.DATA.hubspot = {
       ...window.DATA.hubspot, ...base,
       conversion_por_sede: _rawCache["HubspotSede"] ? buildHubspotSedeMetric(_rawCache["HubspotSede"]) : (window.DATA.hubspot || {}).conversion_por_sede,
       cohortes: _rawCache["HubspotCohortes"] ? buildHubspotCohortes(_rawCache["HubspotCohortes"]) : (window.DATA.hubspot || {}).cohortes,
+      _sinDatosEsteAnio: false,
     };
   }
 
@@ -1146,10 +1243,10 @@ window.getMesVigente = () => MES_VIGENTE;
 window.MESES_12 = MESES_12;
 
 /**
- * Punto de entrada del selector de año (2025/2026) del panel "Ranking por
- * agrupación de consulta". Solo afecta ese panel (ver nota junto a
- * ANIO_VIGENTE arriba) — recalcula el ranking desde _rawCache (ya tiene
- * ConsultasRankingLive y ConsultasRankingLive2025 descargados desde el
+ * Punto de entrada del selector de año (2025/2026) GLOBAL, en la barra de
+ * filtros de arriba (junto a Sede/Periodo/Mes Vigente). Afecta TODO el
+ * tablero (ver nota junto a ANIO_VIGENTE arriba) — recalcula desde
+ * _rawCache (todas las hojas relevantes ya se piden en ambos años desde el
  * primer load, no vuelve a pedirle nada a Sheets) y vuelve a dibujar todo el
  * tablero, igual que changeMesVigente.
  */
