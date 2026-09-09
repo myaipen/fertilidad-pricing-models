@@ -426,14 +426,52 @@ function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
 // tener que volver a pedirle nada a Google Sheets — ver changeMesVigente().
 let _rawCache = {};
 
-async function fetchSheetJson(sheetName) {
-  const res = await fetch(`${WEB_APP_URL}?sheet=${encodeURIComponent(sheetName)}`);
-  if (!res.ok) throw new Error(`Apps Script HTTP ${res.status} (${sheetName})`);
-  const json = await res.json();
-  if (json.error) throw new Error(`Apps Script error (${sheetName}): ${json.error}`);
-  const rows = json.values || [];
-  _rawCache[sheetName] = rows;
-  return rows;
+// TIMEOUT_SHEET_FETCH_MS: cuánto esperar como máximo la respuesta de Apps
+// Script antes de darla por perdida y reintentar. Detectado 9-sep-2026: Apps
+// Script a veces se CUELGA (ni responde ni truena, se queda "pending" para
+// siempre) cuando el dashboard le pide muchas hojas en paralelo al abrir
+// (~15 fetches simultáneos al mismo script — cada uno hace su propio
+// SpreadsheetApp.openById(), y Google limita las ejecuciones concurrentes
+// por script). Sin timeout, un solo fetch atorado bloqueaba TODO el
+// tablero para siempre: la detección de mes vigente (el primer
+// Promise.all de loadLiveDataIntoDashboard) nunca se resolvía NI fallaba,
+// solo se quedaba esperando — pantalla de "Cargando..." sin fin, sin
+// Evolutivo/KPIs/proyección, aunque el resto de los datos ya hubiera
+// llegado bien. Con este timeout + 1 reintento, cada fetch SIEMPRE termina
+// (bien o mal) en un tiempo acotado, así que el resto del tablero puede
+// seguir con sus fallbacks normales (ver Promise.allSettled más abajo) en
+// vez de quedarse congelado.
+const TIMEOUT_SHEET_FETCH_MS = 12000;
+
+async function fetchConTimeout(url, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchSheetJson(sheetName, intento = 1) {
+  try {
+    const res = await fetchConTimeout(`${WEB_APP_URL}?sheet=${encodeURIComponent(sheetName)}`, TIMEOUT_SHEET_FETCH_MS);
+    if (!res.ok) throw new Error(`Apps Script HTTP ${res.status} (${sheetName})`);
+    const json = await res.json();
+    if (json.error) throw new Error(`Apps Script error (${sheetName}): ${json.error}`);
+    const rows = json.values || [];
+    _rawCache[sheetName] = rows;
+    return rows;
+  } catch (e) {
+    // Un solo reintento tras una pausa corta: Apps Script casi siempre
+    // responde bien al segundo intento cuando el primero se colgó/falló por
+    // la concurrencia de abrir el tablero (ver nota arriba).
+    if (intento < 2) {
+      await new Promise(r => setTimeout(r, 1500));
+      return fetchSheetJson(sheetName, intento + 1);
+    }
+    throw e;
+  }
 }
 
 const SEDES = ["CDMX", "GDL", "MTP"];
