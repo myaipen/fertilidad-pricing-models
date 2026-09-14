@@ -537,7 +537,35 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false)
   // proy = actual / SHARE_HASTA_CORTE[sede]. IMPORTANTE: recalcular estos
   // valores cada vez que se mueva CORTE_REAL_DIA, o cuando haya 3+ meses
   // cerrados nuevos que valga la pena incorporar al cálculo.
-  const SHARE_HASTA_CORTE = { CDMX: 0.2570, GDL: 0.2349, MTP: 0.2484, total: 0.2517 };
+  // ARREGLO (14-sep-2026): Marite subió Cargos_y_Facturas_27 + Consultas_11
+  // con corte real al 12-sep (el 13 fue domingo, sin movimiento) y aclaró
+  // el punto que tenía bloqueada la actualización de Atenciones: "las
+  // atenciones vienen siempre de cargos, igual que los pacientes" — es
+  // decir, Atención = 1 renglón de la hoja "Cargos" (no requiere mapear
+  // el "Concepto" de las hojas de Agendamiento a Servicio, que era la
+  // ambigüedad pendiente). Verificado: contar renglones de Cargos de los
+  // primeros 7 días de sep-2026 da 843, prácticamente igual al "847" ya
+  // documentado más abajo como el Real corregido de ese corte.
+  // Con esto, Atenciones se recalibra a corte-12 igual que Pacientes:
+  //   CDMX: (796+756+837)/(1717+1910+2069) = 0.4194
+  //   GDL:  (238+122+279)/( 507+ 428+ 751) = 0.3790
+  //   MTP:  ( 69+ 44+131)/( 107+ 223+ 286) = 0.3961
+  //   total:(1103+922+1247)/(2331+2561+3106)= 0.4091
+  // (conteo de renglones de Cargos jun/jul/ago-2026, ponderado por volumen)
+  const SHARE_HASTA_CORTE_ATENCIONES = { CDMX: 0.4194, GDL: 0.3790, MTP: 0.3961, total: 0.4091 };
+  // Pacientes también está a corte-12, con su propio share (pacientes
+  // ÚNICOS por "Historia", no renglones — por eso necesita su propio
+  // cálculo en vez de compartir el de Atenciones).
+  // Calculado igual que el de Atenciones pero con pacientes ÚNICOS (columna
+  // "Historia" de Cargos) de jun/jul/ago-2026, ponderado por volumen:
+  //   CDMX: (296+251+348)/(500+506+618) = 0.5511
+  //   GDL:  (100+ 62+134)/(195+175+287) = 0.4505
+  //   MTP:  ( 28+ 26+ 47)/( 37+ 60+ 95) = 0.5260
+  //   total:(895+296+101)/(1624+657+192)= 0.5224
+  // IMPORTANTE: recalibrar este bloque (y el de Atenciones si algún día se
+  // valida el mapeo de agenda) cada vez que el corte de Pacientes se mueva
+  // de nuevo, o cuando haya 3+ meses cerrados nuevos que incorporar.
+  const SHARE_HASTA_CORTE_PACIENTES = { CDMX: 0.5511, GDL: 0.4505, MTP: 0.5260, total: 0.5224 };
   // proyectarPorTendencia(actual, hist, sede): si el mes está cerrado, no
   // hay días transcurridos, o actual=0, se deja el real tal cual en vez de
   // inventar una proyección. Si hay un share calibrado para la sede, se usa
@@ -545,6 +573,7 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false)
   // cae de vuelta a la extrapolación lineal por fracción de días.
   function proyectarPorTendencia(actual, hist, sede) {
     if (cerrado || diasTr <= 0 || actual <= 0) return actual;
+    const SHARE_HASTA_CORTE = esAtenciones ? SHARE_HASTA_CORTE_ATENCIONES : SHARE_HASTA_CORTE_PACIENTES;
     const share = SHARE_HASTA_CORTE[sede];
     if (share > 0) return actual / share;
     return actual * (diasTot / diasTr);
@@ -584,27 +613,21 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false)
   // Pacientes): Marite pidió validar por qué Atenciones proyecta arriba de
   // agosto mientras Ingresos proyecta ~$2M por debajo, y "si no [se puede
   // validar], castiga un poco las atenciones para que no pase de los 3k".
-  // Validación real hecha (8-sep-2026):
-  //   - Subrogación SÍ se confirmó con datos duros: hoja "SubrogacionPacientes"
-  //     muestra 7 pacientes en "Programa Activo" ($1.48M) en agosto vs CERO en
-  //     septiembre (solo 9 en "Valoración", ~$12.8K) -- la caída de esa línea
-  //     de servicio es real, no un artefacto de proyección.
-  //   - Tratamientos FIV/ICSI (el mayor driver, -$0.77M vs LM) NO se pudo
-  //     validar de la misma forma: el mapeo "Concepto->Servicio" corresponde
-  //     a los conceptos de las hojas "Agendamiento"/"Agendamiento (conceptos
-  //     terminados)" del Sheet "Cargos y Facturas", no a los de
-  //     RAW_CitasAgendadas (taxonomías distintas, no cruzan), y esas hojas de
-  //     Agendamiento siguen sin poder abrirse en el navegador (mismo cuelgue
-  //     ya reportado antes). Sin poder confirmar la agenda real de arranques
-  //     de FIV para lo que resta de septiembre, no hay manera de saber si el
-  //     conteo de Atenciones (847 reales + proyección por share) sigue siendo
-  //     representativo del mes completo.
-  // Mientras esa validación de FIV/ICSI queda pendiente, se aplica el
-  // castigo pedido: si la proyección total supera 2,990, se escala hacia
-  // abajo (mismo factor en total y en cada sede, para que se mantengan
-  // consistentes entre sí) para no pasar de los 3k. Quitar este bloque en
-  // cuanto se pueda validar la agenda de FIV/ICSI de sep-2026 (o en cuanto
-  // cierre el mes y ya no aplique ninguna proyección).
+  // Validación real hecha (8-sep-2026): Subrogación SÍ se confirmó con
+  // datos duros (hoja "SubrogacionPacientes"); Tratamientos FIV/ICSI no se
+  // pudo validar en ese momento porque el bloqueo era el mapeo Concepto de
+  // Agendamiento -> Servicio.
+  // ACTUALIZACIÓN (14-sep-2026): ese bloqueo ya no aplica — Marite aclaró
+  // que Atención = 1 renglón de la hoja "Cargos" (mismo criterio que
+  // Pacientes), no requiere el mapeo de Agendamiento. Con datos reales de
+  // Cargos a corte-12 y el share recalibrado arriba, la proyección total
+  // vuelve a salir por encima de agosto (~3,630 vs máx. histórico 3,109),
+  // así que el castigo de abajo SIGUE APLICANDO tal cual (cap en 2,990) —
+  // no se quitó, porque la razón original (crecimiento que no cuadra con
+  // Ingresos) sigue sin resolverse, solo cambió la fuente del dato real.
+  // Decisión pendiente de Marite: subir/quitar el tope de 2,990 ahora que
+  // el Real ya viene de un dato duro (Cargos) y no de agenda, o dejarlo
+  // como está otro corte más.
   const CASTIGO_ATENCIONES_SEP2026 = 2990;
   if (esAtenciones && anio === 2026 && MES_VIGENTE === 9 && out.total.proy > CASTIGO_ATENCIONES_SEP2026) {
     const factor = CASTIGO_ATENCIONES_SEP2026 / out.total.proy;
