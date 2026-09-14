@@ -1007,9 +1007,14 @@ function openConceptModal(servKey, servNombre){
 }
 
 function conceptRowsAtPath(path){
+  // OJO: la tabla de grupos (arriba) etiqueta las filas sin subclas/subclas2
+  // como "(sin subclasificar)" (línea `r[nextField] || "(sin subclasificar)"`),
+  // así que al filtrar hay que normalizar el mismo sentinel — comparar
+  // r.subclas directo contra path[0] deja SIEMPRE en 0 el grupo
+  // "(sin subclasificar)" porque null !== "(sin subclasificar)".
   return conceptModalRows.filter(r =>
-    (path.length < 1 || r.subclas === path[0]) &&
-    (path.length < 2 || r.subclas2 === path[1])
+    (path.length < 1 || (r.subclas || "(sin subclasificar)") === path[0]) &&
+    (path.length < 2 || (r.subclas2 || "(sin subclasificar)") === path[1])
   );
 }
 
