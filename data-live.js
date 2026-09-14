@@ -494,7 +494,7 @@ function anioDeFila(anioRaw) {
  * del mismo mes en (anio-1); si no hay datos de ese año anterior, vsLY/nomLY
  * quedan en null (ej. viendo 2025, no hay 2024).
  */
-function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false) {
+function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false, atencionesRef = null) {
   function bySedeParaAnio(targetAnio) {
     const bySede = {};
     for (const r of rows) {
@@ -566,13 +566,45 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false)
   // valida el mapeo de agenda) cada vez que el corte de Pacientes se mueva
   // de nuevo, o cuando haya 3+ meses cerrados nuevos que incorporar.
   const SHARE_HASTA_CORTE_PACIENTES = { CDMX: 0.5511, GDL: 0.4505, MTP: 0.5260, total: 0.5224 };
+  // CAMBIO (14-sep-2026, 2ª pasada): Marite reportó que Pacientes Únicos
+  // proyectados (1,269, vs. máximo histórico real de solo 1,003 en ago-2026)
+  // se veía "muy alto" y pidió usar ratio o mejorar la proyección. Diagnóstico:
+  // el share-por-día-12 de Pacientes (arriba) se calibró con solo 3 meses
+  // (jun/jul/ago) y es MUY volátil mes a mes — el % de pacientes únicos que ya
+  // se ve al día 12 varía de 43% a 59% en CDMX, de 19% a 51% en GDL, de 42% a
+  // 76% en MTP (coeficiente de variación 0.13–0.24 según sede, recalculado con
+  // los 8 meses cerrados de 2026 vía Cargos_y_Facturas_27, columna "Historia").
+  // Dividir por un share tan ruidoso amplifica el error de la proyección.
+  // En cambio, la razón PACIENTES/ATENCIONES de mes completo (mismos 8 meses)
+  // es mucho más estable (CV 0.08–0.10 en CDMX/GDL, 0.20 en MTP — siempre
+  // menor que el share por día): los pacientes únicos crecen casi
+  // proporcional a las atenciones del mes, con poca variación en esa
+  // proporción de un mes a otro. Por eso ahora Pacientes se proyecta como
+  // Atenciones_proyectado[sede] x este ratio, en vez de su propio share por
+  // día-12 — ver parámetro atencionesRef de buildMonthlyRealMetric() y su uso
+  // en fetchLiveOperativos()/rebuildAllFromCache() más abajo. Ratios
+  // (pacientes únicos / renglones de Cargos, ponderado por volumen, ene-ago
+  // 2026): CDMX 4232/15534=0.2725, GDL 1315/3420=0.3845, MTP 398/1503=0.2648.
+  // Con el Real de sep-2026 esto da ~1,068 pacientes proyectados (vs. 1,269
+  // antes), +6.5% sobre ago-2026 en vez de +27% — mucho más creíble. Si algún
+  // día Atenciones deja de proyectarse por share (o cambia de método), este
+  // ratio se puede recalibrar con el mismo criterio (unique Historia / total
+  // renglones de Cargos, por sede, ponderado por volumen, usando todos los
+  // meses cerrados disponibles).
+  const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.2725, GDL: 0.3845, MTP: 0.2648, total: 0.2906 };
   // proyectarPorTendencia(actual, hist, sede): si el mes está cerrado, no
   // hay días transcurridos, o actual=0, se deja el real tal cual en vez de
-  // inventar una proyección. Si hay un share calibrado para la sede, se usa
-  // ese (real / share observado hasta el corte); si no (sede sin calibrar),
-  // cae de vuelta a la extrapolación lineal por fracción de días.
+  // inventar una proyección. Para Pacientes, si se recibió la proyección ya
+  // calculada de Atenciones (atencionesRef), se deriva de ahí por ratio (ver
+  // arriba); si no (fallback, ej. Atenciones sin datos ese mes), se usa el
+  // share por día-12 como antes. Para Atenciones (esAtenciones=true) se sigue
+  // usando el share calibrado; si tampoco hay share para la sede, cae de
+  // vuelta a la extrapolación lineal por fracción de días.
   function proyectarPorTendencia(actual, hist, sede) {
     if (cerrado || diasTr <= 0 || actual <= 0) return actual;
+    if (!esAtenciones && atencionesRef && atencionesRef[sede] && atencionesRef[sede].proy > 0) {
+      return Math.max(actual, atencionesRef[sede].proy * RATIO_PACIENTES_POR_ATENCION[sede]);
+    }
     const SHARE_HASTA_CORTE = esAtenciones ? SHARE_HASTA_CORTE_ATENCIONES : SHARE_HASTA_CORTE_PACIENTES;
     const share = SHARE_HASTA_CORTE[sede];
     if (share > 0) return actual / share;
@@ -609,49 +641,15 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false)
     nomLY: tieneLYTotal ? Math.round(proyTotal - lyTotal) : null,
   };
 
-  // CASTIGO MANUAL, TEMPORAL, sep-2026 (Atenciones únicamente — no toca
-  // Pacientes): Marite pidió validar por qué Atenciones proyecta arriba de
-  // agosto mientras Ingresos proyecta ~$2M por debajo, y "si no [se puede
-  // validar], castiga un poco las atenciones para que no pase de los 3k".
-  // Validación real hecha (8-sep-2026): Subrogación SÍ se confirmó con
-  // datos duros (hoja "SubrogacionPacientes"); Tratamientos FIV/ICSI no se
-  // pudo validar en ese momento porque el bloqueo era el mapeo Concepto de
-  // Agendamiento -> Servicio.
-  // ACTUALIZACIÓN (14-sep-2026): ese bloqueo ya no aplica — Marite aclaró
-  // que Atención = 1 renglón de la hoja "Cargos" (mismo criterio que
-  // Pacientes), no requiere el mapeo de Agendamiento. Con datos reales de
-  // Cargos a corte-12 y el share recalibrado arriba, la proyección total
-  // vuelve a salir por encima de agosto (~3,630 vs máx. histórico 3,109),
-  // así que el castigo de abajo SIGUE APLICANDO tal cual (cap en 2,990) —
-  // no se quitó, porque la razón original (crecimiento que no cuadra con
-  // Ingresos) sigue sin resolverse, solo cambió la fuente del dato real.
-  // Decisión pendiente de Marite: subir/quitar el tope de 2,990 ahora que
-  // el Real ya viene de un dato duro (Cargos) y no de agenda, o dejarlo
-  // como está otro corte más.
-  const CASTIGO_ATENCIONES_SEP2026 = 2990;
-  if (esAtenciones && anio === 2026 && MES_VIGENTE === 9 && out.total.proy > CASTIGO_ATENCIONES_SEP2026) {
-    const factor = CASTIGO_ATENCIONES_SEP2026 / out.total.proy;
-    for (const sede of SEDES) {
-      const lm = out[sede].hist[out[sede].hist.length - 1] || 0;
-      const proyCastigado = out[sede].proy * factor;
-      out[sede].proy = Math.round(proyCastigado);
-      out[sede].vsLM = pctOrNull(proyCastigado, lm);
-      out[sede].vsU3M = pctOrNull(proyCastigado, avgUlt3(out[sede].hist));
-      const ly = lyPorSede[sede];
-      if (ly != null) {
-        out[sede].vsLY = pctOrNull(proyCastigado, ly);
-        out[sede].nomLY = Math.round(proyCastigado - ly);
-      }
-    }
-    const proyTotalCastigado = out.total.proy * factor;
-    out.total.proy = Math.round(proyTotalCastigado);
-    out.total.vsLM = pctOrNull(proyTotalCastigado, lmTotal);
-    out.total.vsU3M = pctOrNull(proyTotalCastigado, avgUlt3(histTotal));
-    if (out.total.vsLY != null) {
-      out.total.vsLY = pctOrNull(proyTotalCastigado, lyTotal);
-      out.total.nomLY = Math.round(proyTotalCastigado - lyTotal);
-    }
-  }
+  // CASTIGO MANUAL A ATENCIONES, sep-2026 — RETIRADO (14-sep-2026).
+  // Historial: se había aplicado un tope de 2,990 mientras no se podía
+  // validar por qué Atenciones proyectaba arriba de agosto cuando Ingresos
+  // proyectaba por debajo (bloqueo: el mapeo Concepto de Agendamiento ->
+  // Servicio no estaba resuelto). Ese bloqueo ya se resolvió (Atención = 1
+  // renglón de "Cargos", igual que Pacientes) y Marite pidió explícitamente
+  // "no quiero tope" — así que este bloque se deja documentado pero inerte.
+  // Si se necesita reactivar un tope en el futuro, reponer aquí el mismo
+  // patrón (factor = TOPE / out.total.proy aplicado a cada sede y al total).
 
   return out;
 }
@@ -893,9 +891,10 @@ async function fetchLiveOperativos() {
     fetchSheetJson("ConsultasRankingLive"),
     fetchSheetJson("ConsultasRankingLive2025"),
   ]);
+  const atencionesOut = buildMonthlyRealMetric(atRows, ANIO_VIGENTE, true);
   return {
-    atenciones: buildMonthlyRealMetric(atRows, ANIO_VIGENTE, true),
-    pacientes: buildMonthlyRealMetric(puRows),
+    atenciones: atencionesOut,
+    pacientes: buildMonthlyRealMetric(puRows, ANIO_VIGENTE, false, atencionesOut),
     consultas: buildConsultasMetric(consRows),
     ranking: buildRankingFromCache(),
   };
@@ -1395,7 +1394,7 @@ function rebuildAllFromCache() {
 
   if (_rawCache["Atenciones"] || _rawCache["Pacientes"] || _rawCache["Consultas"]) {
     const atenciones = buildMonthlyRealMetric(_rawCache["Atenciones"] || [], ANIO_VIGENTE, true);
-    const pacientes = buildMonthlyRealMetric(_rawCache["Pacientes"] || []);
+    const pacientes = buildMonthlyRealMetric(_rawCache["Pacientes"] || [], ANIO_VIGENTE, false, atenciones);
     const consultas = buildConsultasMetric(_rawCache["Consultas"] || []);
     window.DATA.total.atenciones = { ...window.DATA.total.atenciones, ...atenciones.total };
     window.DATA.total.pacientes = { ...window.DATA.total.pacientes, ...pacientes.total };
