@@ -494,7 +494,7 @@ function anioDeFila(anioRaw) {
  * del mismo mes en (anio-1); si no hay datos de ese año anterior, vsLY/nomLY
  * quedan en null (ej. viendo 2025, no hay 2024).
  */
-function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false, atencionesRef = null) {
+function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false, atencionesRef = null, ingresosProyPesos = null) {
   function bySedeParaAnio(targetAnio) {
     const bySede = {};
     for (const r of rows) {
@@ -592,14 +592,68 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // renglones de Cargos, por sede, ponderado por volumen, usando todos los
   // meses cerrados disponibles).
   const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.2725, GDL: 0.3845, MTP: 0.2648, total: 0.2906 };
+  // CAMBIO (14-sep-2026, 3ª pasada): Marite señaló que Atenciones (3,630 proy.,
+  // +17% vs. agosto) Y Pacientes (heredado de Atenciones, +5% vs. agosto)
+  // proyectaban POR ENCIMA de agosto en el mismo momento en que Ingresos
+  // proyecta POR DEBAJO de agosto (-16%) — "no tiene sentido... agosto fue
+  // mayor venta... y ahora proyectando menos [ingresos] superando atenciones
+  // y pacientes de agosto". Diagnóstico con Cargos_y_Facturas_27 (renglón a
+  // renglón, filtrando día<=12 de cada mes):
+  //   - El problema NO es parejo entre sedes: GDL (734 proy.) y MTP (184
+  //     proy.) YA proyectan por debajo de su propio agosto (751 y 286) — no
+  //     presentan la inconsistencia que reportó Marite. El +17% total lo
+  //     genera casi por completo CDMX: 2,704 proy. vs. 2,069 en agosto
+  //     (+31%), con Ingresos CDMX proyectando -6% vs. agosto en ese mismo
+  //     corte — ahí sí hay una contradicción real.
+  //   - Causa raíz en CDMX: septiembre (día 1-12) trae 1,134 renglones de
+  //     Cargos vs. 837 en el mismo corte de agosto (+35%), pero el ticket
+  //     promedio CAYÓ de $6,015 a $5,256 (-12.6%) porque el volumen extra es
+  //     de renglones de bajo o nulo costo (Perfil seguimiento folicular ~$31,
+  //     Ultrasonido incluido $0, Antimulleriana AMH ~$56, más días de
+  //     Almacenamiento de gametos) — más monitoreo de ciclos en curso, no más
+  //     tratamientos de alto valor. Es decir, el conteo de "atenciones"
+  //     (renglones de Cargos) puede subir sin que Ingresos suba igual: miden
+  //     cosas distintas (volumen de interacciones vs. valor).
+  //   - El share por día-12 (arriba) no distingue este cambio de mix: asume
+  //     que la composición de renglones se reparte igual que en jun/jul/ago,
+  //     y extrapola linealmente el ritmo de monitoreo del día 1-12 (que tiende
+  //     a concentrarse al inicio del ciclo de estimulación) a los 30 días.
+  //   - En cambio, el ticket promedio (Ingresos / renglones de Cargos) de mes
+  //     completo, calculado sobre los 8 meses cerrados de 2026, es MUY
+  //     estable: CDMX CV 6.1%, GDL CV 13.5%, MTP CV 18.5%, total CV 3.9%
+  //     (vs. CV 14-38% del share por día-12). Se usa como TECHO de
+  //     sanity-check para Atenciones: si el share por día-12 implica un
+  //     ticket promedio muy por debajo del histórico, se recorta al máximo
+  //     de atenciones que el Ingresos YA proyectado (columna
+  //     AjustePipelineComercial de "Base", que Marite ajusta a mano) sostiene
+  //     a ese ticket — nunca por debajo de lo ya real (Math.max con actual).
+  //   - Ticket promedio (Total Venta / renglón de Cargos, ene-ago 2026):
+  //     CDMX $5,330, GDL $4,520, MTP $3,341, total $5,022.
+  //   - El techo SOLO se activa en CDMX por ahora: con él, CDMX baja de 2,704
+  //     a ~2,195 atenciones (+6% vs. agosto, coherente con el -6% de
+  //     Ingresos CDMX) y Pacientes CDMX (que se deriva de Atenciones, ver
+  //     RATIO_PACIENTES_POR_ATENCION) baja de ~737 a ~598. GDL y MTP se
+  //     dejan con el share por día-12 sin tocar: su Ingresos proyectado cayó
+  //     mucho más que su propio ritmo de atenciones/pacientes real de
+  //     septiembre (GDL: 278 atenciones reales en 12 días vs. Ingresos
+  //     -51% vs. LM), así que aplicarles el mismo techo los dejaría
+  //     proyectando POR DEBAJO de su ritmo ya observado — probable señal de
+  //     que el AjustePipelineComercial de esas 2 sedes no se ha actualizado
+  //     para septiembre, no de que Atenciones esté mal. Queda pendiente que
+  //     Marite confirme si el pipeline de GDL/MTP ya refleja el mes antes de
+  //     activarles el mismo techo (ver SEDES_CON_TECHO_TICKET abajo).
+  const RATIO_TICKET_PROMEDIO_ATENCION = { CDMX: 5330, GDL: 4520, MTP: 3341, total: 5022 };
+  const SEDES_CON_TECHO_TICKET = { CDMX: true, GDL: false, MTP: false };
   // proyectarPorTendencia(actual, hist, sede): si el mes está cerrado, no
   // hay días transcurridos, o actual=0, se deja el real tal cual en vez de
   // inventar una proyección. Para Pacientes, si se recibió la proyección ya
   // calculada de Atenciones (atencionesRef), se deriva de ahí por ratio (ver
   // arriba); si no (fallback, ej. Atenciones sin datos ese mes), se usa el
   // share por día-12 como antes. Para Atenciones (esAtenciones=true) se sigue
-  // usando el share calibrado; si tampoco hay share para la sede, cae de
-  // vuelta a la extrapolación lineal por fracción de días.
+  // usando el share calibrado, con el techo por ticket promedio (arriba)
+  // aplicado solo en las sedes marcadas en SEDES_CON_TECHO_TICKET; si
+  // tampoco hay share para la sede, cae de vuelta a la extrapolación lineal
+  // por fracción de días.
   function proyectarPorTendencia(actual, hist, sede) {
     if (cerrado || diasTr <= 0 || actual <= 0) return actual;
     if (!esAtenciones && atencionesRef && atencionesRef[sede] && atencionesRef[sede].proy > 0) {
@@ -607,8 +661,12 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
     }
     const SHARE_HASTA_CORTE = esAtenciones ? SHARE_HASTA_CORTE_ATENCIONES : SHARE_HASTA_CORTE_PACIENTES;
     const share = SHARE_HASTA_CORTE[sede];
-    if (share > 0) return actual / share;
-    return actual * (diasTot / diasTr);
+    const proyBase = share > 0 ? actual / share : actual * (diasTot / diasTr);
+    if (esAtenciones && SEDES_CON_TECHO_TICKET[sede] && ingresosProyPesos && ingresosProyPesos[sede] > 0 && RATIO_TICKET_PROMEDIO_ATENCION[sede] > 0) {
+      const techoPorTicket = ingresosProyPesos[sede] / RATIO_TICKET_PROMEDIO_ATENCION[sede];
+      return Math.max(actual, Math.min(proyBase, techoPorTicket));
+    }
+    return proyBase;
   }
   const out = {};
   const lyPorSede = {};
@@ -632,10 +690,20 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
       nomLY: tieneLY ? Math.round(proy - ly) : null,
     };
   }
-  const proyTotal = proyectarPorTendencia(actualTotal, histTotal, "total");
+  // ARREGLO (14-sep-2026, 3ª pasada): el total ya NO se proyecta de forma
+  // independiente con su propio share/ratio "total" — eso podía dar un
+  // número que no cuadraba exactamente con la suma de las 3 sedes (ruido
+  // propio del share "total" calibrado aparte) y, más importante, no
+  // heredaba el techo por ticket promedio que ahora se le aplica a CDMX
+  // (ver SEDES_CON_TECHO_TICKET arriba): el total seguía saliendo ~3,630
+  // aunque CDMX ya bajara a ~2,195. Ahora el total es simplemente la suma
+  // de los proy. ya calculados por sede (out[sede].proy, cada uno con su
+  // propio método/techo aplicado), así el header y las tarjetas por sede
+  // siempre cuadran entre sí.
+  const proyTotal = SEDES.reduce((acc, s) => acc + (out[s] ? out[s].proy : 0), 0);
   const lmTotal = histTotal[histTotal.length-1] || 0;
   out.total = {
-    hist: histTotal, actual: actualTotal, proy: Math.round(proyTotal),
+    hist: histTotal, actual: actualTotal, proy: proyTotal,
     vsLM: pctOrNull(proyTotal, lmTotal), vsU3M: pctOrNull(proyTotal, avgUlt3(histTotal)),
     vsLY: tieneLYTotal ? pctOrNull(proyTotal, lyTotal) : null,
     nomLY: tieneLYTotal ? Math.round(proyTotal - lyTotal) : null,
@@ -891,13 +959,37 @@ async function fetchLiveOperativos() {
     fetchSheetJson("ConsultasRankingLive"),
     fetchSheetJson("ConsultasRankingLive2025"),
   ]);
-  const atencionesOut = buildMonthlyRealMetric(atRows, ANIO_VIGENTE, true);
+  // "Base" (Ingresos) ya se descargó y quedó en _rawCache antes de este punto
+  // (ver loadLiveDataIntoDashboard) — se reusa esa copia para calcular el
+  // Ingresos proyectado por sede (en pesos) y pasárselo a Atenciones como
+  // techo de sanity-check (ver SEDES_CON_TECHO_TICKET / RATIO_TICKET_
+  // PROMEDIO_ATENCION más arriba). Si por lo que sea "Base" todavía no está
+  // en cache (ej. ese fetch falló), se sigue de largo sin techo — Atenciones
+  // cae de vuelta al share por día-12 solo, igual que antes de este cambio.
+  const ingresosProyPesos = getIngresosProyPesosPorSede();
+  const atencionesOut = buildMonthlyRealMetric(atRows, ANIO_VIGENTE, true, null, ingresosProyPesos);
   return {
     atenciones: atencionesOut,
     pacientes: buildMonthlyRealMetric(puRows, ANIO_VIGENTE, false, atencionesOut),
     consultas: buildConsultasMetric(consRows),
     ranking: buildRankingFromCache(),
   };
+}
+
+// Extrae, en pesos crudos (no millones), el Ingresos proyectado por sede del
+// mes vigente a partir de _rawCache["Base"] (si ya está cargado) — usado por
+// Atenciones como techo de sanity-check por ticket promedio (ver
+// SEDES_CON_TECHO_TICKET arriba). Devuelve null si "Base" todavía no está en
+// cache (Atenciones simplemente no aplica el techo ese ciclo).
+function getIngresosProyPesosPorSede() {
+  if (!_rawCache["Base"]) return null;
+  const live = buildIngresosMetric(_rawCache["Base"], ANIO_VIGENTE);
+  const out = {};
+  for (const code of Object.keys(live.sedesOut)) {
+    out[code] = (live.sedesOut[code].ingresos.proy || 0) * 1e6; // proy viene en millones (MDP)
+  }
+  out.total = (live.totalIngresos.proy || 0) * 1e6;
+  return out;
 }
 
 /*
@@ -1393,7 +1485,8 @@ function rebuildAllFromCache() {
   }
 
   if (_rawCache["Atenciones"] || _rawCache["Pacientes"] || _rawCache["Consultas"]) {
-    const atenciones = buildMonthlyRealMetric(_rawCache["Atenciones"] || [], ANIO_VIGENTE, true);
+    const ingresosProyPesos = getIngresosProyPesosPorSede();
+    const atenciones = buildMonthlyRealMetric(_rawCache["Atenciones"] || [], ANIO_VIGENTE, true, null, ingresosProyPesos);
     const pacientes = buildMonthlyRealMetric(_rawCache["Pacientes"] || [], ANIO_VIGENTE, false, atenciones);
     const consultas = buildConsultasMetric(_rawCache["Consultas"] || []);
     window.DATA.total.atenciones = { ...window.DATA.total.atenciones, ...atenciones.total };
