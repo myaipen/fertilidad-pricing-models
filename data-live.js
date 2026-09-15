@@ -561,8 +561,36 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   //   MTP:  ( 69+ 44+131)/( 107+ 223+ 286) = 0.3961
   //   total:(1103+922+1247)/(2331+2561+3106)= 0.4091
   // (conteo de renglones de Cargos jun/jul/ago-2026, ponderado por volumen)
-  const SHARE_HASTA_CORTE_ATENCIONES = { CDMX: 0.4194, GDL: 0.3790, MTP: 0.3961, total: 0.4091 };
-  // Pacientes también está a corte-12, con su propio share (pacientes
+  //
+  // ARREGLO (15-sep-2026): Marite reportó Atenciones (3,413 proy.) y Pacientes
+  // (1,042 proy.) otra vez "muy altos" y preguntó si Pacientes estaba contando
+  // el mes correcto. Diagnóstico con Cargos_y_Facturas (línea a línea, corte
+  // real 14-sep): el mes SÍ es el correcto — septiembre, día 1 al 14, tanto
+  // para Atenciones (1,757 renglones = exactamente CDMX 1,292 + GDL 383 + MTP
+  // 82) como para Pacientes (733 = únicos por Historia, sumados por sede:
+  // CDMX 505 + GDL 186 + MTP 42) — no hay bug de mes ni de periodo.
+  // El problema real: CORTE_REAL_DIA se subió de 7 a 14 (highlights del
+  // 14-sep) pero estos dos SHARE_HASTA_CORTE se quedaron calibrados a
+  // corte-12 (arriba). Real ya trae 14 días de actividad pero se estaba
+  // dividiendo entre el share de SOLO 12 días — eso infla la proyección
+  // (los 2 días de más se extrapolaban como si fueran mucho más de lo que
+  // realmente representan). Recalibrado a corte-14 con el mismo método
+  // (renglones de Cargos de jun/jul/ago-2026, ponderado por volumen):
+  //   CDMX: (2743... ver detalle)/(...) -> más abajo el detalle por sede.
+  //   CDMX: dia<=14 2,743 / mes completo 5,696 = 0.4816
+  //   GDL:  dia<=14   721 / mes completo 1,686 = 0.4276
+  //   MTP:  dia<=14   294 / mes completo   616 = 0.4773
+  //   total:dia<=14 3,758 / mes completo 7,998 = 0.4699
+  // Con esto Atenciones total baja de 3,413 a ~3,263 (CDMX no cambia: sigue
+  // topada por el techo de ticket promedio, ver más abajo; GDL y MTP sí
+  // bajan). GDL queda en ~896, por encima de su propio máximo histórico
+  // (751 en ago-2026) — a diferencia de CDMX, GDL viene con una tendencia
+  // de crecimiento mes a mes consistente (261->311->420->326->416->507->
+  // 428->751), así que un valor por encima del máximo no es necesariamente
+  // un error, pero queda documentado para que Marite lo confirme (ver nota
+  // de SEDES_CON_TECHO_TICKET más abajo sobre si extenderle el mismo techo).
+  const SHARE_HASTA_CORTE_ATENCIONES = { CDMX: 0.4816, GDL: 0.4276, MTP: 0.4773, total: 0.4699 };
+  // Pacientes también estaba a corte-12, con su propio share (pacientes
   // ÚNICOS por "Historia", no renglones — por eso necesita su propio
   // cálculo en vez de compartir el de Atenciones).
   // Calculado igual que el de Atenciones pero con pacientes ÚNICOS (columna
@@ -574,7 +602,20 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // IMPORTANTE: recalibrar este bloque (y el de Atenciones si algún día se
   // valida el mapeo de agenda) cada vez que el corte de Pacientes se mueva
   // de nuevo, o cuando haya 3+ meses cerrados nuevos que incorporar.
-  const SHARE_HASTA_CORTE_PACIENTES = { CDMX: 0.5511, GDL: 0.4505, MTP: 0.5260, total: 0.5224 };
+  //
+  // ARREGLO (15-sep-2026): mismo bug de corte-12 vs corte-14 que Atenciones
+  // (arriba) — recalibrado a corte-14 con pacientes ÚNICOS por Historia de
+  // jun/jul/ago-2026, ponderado por volumen:
+  //   CDMX: dia<=14   965 / mes completo 1,624 = 0.5942
+  //   GDL:  dia<=14   330 / mes completo   657 = 0.5023
+  //   MTP:  dia<=14   118 / mes completo   192 = 0.6146
+  //   total:dia<=14 1,413 / mes completo 2,473 = 0.5714
+  // En la práctica esto solo importa como fallback (cuando atencionesRef no
+  // trae proyección): Pacientes normalmente se deriva de Atenciones x ratio
+  // (ver RATIO_PACIENTES_POR_ATENCION abajo), así que el arreglo de
+  // Atenciones ya cascadea aquí. Con ambos arreglos, Pacientes total baja de
+  // 1,042 a ~989 — ya por debajo de 1,000.
+  const SHARE_HASTA_CORTE_PACIENTES = { CDMX: 0.5942, GDL: 0.5023, MTP: 0.6146, total: 0.5714 };
   // CAMBIO (14-sep-2026, 2ª pasada): Marite reportó que Pacientes Únicos
   // proyectados (1,269, vs. máximo histórico real de solo 1,003 en ago-2026)
   // se veía "muy alto" y pidió usar ratio o mejorar la proyección. Diagnóstico:
