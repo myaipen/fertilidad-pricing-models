@@ -441,7 +441,16 @@ let _rawCache = {};
 // (bien o mal) en un tiempo acotado, así que el resto del tablero puede
 // seguir con sus fallbacks normales (ver Promise.allSettled más abajo) en
 // vez de quedarse congelado.
-const TIMEOUT_SHEET_FETCH_MS = 12000;
+//
+// SUBIDO de 12s a 30s (14-sep-2026, reporte de Marite: "Atenciones"/"HubSpot"
+// no cargaban en vivo y se quedaban en el último corte guardado). Diagnóstico:
+// probando directo contra el Apps Script, "Atenciones" tardó ~28-40s y
+// "HubSpot" ~20s en responder con datos correctos (ConceptosMensual ya tiene
+// 13,392 filas y hay más hojas que nunca compitiendo por las ejecuciones
+// concurrentes que permite Apps Script) — 12s ya no alcanza. Este valor es
+// solo cuánto espera el navegador antes de reintentar/rendirse; no cambia
+// ninguna fórmula de datos ni de proyección.
+const TIMEOUT_SHEET_FETCH_MS = 30000;
 
 async function fetchConTimeout(url, timeoutMs) {
   const controller = new AbortController();
