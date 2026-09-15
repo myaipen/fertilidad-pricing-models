@@ -692,8 +692,25 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   //     para septiembre, no de que Atenciones esté mal. Queda pendiente que
   //     Marite confirme si el pipeline de GDL/MTP ya refleja el mes antes de
   //     activarles el mismo techo (ver SEDES_CON_TECHO_TICKET abajo).
+  //
+  // CAMBIO (15-sep-2026): con las shares ya recalibradas a corte-14 (arriba),
+  // GDL seguía proyectando 896 atenciones — por ENCIMA de su propio máximo
+  // histórico (751 en ago-2026), el único de los 3 impidiendo que el total
+  // bajara de 3,000 (CDMX ya topado en 2,195, MTP en 172 sin problema). Marite
+  // confirmó extender a GDL el mismo techo por ticket promedio que ya usa
+  // CDMX (respuesta explícita al preguntarle si dejarlo así, toparlo a
+  // ticket, o toparlo a su máximo histórico). Con Ingresos GDL proyectado en
+  // $1.5M / ticket promedio $4,520 = techo de 332 — por DEBAJO del actual real
+  // (383) — el Math.max(actual, ...) de proyectarPorTendencia hace que el
+  // resultado sea simplemente el actual (383): el techo dice, en efecto, que
+  // el ritmo de Ingresos de GDL no sostiene NINGUNA atención adicional el
+  // resto del mes. Con esto: Atenciones total baja de 3,263 a ~2,750 y
+  // Pacientes de 989 a ~830 (GDL también se floorea en su actual, 186, vía
+  // RATIO_PACIENTES_POR_ATENCION). Si el pipeline comercial de GDL se
+  // actualiza más adelante y su Ingresos proyectado sube, este techo se
+  // relaja solo (sube con ingresosProyPesos.GDL) sin tocar código.
   const RATIO_TICKET_PROMEDIO_ATENCION = { CDMX: 5330, GDL: 4520, MTP: 3341, total: 5022 };
-  const SEDES_CON_TECHO_TICKET = { CDMX: true, GDL: false, MTP: false };
+  const SEDES_CON_TECHO_TICKET = { CDMX: true, GDL: true, MTP: false };
   // proyectarPorTendencia(actual, hist, sede): si el mes está cerrado, no
   // hay días transcurridos, o actual=0, se deja el real tal cual en vez de
   // inventar una proyección. Para Pacientes, si se recibió la proyección ya
