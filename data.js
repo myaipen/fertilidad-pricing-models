@@ -43,15 +43,19 @@ window.DATA = {
   // que viera el tablero durante esos 1-2 segundos de carga (o si el Sheet
   // fallaba) veía números de otro mes. Resincronizado al corte real 14-sep
   // vigente (mismo que ya corregido en data-live.js: shares de Atenciones/
-  // Pacientes recalibrados a corte-14 en vez de corte-12 heredado). IMPORTANTE:
-  // resincronizar este bloque cada vez que cierre un mes o cuando la
-  // proyección en vivo cambie de forma relevante — no tiene que ser exacto al
-  // peso, es solo el respaldo de mientras carga.
+  // Pacientes recalibrados a corte-14 en vez de corte-12 heredado, más el
+  // techo por ticket promedio ahora también en GDL, no solo CDMX — ver
+  // SEDES_CON_TECHO_TICKET en data-live.js). IMPORTANTE: resincronizar este
+  // bloque cada vez que cierre un mes o cuando la proyección en vivo cambie
+  // de forma relevante — no tiene que ser exacto al peso, es solo el
+  // respaldo de mientras carga (y ahora mismo, el 15-sep, el Sheet en vivo
+  // está devolviendo error 404 intermitente — este respaldo es lo que
+  // realmente se le muestra a Marite hasta que Apps Script se estabilice).
   total: {
     nombre: "Todas las sedes",
     ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.7, 12.1, 12.0, 16.2], actual: 7.8, proy: 13.5, vsLM: -17, vsU3M: 0, nota: "$-2.7M vs LM, $0.1M vs U3M" },
-    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3109], actual: 1757, proy: 3263, vsLM: 5, vsU3M: 22, nota: "suma CDMX+GDL+MTP, conteo de líneas de cargo (F. Cargo)" },
-    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1003], actual: 733, proy: 989, vsLM: -1, vsU3M: 20, nota: "suma CDMX+GDL+MTP" },
+    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3109], actual: 1757, proy: 2750, vsLM: -12, vsU3M: 3, nota: "suma CDMX+GDL+MTP, conteo de líneas de cargo (F. Cargo)" },
+    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1003], actual: 733, proy: 830, vsLM: -17, vsU3M: 1, nota: "suma CDMX+GDL+MTP" },
     consultas: { hist: [168, 167, 235, 220, 225, 271, 255, 316], real: 160, agendado: 149, proy: 340, vsLM: -2, vsU3M: 10 },
   },
 
@@ -69,8 +73,8 @@ window.DATA = {
     GDL: {
       nombre: "Guadalajara",
       ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5, 2.8], actual: 0.8, proy: 1.5, vsLM: -47, vsU3M: -33 },
-      atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751], actual: 383, proy: 896, vsLM: 19, vsU3M: 59 },
-      pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287], actual: 186, proy: 345, vsLM: 20, vsU3M: 57 },
+      atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751], actual: 383, proy: 383, vsLM: -49, vsU3M: -32, nota: "topado por techo de ticket promedio (Ingresos GDL proyectado no sostiene más atenciones este mes) — ver SEDES_CON_TECHO_TICKET en data-live.js" },
+      pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287], actual: 186, proy: 186, vsLM: -35, vsU3M: -15 },
       consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133], real: 68, agendado: 42, proy: 138, vsLM: -17, vsU3M: 5, top_cat: "Consulta primera vez", top_n: 32 },
     },
     MTP: {
