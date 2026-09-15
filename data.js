@@ -25,9 +25,9 @@ window.DATA = {
   // Atenciones, Pacientes y Consultas ya vienen en vivo desde el Sheet (ver
   // sección 0 del README); HubSpot y Highlights siguen siendo manuales aquí
   // y quedan al corte que se indica abajo hasta que también se automaticen.
-  corte: "31-ago-2026",
-  meses_hist: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul"],
-  mes_actual: "Ago",
+  corte: "14-sep-2026",
+  meses_hist: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago"],
+  mes_actual: "Sep",
 
   // ------------------------------------------------------------------------
   // TOTAL COMPAÑÍA (Ingresos = dato oficial del corte; Atenciones y
@@ -126,23 +126,30 @@ window.DATA = {
   // ------------------------------------------------------------------------
   highlights: {
     total: [
-      "Ingresos: $16.2M al cierre de agosto (mes cerrado, Real = Proyectado), +35% vs LM, +32% vs U3M.",
-      "Laboratorio ($2.36M, +22% vs LM): Laboratorio FI +31% ($1.73M) es el motor; Laboratorio Clínico +7% ($605k); Laboratorio Externo -31% ($29k).",
-      "Subrogación: $1.46M, +167% vs LM — 100% CDMX. All Inclusive Package $819k (+51%) + 2 paquetes nuevos: Integrated Frozen Donor $546k y Essentials $95k.",
-      "Metepec: +82% vs LM — Laboratorio (+210%) y Congelación son el motor, aunque sobre base pequeña (sede chica).",
-      "Reclasificación de este corte: ~$218k de Donación de óvulos/esperma (CDMX) que caían en Congelación se movieron a Tratamientos FIV/ICSI — ya reflejado en los números de arriba.",
+      "Ingresos: $13.5M proyectado a cierre de septiembre (Real acumulado al 14-sep: $7.8M, Ratio a cierre 1.73x), -16% vs LM, +1% vs U3M, +27% vs LY — la caída vs agosto no es una señal de alarma generalizada: el crecimiento interanual se mantiene fuerte (agosto cerrado fue +42% vs LY).",
+      "Tratamientos de Fertilidad (FIV/ICSI): $3.45M proyectado, -29% vs LM (-$1.44M) — el mayor movimiento en pesos del mes dentro de Ingresos por servicio, y está repartido en las 3 sedes (no es un fenómeno aislado de una sola sede).",
+      "Subrogación: $324,612 acumulado al 14-sep (28 valoraciones $38,405 + 2 programas activos nuevos $286,207), 100% CDMX. Proyectado a cierre $788,587, -47% vs LM, -9% vs U3M — segundo corte consecutivo a la baja tras el pico de agosto; dar seguimiento al pipeline.",
+      "Guadalajara y Metepec explican casi toda la caída vs LM: GDL -47% ($1.48M proy. vs $2.78M en agosto) y MTP -63% ($0.34M vs $0.90M), mientras CDMX solo -6% (+10% vs U3M). Evolutivo 2026 señala que el ajuste de pipeline comercial de estas 2 sedes podría no estar actualizado a septiembre — validar con comercial antes de dar la baja por buena.",
+      "Vs año anterior (mismo mes, cifra proyectada a cierre): compañía +27%, CDMX +31%, GDL +65%, MTP -58% — Metepec es la única sede que retrocede en términos interanuales este corte.",
+      "Atenciones y Pacientes (Real acumulado al 14-sep, conteo de Cargos, sin proyectar en este texto): 1,757 atenciones y 730 pacientes únicos — ver tarjetas de Atenciones/Pacientes para la proyección a cierre de mes.",
     ],
     CDMX: [
-      "Donación (dentro de FIV/ICSI): $511k en agosto vs $22k en julio. Incluye ~$218k reclasificados este corte (antes en Congelación) — validar cuánto del resto es recurrente antes de proyectar septiembre.",
-      "Inseminación Intrauterina (IIU): $37k, -42% vs LM — única subclasificación en descenso sostenido dentro de FIV/ICSI; dar seguimiento.",
+      "Farmacia (+16% vs LM, $3.00M proy., +27% vs U3M) y Laboratorio (+26% vs LM, $2.20M proy., +44% vs U3M) son los motores de crecimiento del mes en CDMX — compensan la baja de FIV/ICSI.",
+      "Tratamientos FIV/ICSI: $2.96M proyectado, -25% vs LM (-8% vs U3M) — el servicio de mayor peso de la sede retrocede este corte; validar si es estacionalidad o requiere atención comercial.",
+      "Imágenes (+98% vs LM, $90.8k proy.) y Wellness (+129% vs LM, $30.4k proy.) crecen fuerte pero sobre base chica.",
+      "Otros cae a $0 proyectado (-100% vs LM) — revisar si hay cargos de septiembre pendientes de clasificar en este concepto.",
     ],
     GDL: [
-      "FIV/ICSI (+118% vs LM, $0.7M) y Congelación (+209% vs LM, $0.7M) son el motor del mes — validar que la capacidad de laboratorio soporte el ritmo.",
-      "Laboratorio +35% vs LM ($0.6M) — segundo motor de crecimiento de la sede.",
+      "Imágenes +622% vs LM ($37.3k proy.) es el mayor salto porcentual de la sede, pero sobre base pequeña ($5.2k en agosto) — validar si es recurrente.",
+      "Congelación (-55% vs LM, $304k proy.) y Laboratorio (-58% vs LM, $266k proy.) caen fuerte — junto con FIV/ICSI (-46%, $386k) explican la baja de -47% de la sede vs agosto. GDL no tiene Subrogación.",
+      "Consultas +28% vs LM ($281k proy., +91% vs U3M) es la única línea de negocio con crecimiento sólido y consistente en GDL este corte.",
+      "Vs año anterior: GDL +65% en septiembre proyectado y +121% en agosto cerrado — el retroceso vs agosto es secuencial, no interanual; la sede sigue creciendo con fuerza vs 2025.",
     ],
     MTP: [
-      "Laboratorio ($0.2M, +210% vs LM) es el principal motor de la sede — volumen aún bajo (sede pequeña) pero tendencia sostenida.",
-      "Congelación de Gametos +1358% vs LM — salto por base casi nula en julio; validar si es recurrente antes de proyectar.",
+      "Laboratorio cae -76% vs LM ($53.4k proy. vs $222k en agosto, -54% vs U3M) — el mayor retroceso porcentual de la sede este corte, aunque sobre volumen bajo.",
+      "Congelación de Gametos -88% vs LM ($15.3k proy.) y Procedimientos sin proyección este corte (-79% vs LM) — sede pequeña, alta volatilidad mes a mes.",
+      "Consultas es la línea más estable: $15.5k proyectado, +11% vs LM y vs U3M.",
+      "Vs año anterior: Metepec -58% en septiembre proyectado y -9% en agosto cerrado — es la única sede con retroceso interanual este corte; dar seguimiento cercano.",
     ],
   },
 

@@ -86,7 +86,7 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // este valor a 12). Solo aplica al mes vigente EN CURSO (no cerrado) — para
 // meses ya cerrados (Real = mes completo) no se muestra ninguna nota de corte,
 // ver mesVigenteCerrado().
-let CORTE_REAL_DIA = 7;
+let CORTE_REAL_DIA = 14;
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 
