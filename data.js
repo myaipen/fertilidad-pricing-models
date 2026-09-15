@@ -34,12 +34,25 @@ window.DATA = {
   // Pacientes Únicos = suma de las 3 sedes, ya que se proyectan sede por
   // sede en el reporte fuente)
   // ------------------------------------------------------------------------
+  // ARREGLO (15-sep-2026): este bloque numérico (total/sedes de Ingresos,
+  // Atenciones, Pacientes, Consultas) es SOLO el respaldo que se muestra
+  // mientras carga el Sheet en vivo, o si el fetch en vivo falla (ver
+  // fetchLiveOperativos()/buildIngresosMetric() en data-live.js). Se había
+  // quedado con cifras de un corte de AGOSTO a medio mes (hist de 7 meses,
+  // "actual" no correspondía a ningún corte real de septiembre) — cualquiera
+  // que viera el tablero durante esos 1-2 segundos de carga (o si el Sheet
+  // fallaba) veía números de otro mes. Resincronizado al corte real 14-sep
+  // vigente (mismo que ya corregido en data-live.js: shares de Atenciones/
+  // Pacientes recalibrados a corte-14 en vez de corte-12 heredado). IMPORTANTE:
+  // resincronizar este bloque cada vez que cierre un mes o cuando la
+  // proyección en vivo cambie de forma relevante — no tiene que ser exacto al
+  // peso, es solo el respaldo de mientras carga.
   total: {
     nombre: "Todas las sedes",
-    ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.8, 12.1, 12.0], actual: 12.7, proy: 14.6, vsLM: 22, vsU3M: 19, nota: "$2.6M vs LM, $2.3M vs U3M" },
-    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561], actual: 2402, proy: 2823, vsLM: 10, vsU3M: 14, nota: "suma CDMX+GDL+MTP, conteo de líneas de cargo (F. Cargo)" },
-    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741], actual: 837, proy: 1024, vsLM: 38, vsU3M: 37, nota: "suma CDMX+GDL+MTP" },
-    consultas: { hist: [168, 167, 235, 220, 225, 271, 255], real: 248, agendado: 92, proy: 340, vsLM: 33, vsU3M: 36 },
+    ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.7, 12.1, 12.0, 16.2], actual: 7.8, proy: 13.5, vsLM: -17, vsU3M: 0, nota: "$-2.7M vs LM, $0.1M vs U3M" },
+    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3109], actual: 1757, proy: 3263, vsLM: 5, vsU3M: 22, nota: "suma CDMX+GDL+MTP, conteo de líneas de cargo (F. Cargo)" },
+    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1003], actual: 733, proy: 989, vsLM: -1, vsU3M: 20, nota: "suma CDMX+GDL+MTP" },
+    consultas: { hist: [168, 167, 235, 220, 225, 271, 255, 316], real: 160, agendado: 149, proy: 340, vsLM: -2, vsU3M: 10 },
   },
 
   // ------------------------------------------------------------------------
@@ -48,24 +61,24 @@ window.DATA = {
   sedes: {
     CDMX: {
       nombre: "Ciudad de México",
-      ingresos: { hist: [10.2, 9.8, 10.3, 10.5, 10.2, 9.3, 10.0], actual: 10.0, proy: 11.5, vsLM: 15, vsU3M: 17 },
-      atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910], actual: 1625, proy: 1883, vsLM: -1, vsU3M: 1 },
-      pacientes: { hist: [455, 470, 530, 587, 566, 500, 506], actual: 527, proy: 641, vsLM: 27, vsU3M: 22 },
-      consultas: { hist: [127, 105, 144, 145, 133, 169, 141], real: 105, agendado: 44, proy: 149, vsLM: 6, vsU3M: 1, top_cat: "Consulta primera vez", top_n: 82 },
+      ingresos: { hist: [10.2, 9.8, 10.3, 10.5, 10.2, 9.3, 10.0, 12.5], actual: 6.8, proy: 11.7, vsLM: -6, vsU3M: 10 },
+      atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2072], actual: 1292, proy: 2195, vsLM: 6, vsU3M: 16 },
+      pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 621], actual: 505, proy: 598, vsLM: -4, vsU3M: 10 },
+      consultas: { hist: [127, 105, 144, 145, 133, 169, 141, 137], real: 72, agendado: 77, proy: 149, vsLM: 9, vsU3M: 0, top_cat: "Consulta primera vez", top_n: 82 },
     },
     GDL: {
       nombre: "Guadalajara",
-      ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5], actual: 1.9, proy: 2.2, vsLM: 51, vsU3M: 15 },
-      atenciones: { hist: [261, 311, 420, 326, 416, 507, 428], actual: 545, proy: 648, vsLM: 51, vsU3M: 44 },
-      pacientes: { hist: [103, 98, 158, 136, 163, 195, 175], actual: 232, proy: 295, vsLM: 69, vsU3M: 66 },
-      consultas: { hist: [33, 41, 75, 55, 79, 93, 87], real: 106, agendado: 32, proy: 138, vsLM: 59, vsU3M: 60, top_cat: "Consulta primera vez", top_n: 32 },
+      ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5, 2.8], actual: 0.8, proy: 1.5, vsLM: -47, vsU3M: -33 },
+      atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751], actual: 383, proy: 896, vsLM: 19, vsU3M: 59 },
+      pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287], actual: 186, proy: 345, vsLM: 20, vsU3M: 57 },
+      consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133], real: 68, agendado: 42, proy: 138, vsLM: -17, vsU3M: 5, top_cat: "Consulta primera vez", top_n: 32 },
     },
     MTP: {
       nombre: "Metepec",
-      ingresos: { hist: [0.5, 0.7, 0.8, 0.5, 0.6, 0.4, 0.5], actual: 0.8, proy: 0.8, vsLM: 63, vsU3M: 58 },
-      atenciones: { hist: [138, 189, 213, 178, 169, 107, 223], actual: 232, proy: 292, vsLM: 31, vsU3M: 76 },
-      pacientes: { hist: [31, 45, 47, 50, 33, 37, 60], actual: 78, proy: 88, vsLM: 47, vsU3M: 103 },
-      consultas: { hist: [8, 21, 16, 20, 13, 9, 27], real: 37, agendado: 16, proy: 53, vsLM: 96, vsU3M: 225, top_cat: "Consulta primera vez", top_n: 32 },
+      ingresos: { hist: [0.5, 0.7, 0.8, 0.5, 0.6, 0.4, 0.5, 0.9], actual: 0.2, proy: 0.3, vsLM: -63, vsU3M: -43 },
+      atenciones: { hist: [138, 189, 213, 178, 169, 107, 223, 286], actual: 82, proy: 172, vsLM: -40, vsU3M: -16 },
+      pacientes: { hist: [31, 45, 47, 50, 33, 37, 60, 95], actual: 42, proy: 46, vsLM: -52, vsU3M: -29 },
+      consultas: { hist: [8, 21, 16, 20, 13, 9, 27, 46], real: 20, agendado: 30, proy: 53, vsLM: 9, vsU3M: 83, top_cat: "Consulta primera vez", top_n: 32 },
     },
   },
 
