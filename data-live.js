@@ -600,71 +600,66 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   //   GDL:  ( 357+ 209+ 442)/( 507+ 428+ 751) = 1008/1686 = 0.5979
   //   MTP:  (  82+  88+ 191)/( 107+ 223+ 286) =  361/616  = 0.5860
   //   total:(1596+1450+1984)/(2331+2561+3106) = 5030/7998 = 0.6289
-  const SHARE_HASTA_CORTE_ATENCIONES = { CDMX: 0.6427, GDL: 0.5979, MTP: 0.586, total: 0.6289 };
-  // Pacientes también estaba a corte-12, con su propio share (pacientes
-  // ÚNICOS por "Historia", no renglones — por eso necesita su propio
-  // cálculo en vez de compartir el de Atenciones).
-  // Calculado igual que el de Atenciones pero con pacientes ÚNICOS (columna
-  // "Historia" de Cargos) de jun/jul/ago-2026, ponderado por volumen:
-  //   CDMX: (296+251+348)/(500+506+618) = 0.5511
-  //   GDL:  (100+ 62+134)/(195+175+287) = 0.4505
-  //   MTP:  ( 28+ 26+ 47)/( 37+ 60+ 95) = 0.5260
-  //   total:(895+296+101)/(1624+657+192)= 0.5224
-  // IMPORTANTE: recalibrar este bloque (y el de Atenciones si algún día se
-  // valida el mapeo de agenda) cada vez que el corte de Pacientes se mueva
-  // de nuevo, o cuando haya 3+ meses cerrados nuevos que incorporar.
+  // REEMPLAZADO (21-sep-2026, 2ª pasada — Marite pidió mejorar la metodología
+  // de proyección: "¿estás considerando la agenda y las atenciones
+  // realizadas? di cuál es la mejor forma de proyectar"). Diagnóstico previo
+  // (ver historial completo en versiones anteriores de este archivo, git
+  // log): el share a UN SOLO día de corte (ej. "0.6427 al día 19"),
+  // calibrado con solo 3 meses (jun/jul/ago), es el eslabón más ruidoso de
+  // todo el tablero — coeficiente de variación (CV) del share-al-día-19 con
+  // n=3 meses: CDMX 4.6%, GDL 14.9%, MTP 25.8%. Cada vez que CORTE_REAL_DIA
+  // sube (12->14->19...) alguien tiene que recalcular a mano estos números
+  // desde cero, y con solo 3 puntos el resultado es frágil.
   //
-  // ARREGLO (15-sep-2026): mismo bug de corte-12 vs corte-14 que Atenciones
-  // (arriba) — recalibrado a corte-14 con pacientes ÚNICOS por Historia de
-  // jun/jul/ago-2026, ponderado por volumen:
-  //   CDMX: dia<=14   965 / mes completo 1,624 = 0.5942
-  //   GDL:  dia<=14   330 / mes completo   657 = 0.5023
-  //   MTP:  dia<=14   118 / mes completo   192 = 0.6146
-  //   total:dia<=14 1,413 / mes completo 2,473 = 0.5714
-  // En la práctica esto solo importa como fallback (cuando atencionesRef no
-  // trae proyección): Pacientes normalmente se deriva de Atenciones x ratio
-  // (ver RATIO_PACIENTES_POR_ATENCION abajo), así que el arreglo de
-  // Atenciones ya cascadea aquí. Con ambos arreglos, Pacientes total baja de
-  // 1,042 a ~989 — ya por debajo de 1,000.
-  // ARREGLO (21-sep-2026): mismo recalibrado de corte-14 a corte-19, con
-  // pacientes ÚNICOS por Historia de jun/jul/ago-2026, ponderado por volumen:
-  //   CDMX: (376+349+456)/(500+506+618) = 1181/1624 = 0.7272
-  //   GDL:  (140+100+200)/(195+175+287) =  440/657  = 0.6697
-  //   MTP:  ( 32+ 41+ 62)/( 37+ 60+ 95) =  135/192  = 0.7031
-  //   total:(547+489+715)/(731+739+992) = 1751/2462 = 0.7112
-  const SHARE_HASTA_CORTE_PACIENTES = { CDMX: 0.7272, GDL: 0.6697, MTP: 0.7031, total: 0.7112 };
-  // CAMBIO (14-sep-2026, 2ª pasada): Marite reportó que Pacientes Únicos
-  // proyectados (1,269, vs. máximo histórico real de solo 1,003 en ago-2026)
-  // se veía "muy alto" y pidió usar ratio o mejorar la proyección. Diagnóstico:
-  // el share-por-día-12 de Pacientes (arriba) se calibró con solo 3 meses
-  // (jun/jul/ago) y es MUY volátil mes a mes — el % de pacientes únicos que ya
-  // se ve al día 12 varía de 43% a 59% en CDMX, de 19% a 51% en GDL, de 42% a
-  // 76% en MTP (coeficiente de variación 0.13–0.24 según sede, recalculado con
-  // los 8 meses cerrados de 2026 vía Cargos_y_Facturas_27, columna "Historia").
-  // Dividir por un share tan ruidoso amplifica el error de la proyección.
-  // En cambio, la razón PACIENTES/ATENCIONES de mes completo (mismos 8 meses)
-  // es mucho más estable (CV 0.08–0.10 en CDMX/GDL, 0.20 en MTP — siempre
-  // menor que el share por día): los pacientes únicos crecen casi
-  // proporcional a las atenciones del mes, con poca variación en esa
-  // proporción de un mes a otro. Por eso ahora Pacientes se proyecta como
-  // Atenciones_proyectado[sede] x este ratio, en vez de su propio share por
-  // día-12 — ver parámetro atencionesRef de buildMonthlyRealMetric() y su uso
-  // en fetchLiveOperativos()/rebuildAllFromCache() más abajo. Ratios
-  // (pacientes únicos / renglones de Cargos, ponderado por volumen, ene-ago
-  // 2026): CDMX 4232/15534=0.2725, GDL 1315/3420=0.3845, MTP 398/1503=0.2648.
-  // Con el Real de sep-2026 esto da ~1,068 pacientes proyectados (vs. 1,269
-  // antes), +6.5% sobre ago-2026 en vez de +27% — mucho más creíble. Si algún
-  // día Atenciones deja de proyectarse por share (o cambia de método), este
-  // ratio se puede recalibrar con el mismo criterio (unique Historia / total
-  // renglones de Cargos, por sede, ponderado por volumen, usando todos los
-  // meses cerrados disponibles).
-  // ACTUALIZADO 21-sep-2026: recalculado con Cargos_y_Facturas_31 (mismos 8
-  // meses cerrados ene-ago 2026, pacientes únicos/renglones, ponderado por
-  // volumen mensual) — prácticamente sin cambio vs. la calibración anterior,
-  // como se espera (los meses cerrados no se mueven de un corte a otro):
-  //   CDMX 4232/15534=0.2724, GDL 1315/3420=0.3845, MTP 398/1503=0.2648,
-  //   total 5945/20457=0.2906.
-  const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.2724, GDL: 0.3845, MTP: 0.2648, total: 0.2906 };
+  // SOLUCIÓN: en vez de un share fijo a un solo día, se construye una CURVA
+  // DE PACING día-por-día (día 1 a 31) usando los 8 meses cerrados de 2026
+  // (ene-ago, no solo jun-ago) y ponderando cada mes por RECENCIA además de
+  // por volumen — un mes reciente pesa más que uno viejo, pero ningún mes se
+  // descarta:
+  //   share(d) = Σ_m [ w_m · cumulativo_m(d) ] / Σ_m [ w_m · total_m ]
+  //   w_m = 0.80 ^ (mesesDeAntiguedad)   (Ago=peso 1.00, Jul=0.80, Jun=0.64,
+  //   May=0.51, Abr=0.41, Mar=0.33, Feb=0.26, Ene=0.21)
+  // Fuente: Cargos_y_Facturas_31.xlsx completo (22,214 renglones, ene-sep
+  // 2026), un renglón de "Cargos" = 1 atención, columna "Historia" para
+  // pacientes únicos. Con esto, subir CORTE_REAL_DIA ya NO requiere
+  // recalibrar nada a mano: shareEnDia() simplemente lee el punto de la
+  // curva que corresponda al nuevo día de corte.
+  //
+  // Honestidad sobre la varianza (con n=8 en vez de n=3): el CV del share-
+  // al-día-19 con los 8 meses completos es CDMX 7.3%, GDL 13.0%, MTP 20.0%
+  // — en GDL/MTP el CV baja (más datos = menos ruido de muestra chica), pero
+  // en CDMX sube un poco (4.6%->7.3%): el 4.6% de antes era una varianza
+  // artificialmente baja por tener solo 3 puntos, no evidencia real de
+  // estabilidad. La curva ponderada por recencia es la estimación más
+  // honesta disponible con los datos actuales — no elimina la varianza,
+  // solo dexinfla la falsa confianza de calibrar con muy pocos meses.
+  //
+  // shareEnDia(curva, sede, dia): dia se acota a [1,31] (curva[30]=1.0,
+  // el mes ya cerrado). Domingos/días sin corte no rompen nada porque la
+  // curva ya es cumulativa observada, no requiere que el día exista.
+  function shareEnDia(curva, sede, dia) {
+    const arr = curva[sede];
+    if (!arr) return 0;
+    const idx = Math.min(Math.max(Math.round(dia), 1), 31) - 1;
+    return arr[idx];
+  }
+  const SHARE_CURVE_ATENCIONES = {
+    CDMX: [0.0338,0.0692,0.1039,0.1439,0.1738,0.2115,0.2425,0.2786,0.3063,0.3396,0.3721,0.4025,0.4385,0.468,0.5028,0.5297,0.5662,0.6004,0.6273,0.6684,0.7018,0.7314,0.7575,0.7899,0.82,0.8487,0.8883,0.92,0.9451,0.969,1.0],
+    GDL:  [0.0367,0.0549,0.0881,0.1265,0.1568,0.1953,0.2213,0.25,0.2768,0.3163,0.3399,0.3593,0.3934,0.4157,0.4557,0.4774,0.5178,0.5593,0.5831,0.6195,0.6432,0.6762,0.697,0.7426,0.7844,0.8104,0.8493,0.9033,0.9272,0.9562,1.0],
+    MTP:  [0.0212,0.0433,0.1073,0.1378,0.1676,0.2092,0.2305,0.2534,0.2792,0.3348,0.3598,0.3968,0.4372,0.4813,0.4967,0.512,0.5526,0.5739,0.5886,0.6452,0.6775,0.708,0.7279,0.7885,0.8107,0.8329,0.864,0.8882,0.927,0.9539,1.0],
+  };
+  const SHARE_CURVE_PACIENTES = {
+    CDMX: [0.0729,0.1294,0.1832,0.2512,0.2961,0.3363,0.3707,0.4052,0.4374,0.4638,0.4924,0.5236,0.5507,0.5753,0.6003,0.6244,0.6581,0.6833,0.7066,0.7459,0.7685,0.7887,0.8085,0.8339,0.8593,0.882,0.914,0.9356,0.9542,0.9745,1.0],
+    GDL:  [0.0442,0.0718,0.1102,0.1644,0.1954,0.234,0.2654,0.2955,0.3197,0.374,0.4001,0.4223,0.4611,0.4804,0.517,0.5336,0.5816,0.6212,0.6439,0.6761,0.6996,0.7328,0.757,0.796,0.8276,0.8495,0.8765,0.9246,0.9471,0.969,1.0],
+    MTP:  [0.05,0.0941,0.1893,0.2483,0.2827,0.3194,0.348,0.3764,0.4056,0.4447,0.474,0.5127,0.5552,0.5975,0.6081,0.6239,0.6526,0.6775,0.6921,0.732,0.7648,0.784,0.8112,0.8543,0.8856,0.9118,0.921,0.9434,0.9632,0.9793,1.0],
+  };
+  // RATIO_PACIENTES_POR_ATENCION: pacientes únicos / renglones de Cargos, mes
+  // completo, 8 meses cerrados (ene-ago 2026) — YA usaba la ventana ancha,
+  // ahora se le suma ponderación por recencia (mismo decay=0.80 de arriba)
+  // en vez de suma simple sin ponderar, por consistencia de método:
+  //   CDMX 0.2724->0.2802, GDL 0.3845->0.3876, MTP 0.2648->0.2828,
+  //   total 0.2906->0.3004 (cambios menores, la ventana ya era ancha).
+  const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.2802, GDL: 0.3876, MTP: 0.2828, total: 0.3004 };
   // CAMBIO (14-sep-2026, 3ª pasada): Marite señaló que Atenciones (3,630 proy.,
   // +17% vs. agosto) Y Pacientes (heredado de Atenciones, +5% vs. agosto)
   // proyectaban POR ENCIMA de agosto en el mismo momento en que Ingresos
@@ -732,11 +727,11 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // RATIO_PACIENTES_POR_ATENCION). Si el pipeline comercial de GDL se
   // actualiza más adelante y su Ingresos proyectado sube, este techo se
   // relaja solo (sube con ingresosProyPesos.GDL) sin tocar código.
-  // ACTUALIZADO 21-sep-2026: recalculado con Cargos_y_Facturas_31 (mismos 8
-  // meses cerrados ene-ago 2026): CDMX $5,328, GDL $4,403, MTP $3,281, total
-  // $5,023 — casi sin cambio en CDMX/total; GDL y MTP bajan ~3% (más
-  // renglones de bajo costo en esos meses con el dataset más completo).
-  const RATIO_TICKET_PROMEDIO_ATENCION = { CDMX: 5328, GDL: 4403, MTP: 3281, total: 5023 };
+  // ACTUALIZADO 21-sep-2026 (2ª pasada): mismo criterio que RATIO_PACIENTES_
+  // POR_ATENCION arriba — se le agrega ponderación por recencia (decay=0.80)
+  // a la ventana de 8 meses que ya se usaba:
+  //   CDMX 5328->5444, GDL 4403->4160, MTP 3281->3126, total 5023->5027.
+  const RATIO_TICKET_PROMEDIO_ATENCION = { CDMX: 5444, GDL: 4160, MTP: 3126, total: 5027 };
   // SIN CAMBIO (21-sep-2026): con el corte-19 y las shares recalibradas
   // arriba, GDL vuelve a topar por debajo de su actual (Math.max lo deja
   // plano en 439, igual que en el arreglo de corte-14/15-sep) — mismo patrón
@@ -748,19 +743,21 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // hay días transcurridos, o actual=0, se deja el real tal cual en vez de
   // inventar una proyección. Para Pacientes, si se recibió la proyección ya
   // calculada de Atenciones (atencionesRef), se deriva de ahí por ratio (ver
-  // arriba); si no (fallback, ej. Atenciones sin datos ese mes), se usa el
-  // share por día-12 como antes. Para Atenciones (esAtenciones=true) se sigue
-  // usando el share calibrado, con el techo por ticket promedio (arriba)
-  // aplicado solo en las sedes marcadas en SEDES_CON_TECHO_TICKET; si
-  // tampoco hay share para la sede, cae de vuelta a la extrapolación lineal
-  // por fracción de días.
+  // arriba); si no (fallback, ej. Atenciones sin datos ese mes), se usa la
+  // curva de pacing de Pacientes. Para Atenciones (esAtenciones=true) se usa
+  // la curva de pacing calibrada (shareEnDia, arriba) leída al día exacto de
+  // CORTE_REAL_DIA — YA NO hace falta recalibrar un número a mano cada vez
+  // que el corte avanza, la curva ya trae el punto correcto para cualquier
+  // día — con el techo por ticket promedio (arriba) aplicado solo en las
+  // sedes marcadas en SEDES_CON_TECHO_TICKET; si tampoco hay curva para la
+  // sede, cae de vuelta a la extrapolación lineal por fracción de días.
   function proyectarPorTendencia(actual, hist, sede) {
     if (cerrado || diasTr <= 0 || actual <= 0) return actual;
     if (!esAtenciones && atencionesRef && atencionesRef[sede] && atencionesRef[sede].proy > 0) {
       return Math.max(actual, atencionesRef[sede].proy * RATIO_PACIENTES_POR_ATENCION[sede]);
     }
-    const SHARE_HASTA_CORTE = esAtenciones ? SHARE_HASTA_CORTE_ATENCIONES : SHARE_HASTA_CORTE_PACIENTES;
-    const share = SHARE_HASTA_CORTE[sede];
+    const CURVA = esAtenciones ? SHARE_CURVE_ATENCIONES : SHARE_CURVE_PACIENTES;
+    const share = shareEnDia(CURVA, sede, CORTE_REAL_DIA);
     const proyBase = share > 0 ? actual / share : actual * (diasTot / diasTr);
     if (esAtenciones && SEDES_CON_TECHO_TICKET[sede] && ingresosProyPesos && ingresosProyPesos[sede] > 0 && RATIO_TICKET_PROMEDIO_ATENCION[sede] > 0) {
       const techoPorTicket = ingresosProyPesos[sede] / RATIO_TICKET_PROMEDIO_ATENCION[sede];
