@@ -34,17 +34,20 @@ window.DATA = {
   // Pacientes Únicos = suma de las 3 sedes, ya que se proyectan sede por
   // sede en el reporte fuente)
   // ------------------------------------------------------------------------
-  // ARREGLO (21-sep-2026): resincronizado al corte real 19-sep (subió de
-  // 14 a 19 con Cargos_y_Facturas_31.xlsx + Consultas_13.xlsx). Igual que en
-  // el arreglo anterior, este bloque es SOLO el respaldo que se muestra
-  // mientras carga el Sheet en vivo o si el fetch falla — no tiene que ser
-  // exacto al peso. Shares de Atenciones/Pacientes y ratio de ticket
-  // promedio recalibrados igual en data-live.js (ver comentarios ahí).
+  // ARREGLO (21-sep-2026, 3ª pasada — METODOLOGÍA CONSERVADORA): la curva de
+  // pacing pasó de promedio ponderado por recencia a el MÁXIMO share diario
+  // observado en los 8 meses cerrados (ene-ago 2026) por sede — esto reduce
+  // el multiplicador de "mes restante" y por tanto la proyección. Ratios
+  // derivados también al extremo conservador: RATIO_PACIENTES_POR_ATENCION
+  // usa el MÍNIMO mensual observado, RATIO_TICKET_PROMEDIO_ATENCION usa el
+  // MÁXIMO (ver comentarios en data-live.js). Este bloque es SOLO el
+  // respaldo que se muestra mientras carga el Sheet en vivo o si el fetch
+  // falla — no tiene que ser exacto al peso.
   total: {
     nombre: "Todas las sedes",
-    ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.7, 12.1, 12.0, 16.2], actual: 9.81, proy: 15.94, vsLM: -2, vsU3M: 19, nota: "Real a la fecha $9.8M, proyección $15.9M a cierre" },
-    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3109], actual: 2334, proy: 3183, vsLM: 2, vsU3M: 19, nota: "suma CDMX+GDL+MTP, conteo de líneas de cargo (F. Cargo)" },
-    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1003], actual: 949, proy: 984, vsLM: -2, vsU3M: 19, nota: "suma CDMX+GDL+MTP" },
+    ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.7, 12.1, 12.0, 16.2], actual: 9.81, proy: 14.07, vsLM: -13, vsU3M: 5, nota: "Real a la fecha $9.8M, proyección conservadora $14.1M a cierre" },
+    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3109], actual: 2334, proy: 2659, vsLM: -14, vsU3M: 0, nota: "suma CDMX+GDL+MTP, conteo de líneas de cargo (F. Cargo)" },
+    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1003], actual: 949, proy: 953, vsLM: -5, vsU3M: 15, nota: "suma CDMX+GDL+MTP — con metodología conservadora, Pacientes queda prácticamente igual al real a la fecha en las 3 sedes" },
     consultas: { hist: [168, 167, 235, 220, 225, 271, 255, 316], real: 212, agendado: 134, proy: 346, vsLM: 9, vsU3M: 23 },
   },
 
@@ -54,23 +57,23 @@ window.DATA = {
   sedes: {
     CDMX: {
       nombre: "Ciudad de México",
-      ingresos: { hist: [10.2, 9.8, 10.3, 10.5, 10.2, 9.3, 10.0, 12.5], actual: 8.59, proy: 13.79, vsLM: 10, vsU3M: 30 },
-      atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2072], actual: 1770, proy: 2532, vsLM: 22, vsU3M: 33, nota: "topado por techo de ticket promedio (Ingresos CDMX proyectado no sostiene más atenciones este mes) — ver SEDES_CON_TECHO_TICKET en data-live.js" },
-      pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 621], actual: 683, proy: 709, vsLM: 14, vsU3M: 31 },
+      ingresos: { hist: [10.2, 9.8, 10.3, 10.5, 10.2, 9.3, 10.0, 12.5], actual: 8.59, proy: 12.36, vsLM: -1, vsU3M: 17 },
+      atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2072], actual: 1770, proy: 2057, vsLM: -1, vsU3M: 8, nota: "topado por techo de ticket promedio (Ingresos CDMX proyectado no sostiene más atenciones este mes) — ver SEDES_CON_TECHO_TICKET en data-live.js" },
+      pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 621], actual: 683, proy: 683, vsLM: 10, vsU3M: 26, nota: "piso en el real a la fecha bajo metodología conservadora" },
       consultas: { hist: [127, 105, 144, 145, 133, 169, 141, 137], real: 97, agendado: 65, proy: 164, vsLM: 20, vsU3M: 10, top_cat: "Consulta primera vez", top_n: 82 },
     },
     GDL: {
       nombre: "Guadalajara",
-      ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5, 2.8], actual: 0.95, proy: 1.70, vsLM: -39, vsU3M: -24 },
+      ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5, 2.8], actual: 0.95, proy: 1.41, vsLM: -49, vsU3M: -37 },
       atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751], actual: 439, proy: 439, vsLM: -42, vsU3M: -22, nota: "topado por techo de ticket promedio (Ingresos GDL proyectado no sostiene más atenciones este mes) — ver SEDES_CON_TECHO_TICKET en data-live.js" },
-      pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287], actual: 215, proy: 215, vsLM: -25, vsU3M: -2 },
+      pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287], actual: 215, proy: 215, vsLM: -25, vsU3M: -2, nota: "piso en el real a la fecha bajo metodología conservadora" },
       consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133], real: 90, agendado: 39, proy: 132, vsLM: -1, vsU3M: 27, top_cat: "Consulta primera vez", top_n: 32 },
     },
     MTP: {
       nombre: "Metepec",
-      ingresos: { hist: [0.5, 0.7, 0.8, 0.5, 0.6, 0.4, 0.5, 0.9], actual: 0.28, proy: 0.45, vsLM: -50, vsU3M: -25 },
-      atenciones: { hist: [138, 189, 213, 178, 169, 107, 223, 286], actual: 125, proy: 212, vsLM: -26, vsU3M: 3 },
-      pacientes: { hist: [31, 45, 47, 50, 33, 37, 60, 95], actual: 55, proy: 60, vsLM: -37, vsU3M: -6 },
+      ingresos: { hist: [0.5, 0.7, 0.8, 0.5, 0.6, 0.4, 0.5, 0.9], actual: 0.28, proy: 0.30, vsLM: -66, vsU3M: -49 },
+      atenciones: { hist: [138, 189, 213, 178, 169, 107, 223, 286], actual: 125, proy: 163, vsLM: -43, vsU3M: -21 },
+      pacientes: { hist: [31, 45, 47, 50, 33, 37, 60, 95], actual: 55, proy: 55, vsLM: -42, vsU3M: -14, nota: "piso en el real a la fecha bajo metodología conservadora" },
       consultas: { hist: [8, 21, 16, 20, 13, 9, 27, 46], real: 25, agendado: 30, proy: 50, vsLM: 9, vsU3M: 83, top_cat: "Consulta primera vez", top_n: 32 },
     },
   },
@@ -79,47 +82,48 @@ window.DATA = {
   // SERVICIOS — Ingresos por servicio, proyectado (MDP), vs LM y vs U3M
   // ------------------------------------------------------------------------
   servicios: {
-    // Resincronizado 21-sep-2026 (2ª pasada — curva de pacing 8 meses
-    // ponderada por recencia, ver ingresos_curve_result/ingresos_projection_
-    // rows_v2 en la sesión que generó este corte; vsLM = vs. agosto cerrado,
-    // vsU3M = vs. promedio jun/jul/ago cerrados).
+    // Resincronizado 21-sep-2026 (3ª pasada — METODOLOGÍA CONSERVADORA, ver
+    // ingresos_projection_rows_v3_conservador en la sesión que generó este
+    // corte; vsLM = vs. agosto cerrado, vsU3M = vs. promedio jun/jul/ago
+    // cerrados). Misma curaduría de servicios por sede que la pasada
+    // anterior, solo con los valores recalculados al extremo conservador.
     total: [
-      { nombre: "Tratamientos FIV/ICSI", valor: 4.2, vsLM: -15, vsU3M: 2 },
-      { nombre: "Congelación de Gametos", valor: 4.1, vsLM: 46, vsU3M: 63 },
-      { nombre: "Farmacia", valor: 3.1, vsLM: -5, vsU3M: 7 },
-      { nombre: "Laboratorio", valor: 2.8, vsLM: 7, vsU3M: 29 },
-      { nombre: "Subrogación", valor: 0.6, vsLM: -61, vsU3M: -34 },
-      { nombre: "Consultas", valor: 0.5, vsLM: 16, vsU3M: 38 },
-      { nombre: "Procedimientos / Quirúrgicos", valor: 0.3, vsLM: -37, vsU3M: -17 },
-      { nombre: "Imágenes", valor: 0.2, vsLM: 259, vsU3M: 187 },
-      { nombre: "Otros", valor: 0.1, vsLM: 67, vsU3M: 22 },
-      { nombre: "Wellness", valor: 0.1, vsLM: 307, vsU3M: 468 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 3.7, vsLM: -25, vsU3M: -10 },
+      { nombre: "Congelación de Gametos", valor: 3.7, vsLM: 29, vsU3M: 45 },
+      { nombre: "Farmacia", valor: 2.8, vsLM: -17, vsU3M: -6 },
+      { nombre: "Laboratorio", valor: 2.4, vsLM: -5, vsU3M: 14 },
+      { nombre: "Subrogación", valor: 0.5, vsLM: -65, vsU3M: -41 },
+      { nombre: "Consultas", valor: 0.5, vsLM: 0, vsU3M: 19 },
+      { nombre: "Procedimientos / Quirúrgicos", valor: 0.2, vsLM: -44, vsU3M: -26 },
+      { nombre: "Imágenes", valor: 0.2, vsLM: 218, vsU3M: 154 },
+      { nombre: "Wellness", valor: 0.1, vsLM: 262, vsU3M: 405 },
+      { nombre: "Otros", valor: 0.0, vsLM: 49, vsU3M: 9 },
     ],
     CDMX: [
-      { nombre: "Tratamientos FIV/ICSI", valor: 3.6, vsLM: -7, vsU3M: 13 },
-      { nombre: "Congelación de Gametos", valor: 3.5, vsLM: 72, vsU3M: 73 },
-      { nombre: "Farmacia", valor: 2.8, vsLM: 8, vsU3M: 18 },
-      { nombre: "Laboratorio", valor: 2.4, vsLM: 41, vsU3M: 60 },
-      { nombre: "Subrogación", valor: 0.6, vsLM: -61, vsU3M: -34 },
-      { nombre: "Consultas", valor: 0.3, vsLM: 30, vsU3M: 31 },
-      { nombre: "Procedimientos / Quirúrgicos", valor: 0.2, vsLM: -30, vsU3M: -8 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 3.3, vsLM: -17, vsU3M: 1 },
+      { nombre: "Congelación de Gametos", valor: 3.1, vsLM: 54, vsU3M: 55 },
+      { nombre: "Farmacia", valor: 2.5, vsLM: -3, vsU3M: 6 },
+      { nombre: "Laboratorio", valor: 2.2, vsLM: 26, vsU3M: 43 },
+      { nombre: "Subrogación", valor: 0.5, vsLM: -65, vsU3M: -41 },
+      { nombre: "Consultas", valor: 0.3, vsLM: 17, vsU3M: 18 },
+      { nombre: "Procedimientos / Quirúrgicos", valor: 0.2, vsLM: -37, vsU3M: -18 },
     ],
     GDL: [
-      { nombre: "Congelación de Gametos", valor: 0.6, vsLM: -12, vsU3M: 34 },
-      { nombre: "Tratamientos FIV/ICSI", valor: 0.4, vsLM: -41, vsU3M: -38 },
-      { nombre: "Laboratorio", valor: 0.3, vsLM: -58, vsU3M: -48 },
-      { nombre: "Consultas", valor: 0.2, vsLM: 0, vsU3M: 49 },
-      { nombre: "Farmacia", valor: 0.1, vsLM: -73, vsU3M: -65 },
-      { nombre: "Procedimientos / Quirúrgicos", valor: 0.0, vsLM: -44, vsU3M: -39 },
-      { nombre: "Imágenes", valor: 0.0, vsLM: 358, vsU3M: 84 },
+      { nombre: "Congelación de Gametos", valor: 0.5, vsLM: -27, vsU3M: 12 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 0.3, vsLM: -51, vsU3M: -48 },
+      { nombre: "Laboratorio", valor: 0.2, vsLM: -65, vsU3M: -56 },
+      { nombre: "Consultas", valor: 0.2, vsLM: -17, vsU3M: 24 },
+      { nombre: "Farmacia", valor: 0.1, vsLM: -77, vsU3M: -71 },
+      { nombre: "Procedimientos / Quirúrgicos", valor: 0.0, vsLM: -54, vsU3M: -49 },
+      { nombre: "Imágenes", valor: 0.0, vsLM: 281, vsU3M: 53 },
     ],
     MTP: [
-      { nombre: "Farmacia", valor: 0.2, vsLM: -14, vsU3M: 15 },
-      { nombre: "Tratamientos FIV/ICSI", valor: 0.1, vsLM: -60, vsU3M: -50 },
-      { nombre: "Laboratorio", valor: 0.1, vsLM: -68, vsU3M: -39 },
-      { nombre: "Congelación de Gametos", valor: 0.0, vsLM: -67, vsU3M: -34 },
-      { nombre: "Consultas", valor: 0.0, vsLM: 29, vsU3M: 30 },
-      { nombre: "Imágenes", valor: 0.0, vsLM: -68, vsU3M: -68 },
+      { nombre: "Farmacia", valor: 0.2, vsLM: -43, vsU3M: -24 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 0.1, vsLM: -74, vsU3M: -67 },
+      { nombre: "Laboratorio", valor: 0.0, vsLM: -79, vsU3M: -60 },
+      { nombre: "Congelación de Gametos", valor: 0.0, vsLM: -78, vsU3M: -56 },
+      { nombre: "Consultas", valor: 0.0, vsLM: -15, vsU3M: -14 },
+      { nombre: "Imágenes", valor: 0.0, vsLM: -79, vsU3M: -79 },
     ],
   },
 
