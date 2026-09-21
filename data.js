@@ -25,7 +25,7 @@ window.DATA = {
   // Atenciones, Pacientes y Consultas ya vienen en vivo desde el Sheet (ver
   // sección 0 del README); HubSpot y Highlights siguen siendo manuales aquí
   // y quedan al corte que se indica abajo hasta que también se automaticen.
-  corte: "14-sep-2026",
+  corte: "19-sep-2026",
   meses_hist: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago"],
   mes_actual: "Sep",
 
@@ -34,29 +34,18 @@ window.DATA = {
   // Pacientes Únicos = suma de las 3 sedes, ya que se proyectan sede por
   // sede en el reporte fuente)
   // ------------------------------------------------------------------------
-  // ARREGLO (15-sep-2026): este bloque numérico (total/sedes de Ingresos,
-  // Atenciones, Pacientes, Consultas) es SOLO el respaldo que se muestra
-  // mientras carga el Sheet en vivo, o si el fetch en vivo falla (ver
-  // fetchLiveOperativos()/buildIngresosMetric() en data-live.js). Se había
-  // quedado con cifras de un corte de AGOSTO a medio mes (hist de 7 meses,
-  // "actual" no correspondía a ningún corte real de septiembre) — cualquiera
-  // que viera el tablero durante esos 1-2 segundos de carga (o si el Sheet
-  // fallaba) veía números de otro mes. Resincronizado al corte real 14-sep
-  // vigente (mismo que ya corregido en data-live.js: shares de Atenciones/
-  // Pacientes recalibrados a corte-14 en vez de corte-12 heredado, más el
-  // techo por ticket promedio ahora también en GDL, no solo CDMX — ver
-  // SEDES_CON_TECHO_TICKET en data-live.js). IMPORTANTE: resincronizar este
-  // bloque cada vez que cierre un mes o cuando la proyección en vivo cambie
-  // de forma relevante — no tiene que ser exacto al peso, es solo el
-  // respaldo de mientras carga (y ahora mismo, el 15-sep, el Sheet en vivo
-  // está devolviendo error 404 intermitente — este respaldo es lo que
-  // realmente se le muestra a Marite hasta que Apps Script se estabilice).
+  // ARREGLO (21-sep-2026): resincronizado al corte real 19-sep (subió de
+  // 14 a 19 con Cargos_y_Facturas_31.xlsx + Consultas_13.xlsx). Igual que en
+  // el arreglo anterior, este bloque es SOLO el respaldo que se muestra
+  // mientras carga el Sheet en vivo o si el fetch falla — no tiene que ser
+  // exacto al peso. Shares de Atenciones/Pacientes y ratio de ticket
+  // promedio recalibrados igual en data-live.js (ver comentarios ahí).
   total: {
     nombre: "Todas las sedes",
-    ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.7, 12.1, 12.0, 16.2], actual: 7.8, proy: 13.5, vsLM: -17, vsU3M: 0, nota: "$-2.7M vs LM, $0.1M vs U3M" },
-    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3109], actual: 1757, proy: 2750, vsLM: -12, vsU3M: 3, nota: "suma CDMX+GDL+MTP, conteo de líneas de cargo (F. Cargo)" },
-    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1003], actual: 733, proy: 830, vsLM: -17, vsU3M: 1, nota: "suma CDMX+GDL+MTP" },
-    consultas: { hist: [168, 167, 235, 220, 225, 271, 255, 316], real: 160, agendado: 149, proy: 340, vsLM: -2, vsU3M: 10 },
+    ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.7, 12.1, 12.0, 16.2], actual: 9.81, proy: 15.49, vsLM: -4, vsU3M: 15, nota: "Real a la fecha $9.8M, proyección $15.5M a cierre" },
+    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3109], actual: 2334, proy: 3148, vsLM: 1, vsU3M: 18, nota: "suma CDMX+GDL+MTP, conteo de líneas de cargo (F. Cargo)" },
+    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1003], actual: 949, proy: 954, vsLM: -5, vsU3M: 16, nota: "suma CDMX+GDL+MTP" },
+    consultas: { hist: [168, 167, 235, 220, 225, 271, 255, 316], real: 212, agendado: 134, proy: 346, vsLM: 9, vsU3M: 23 },
   },
 
   // ------------------------------------------------------------------------
@@ -65,24 +54,24 @@ window.DATA = {
   sedes: {
     CDMX: {
       nombre: "Ciudad de México",
-      ingresos: { hist: [10.2, 9.8, 10.3, 10.5, 10.2, 9.3, 10.0, 12.5], actual: 6.8, proy: 11.7, vsLM: -6, vsU3M: 10 },
-      atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2072], actual: 1292, proy: 2195, vsLM: 6, vsU3M: 16 },
-      pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 621], actual: 505, proy: 598, vsLM: -4, vsU3M: 10 },
-      consultas: { hist: [127, 105, 144, 145, 133, 169, 141, 137], real: 72, agendado: 77, proy: 149, vsLM: 9, vsU3M: 0, top_cat: "Consulta primera vez", top_n: 82 },
+      ingresos: { hist: [10.2, 9.8, 10.3, 10.5, 10.2, 9.3, 10.0, 12.5], actual: 8.59, proy: 13.30, vsLM: 6, vsU3M: 25 },
+      atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2072], actual: 1770, proy: 2496, vsLM: 20, vsU3M: 31, nota: "topado por techo de ticket promedio (Ingresos CDMX proyectado no sostiene más atenciones este mes) — ver SEDES_CON_TECHO_TICKET en data-live.js" },
+      pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 621], actual: 683, proy: 683, vsLM: 10, vsU3M: 26 },
+      consultas: { hist: [127, 105, 144, 145, 133, 169, 141, 137], real: 97, agendado: 65, proy: 164, vsLM: 20, vsU3M: 10, top_cat: "Consulta primera vez", top_n: 82 },
     },
     GDL: {
       nombre: "Guadalajara",
-      ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5, 2.8], actual: 0.8, proy: 1.5, vsLM: -47, vsU3M: -33 },
-      atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751], actual: 383, proy: 383, vsLM: -49, vsU3M: -32, nota: "topado por techo de ticket promedio (Ingresos GDL proyectado no sostiene más atenciones este mes) — ver SEDES_CON_TECHO_TICKET en data-live.js" },
-      pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287], actual: 186, proy: 186, vsLM: -35, vsU3M: -15 },
-      consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133], real: 68, agendado: 42, proy: 138, vsLM: -17, vsU3M: 5, top_cat: "Consulta primera vez", top_n: 32 },
+      ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5, 2.8], actual: 0.95, proy: 1.73, vsLM: -38, vsU3M: -23 },
+      atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751], actual: 439, proy: 439, vsLM: -42, vsU3M: -22, nota: "topado por techo de ticket promedio (Ingresos GDL proyectado no sostiene más atenciones este mes) — ver SEDES_CON_TECHO_TICKET en data-live.js" },
+      pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287], actual: 215, proy: 215, vsLM: -25, vsU3M: -2 },
+      consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133], real: 90, agendado: 39, proy: 132, vsLM: -1, vsU3M: 27, top_cat: "Consulta primera vez", top_n: 32 },
     },
     MTP: {
       nombre: "Metepec",
-      ingresos: { hist: [0.5, 0.7, 0.8, 0.5, 0.6, 0.4, 0.5, 0.9], actual: 0.2, proy: 0.3, vsLM: -63, vsU3M: -43 },
-      atenciones: { hist: [138, 189, 213, 178, 169, 107, 223, 286], actual: 82, proy: 172, vsLM: -40, vsU3M: -16 },
-      pacientes: { hist: [31, 45, 47, 50, 33, 37, 60, 95], actual: 42, proy: 46, vsLM: -52, vsU3M: -29 },
-      consultas: { hist: [8, 21, 16, 20, 13, 9, 27, 46], real: 20, agendado: 30, proy: 53, vsLM: 9, vsU3M: 83, top_cat: "Consulta primera vez", top_n: 32 },
+      ingresos: { hist: [0.5, 0.7, 0.8, 0.5, 0.6, 0.4, 0.5, 0.9], actual: 0.28, proy: 0.46, vsLM: -49, vsU3M: -23 },
+      atenciones: { hist: [138, 189, 213, 178, 169, 107, 223, 286], actual: 125, proy: 213, vsLM: -26, vsU3M: 4 },
+      pacientes: { hist: [31, 45, 47, 50, 33, 37, 60, 95], actual: 55, proy: 56, vsLM: -41, vsU3M: -12 },
+      consultas: { hist: [8, 21, 16, 20, 13, 9, 27, 46], real: 25, agendado: 30, proy: 50, vsLM: 9, vsU3M: 83, top_cat: "Consulta primera vez", top_n: 32 },
     },
   },
 
@@ -90,57 +79,67 @@ window.DATA = {
   // SERVICIOS — Ingresos por servicio, proyectado (MDP), vs LM y vs U3M
   // ------------------------------------------------------------------------
   servicios: {
+    // Resincronizado 21-sep-2026 al corte 19-sep (proyección share-based
+    // por (Sede,Servicio) — ver ingresos_projection_rows en la sesión que
+    // generó este corte; vsLM = vs. agosto cerrado, vsU3M = vs. promedio
+    // jun/jul/ago cerrados).
     total: [
-      { nombre: "Tratamientos FIV/ICSI", valor: 4.3, vsLM: 18, vsU3M: 12 },
-      { nombre: "Farmacia", valor: 2.9, vsLM: -2, vsU3M: 3 },
-      { nombre: "Congelación de Gametos", valor: 2.6, vsLM: 26, vsU3M: 0 },
-      { nombre: "Laboratorio", valor: 2.7, vsLM: 42, vsU3M: 43 },
-      { nombre: "Subrogación", valor: 1.3, vsLM: 135, vsU3M: 205 },
-      { nombre: "Consultas", valor: 0.4, vsLM: 38, vsU3M: 30 },
-      { nombre: "Procedimientos / Quirúrgicos", valor: 0.3, vsLM: -14, vsU3M: 20 },
-      { nombre: "Imágenes", valor: 0.0, vsLM: -43, vsU3M: -34 },
-      { nombre: "Wellness", valor: 0.0, vsLM: 24, vsU3M: 31 },
-      { nombre: "Otros", valor: 0.0, vsLM: -30, vsU3M: -26 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 4.0, vsLM: -17, vsU3M: -1 },
+      { nombre: "Congelación de Gametos", valor: 4.0, vsLM: 42, vsU3M: 59 },
+      { nombre: "Farmacia", valor: 3.0, vsLM: -8, vsU3M: 4 },
+      { nombre: "Laboratorio", valor: 2.7, vsLM: 4, vsU3M: 25 },
+      { nombre: "Subrogación", valor: 0.6, vsLM: -63, vsU3M: -36 },
+      { nombre: "Consultas", valor: 0.5, vsLM: 15, vsU3M: 36 },
+      { nombre: "Procedimientos / Quirúrgicos", valor: 0.3, vsLM: -38, vsU3M: -19 },
+      { nombre: "Imágenes", valor: 0.2, vsLM: 248, vsU3M: 179 },
+      { nombre: "Otros", valor: 0.1, vsLM: 62, vsU3M: 18 },
+      { nombre: "Wellness", valor: 0.1, vsLM: 296, vsU3M: 452 },
     ],
     CDMX: [
-      { nombre: "Tratamientos FIV/ICSI", valor: 3.5, vsLM: 9, vsU3M: 15 },
-      { nombre: "Congelación de Gametos", valor: 1.9, vsLM: 4, vsU3M: -14 },
-      { nombre: "Farmacia", valor: 2.4, vsLM: -5, vsU3M: 1 },
-      { nombre: "Subrogación", valor: 1.3, vsLM: 135, vsU3M: 205 },
-      { nombre: "Laboratorio", valor: 2.1, vsLM: 49, vsU3M: 48 },
-      { nombre: "Consultas", valor: 0.2, vsLM: 5, vsU3M: -1 },
-      { nombre: "Procedimientos / Quirúrgicos", valor: 0.3, vsLM: -20, vsU3M: 22 },
-      { nombre: "Imágenes", valor: 0.0, vsLM: -37, vsU3M: -28 },
-      { nombre: "Otros", valor: 0.0, vsLM: 57, vsU3M: 73 },
-      { nombre: "Wellness", valor: 0.0, vsLM: 17, vsU3M: 12 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 3.5, vsLM: -11, vsU3M: 9 },
+      { nombre: "Congelación de Gametos", valor: 3.4, vsLM: 66, vsU3M: 67 },
+      { nombre: "Farmacia", valor: 2.7, vsLM: 4, vsU3M: 14 },
+      { nombre: "Laboratorio", valor: 2.3, vsLM: 36, vsU3M: 54 },
+      { nombre: "Subrogación", valor: 0.6, vsLM: -63, vsU3M: -36 },
+      { nombre: "Consultas", valor: 0.3, vsLM: 26, vsU3M: 27 },
+      { nombre: "Procedimientos / Quirúrgicos", valor: 0.2, vsLM: -32, vsU3M: -12 },
+      { nombre: "Imágenes", valor: 0.2, vsLM: 291, vsU3M: 238 },
+      { nombre: "Wellness", valor: 0.1, vsLM: 332, vsU3M: 472 },
+      { nombre: "Otros", valor: 0.0, vsLM: 53, vsU3M: 92 },
     ],
     GDL: [
-      { nombre: "Tratamientos FIV/ICSI", valor: 0.6, vsLM: 79, vsU3M: -12 },
-      { nombre: "Congelación de Gametos", valor: 0.6, vsLM: 164, vsU3M: 73 },
-      { nombre: "Farmacia", valor: 0.4, vsLM: 31, vsU3M: 22 },
-      { nombre: "Laboratorio", valor: 0.5, vsLM: 2, vsU3M: 7 },
-      { nombre: "Consultas", valor: 0.2, vsLM: 112, vsU3M: 89 },
-      { nombre: "Procedimientos / Quirúrgicos", valor: 0.0, vsLM: -44, vsU3M: -45 },
-      { nombre: "Wellness", valor: 0.0, vsLM: 55, vsU3M: 196 },
-      { nombre: "Imágenes", valor: 0.0, vsLM: -66, vsU3M: -57 },
-      { nombre: "Otros", valor: 0.0, vsLM: -77, vsU3M: -77 },
+      { nombre: "Congelación de Gametos", valor: 0.6, vsLM: -10, vsU3M: 37 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 0.4, vsLM: -40, vsU3M: -36 },
+      { nombre: "Laboratorio", valor: 0.3, vsLM: -57, vsU3M: -47 },
+      { nombre: "Consultas", valor: 0.2, vsLM: 2, vsU3M: 52 },
+      { nombre: "Farmacia", valor: 0.1, vsLM: -72, vsU3M: -64 },
+      { nombre: "Procedimientos / Quirúrgicos", valor: 0.0, vsLM: -43, vsU3M: -37 },
+      { nombre: "Imágenes", valor: 0.0, vsLM: 368, vsU3M: 88 },
+      { nombre: "Wellness", valor: 0.0, vsLM: 155, vsU3M: 350 },
+      { nombre: "Otros", valor: 0.0, vsLM: null, vsU3M: -84 },
+      { nombre: "Subrogación", valor: 0.0, vsLM: null, vsU3M: null },
     ],
     MTP: [
-      { nombre: "Farmacia", valor: 0.2, vsLM: -11, vsU3M: -6 },
-      { nombre: "Tratamientos FIV/ICSI", valor: 0.2, vsLM: 72, vsU3M: 68 },
-      { nombre: "Laboratorio", valor: 0.2, vsLM: 172, vsU3M: 180 },
-      { nombre: "Congelación de Gametos", valor: 0.1, vsLM: 1088, vsU3M: 161 },
-      { nombre: "Procedimientos / Quirúrgicos", valor: 0.0, vsLM: null, vsU3M: null, nuevo: true },
-      { nombre: "Consultas", valor: 0.0, vsLM: 1, vsU3M: -4 },
-      { nombre: "Imágenes", valor: 0.0, vsLM: -49, vsU3M: -32 },
-      { nombre: "Otros", valor: 0.0, vsLM: null, vsU3M: null, nuevo: true },
-      { nombre: "Wellness", valor: 0.0, vsLM: null, vsU3M: null, nuevo: true },
+      { nombre: "Farmacia", valor: 0.2, vsLM: -14, vsU3M: 15 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 0.1, vsLM: -60, vsU3M: -50 },
+      { nombre: "Laboratorio", valor: 0.1, vsLM: -68, vsU3M: -39 },
+      { nombre: "Congelación de Gametos", valor: 0.0, vsLM: -67, vsU3M: -34 },
+      { nombre: "Consultas", valor: 0.0, vsLM: 29, vsU3M: 30 },
+      { nombre: "Imágenes", valor: 0.0, vsLM: -68, vsU3M: -68 },
+      { nombre: "Procedimientos / Quirúrgicos", valor: 0.0, vsLM: -100, vsU3M: -100 },
+      { nombre: "Otros", valor: 0.0, vsLM: null, vsU3M: null },
     ],
   },
 
   // ------------------------------------------------------------------------
   // HIGHLIGHTS — hallazgos cualitativos del corte (texto libre, editable)
   // ------------------------------------------------------------------------
+  // PENDIENTE (21-sep-2026): el texto de abajo sigue redactado para el corte
+  // 14-sep — no se reescribió en esta pasada (solo se resincronizaron los
+  // bloques numéricos de arriba: total/sedes/servicios). Como highlights es
+  // texto libre y no se lee del Sheet en vivo, este bloque queda desfasado
+  // hasta la próxima revisión manual; los números que sí importan (tarjetas,
+  // evolutivo, servicios) ya están al corte 19-sep.
   highlights: {
     total: [
       "Ingresos: $13.5M proyectado a cierre de septiembre (Real acumulado al 14-sep: $7.8M, Ratio a cierre 1.73x), -16% vs LM, +1% vs U3M, +27% vs LY — la caída vs agosto no es una señal de alarma generalizada: el crecimiento interanual se mantiene fuerte (agosto cerrado fue +42% vs LY).",

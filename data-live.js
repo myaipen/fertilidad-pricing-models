@@ -86,7 +86,11 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // este valor a 12). Solo aplica al mes vigente EN CURSO (no cerrado) — para
 // meses ya cerrados (Real = mes completo) no se muestra ninguna nota de corte,
 // ver mesVigenteCerrado().
-let CORTE_REAL_DIA = 14;
+// ACTUALIZADO 21-sep-2026: corte sube de 14 a 19 (Cargos_y_Facturas_31.xlsx +
+// Consultas_13.xlsx, ambos hasta 19-sep-2026). Recalibrados con el mismo
+// método de siempre (jun/jul/ago-2026 por sede, ponderado por volumen; ver
+// detalle en cada bloque de shares/ratios más abajo).
+let CORTE_REAL_DIA = 19;
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 
@@ -589,7 +593,14 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // 428->751), así que un valor por encima del máximo no es necesariamente
   // un error, pero queda documentado para que Marite lo confirme (ver nota
   // de SEDES_CON_TECHO_TICKET más abajo sobre si extenderle el mismo techo).
-  const SHARE_HASTA_CORTE_ATENCIONES = { CDMX: 0.4816, GDL: 0.4276, MTP: 0.4773, total: 0.4699 };
+  // ARREGLO (21-sep-2026): corte sube de 14 a 19. Recalibrado con el mismo
+  // método (renglones de Cargos_y_Facturas_31, día<=19 de jun/jul/ago-2026
+  // vs. mes completo, ponderado por volumen):
+  //   CDMX: (1157+1153+1351)/(1717+1910+2069) = 3661/5696 = 0.6427
+  //   GDL:  ( 357+ 209+ 442)/( 507+ 428+ 751) = 1008/1686 = 0.5979
+  //   MTP:  (  82+  88+ 191)/( 107+ 223+ 286) =  361/616  = 0.5860
+  //   total:(1596+1450+1984)/(2331+2561+3106) = 5030/7998 = 0.6289
+  const SHARE_HASTA_CORTE_ATENCIONES = { CDMX: 0.6427, GDL: 0.5979, MTP: 0.586, total: 0.6289 };
   // Pacientes también estaba a corte-12, con su propio share (pacientes
   // ÚNICOS por "Historia", no renglones — por eso necesita su propio
   // cálculo en vez de compartir el de Atenciones).
@@ -615,7 +626,13 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // (ver RATIO_PACIENTES_POR_ATENCION abajo), así que el arreglo de
   // Atenciones ya cascadea aquí. Con ambos arreglos, Pacientes total baja de
   // 1,042 a ~989 — ya por debajo de 1,000.
-  const SHARE_HASTA_CORTE_PACIENTES = { CDMX: 0.5942, GDL: 0.5023, MTP: 0.6146, total: 0.5714 };
+  // ARREGLO (21-sep-2026): mismo recalibrado de corte-14 a corte-19, con
+  // pacientes ÚNICOS por Historia de jun/jul/ago-2026, ponderado por volumen:
+  //   CDMX: (376+349+456)/(500+506+618) = 1181/1624 = 0.7272
+  //   GDL:  (140+100+200)/(195+175+287) =  440/657  = 0.6697
+  //   MTP:  ( 32+ 41+ 62)/( 37+ 60+ 95) =  135/192  = 0.7031
+  //   total:(547+489+715)/(731+739+992) = 1751/2462 = 0.7112
+  const SHARE_HASTA_CORTE_PACIENTES = { CDMX: 0.7272, GDL: 0.6697, MTP: 0.7031, total: 0.7112 };
   // CAMBIO (14-sep-2026, 2ª pasada): Marite reportó que Pacientes Únicos
   // proyectados (1,269, vs. máximo histórico real de solo 1,003 en ago-2026)
   // se veía "muy alto" y pidió usar ratio o mejorar la proyección. Diagnóstico:
@@ -641,7 +658,13 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // ratio se puede recalibrar con el mismo criterio (unique Historia / total
   // renglones de Cargos, por sede, ponderado por volumen, usando todos los
   // meses cerrados disponibles).
-  const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.2725, GDL: 0.3845, MTP: 0.2648, total: 0.2906 };
+  // ACTUALIZADO 21-sep-2026: recalculado con Cargos_y_Facturas_31 (mismos 8
+  // meses cerrados ene-ago 2026, pacientes únicos/renglones, ponderado por
+  // volumen mensual) — prácticamente sin cambio vs. la calibración anterior,
+  // como se espera (los meses cerrados no se mueven de un corte a otro):
+  //   CDMX 4232/15534=0.2724, GDL 1315/3420=0.3845, MTP 398/1503=0.2648,
+  //   total 5945/20457=0.2906.
+  const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.2724, GDL: 0.3845, MTP: 0.2648, total: 0.2906 };
   // CAMBIO (14-sep-2026, 3ª pasada): Marite señaló que Atenciones (3,630 proy.,
   // +17% vs. agosto) Y Pacientes (heredado de Atenciones, +5% vs. agosto)
   // proyectaban POR ENCIMA de agosto en el mismo momento en que Ingresos
@@ -709,7 +732,17 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // RATIO_PACIENTES_POR_ATENCION). Si el pipeline comercial de GDL se
   // actualiza más adelante y su Ingresos proyectado sube, este techo se
   // relaja solo (sube con ingresosProyPesos.GDL) sin tocar código.
-  const RATIO_TICKET_PROMEDIO_ATENCION = { CDMX: 5330, GDL: 4520, MTP: 3341, total: 5022 };
+  // ACTUALIZADO 21-sep-2026: recalculado con Cargos_y_Facturas_31 (mismos 8
+  // meses cerrados ene-ago 2026): CDMX $5,328, GDL $4,403, MTP $3,281, total
+  // $5,023 — casi sin cambio en CDMX/total; GDL y MTP bajan ~3% (más
+  // renglones de bajo costo en esos meses con el dataset más completo).
+  const RATIO_TICKET_PROMEDIO_ATENCION = { CDMX: 5328, GDL: 4403, MTP: 3281, total: 5023 };
+  // SIN CAMBIO (21-sep-2026): con el corte-19 y las shares recalibradas
+  // arriba, GDL vuelve a topar por debajo de su actual (Math.max lo deja
+  // plano en 439, igual que en el arreglo de corte-14/15-sep) — mismo patrón
+  // de siempre, no amerita revisar el interruptor. MTP sigue sin techo
+  // (Marite no lo ha confirmado); pendiente su revisión si el pipeline de
+  // MTP se estabiliza.
   const SEDES_CON_TECHO_TICKET = { CDMX: true, GDL: true, MTP: false };
   // proyectarPorTendencia(actual, hist, sede): si el mes está cerrado, no
   // hay días transcurridos, o actual=0, se deja el real tal cual en vez de
