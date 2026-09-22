@@ -86,11 +86,15 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // este valor a 12). Solo aplica al mes vigente EN CURSO (no cerrado) — para
 // meses ya cerrados (Real = mes completo) no se muestra ninguna nota de corte,
 // ver mesVigenteCerrado().
-// ACTUALIZADO 21-sep-2026: corte sube de 14 a 19 (Cargos_y_Facturas_31.xlsx +
-// Consultas_13.xlsx, ambos hasta 19-sep-2026). Recalibrados con el mismo
-// método de siempre (jun/jul/ago-2026 por sede, ponderado por volumen; ver
-// detalle en cada bloque de shares/ratios más abajo).
-let CORTE_REAL_DIA = 19;
+// ACTUALIZADO 21-sep-2026 (2ª pasada, mismo día): corte sube de 19 a 21
+// (Cargos_y_Facturas_33.xlsx + Consultas_14.xlsx, ambos hasta 21-sep-2026).
+// Atenciones/Pacientes de sep-2026 quedan congelados vía
+// PROY_CONGELADA_SEP2026 (ver buildMonthlyRealMetric más abajo) por
+// instrucción explícita de Marite ("No cambien la proyección") — este bump
+// de corte NO recalibra shares/ratios de sep-2026 en la práctica porque el
+// freeze los sobreescribe; sí sigue afectando el texto de display
+// ("corte al día X") vía getCorteRealDia().
+let CORTE_REAL_DIA = 21;
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 
@@ -758,6 +762,23 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
     }
     return proyBase;
   }
+  // CONGELAMIENTO (21-sep-2026, corte 19->21): Marite pidió explícitamente
+  // "No cambien la proyección" al mover el corte real de 19 a 21-sep. Los
+  // valores ya publicados (ver data.js pre-corte-21) son el piso a respetar:
+  // Atenciones {CDMX:2057, GDL:439, MTP:163}, Pacientes {CDMX:683, GDL:215,
+  // MTP:55}. PERO con el Real ya actualizado a corte-21, GDL en Atenciones
+  // (real 457) y las 3 sedes en Pacientes (real 714/221/57) YA SUPERAN esos
+  // pisos — dejarlos literales mostraría proyectado < real, inconsistente.
+  // Marite confirmó (21-sep-2026, vía pregunta explícita): usar
+  // Math.max(actual, piso_congelado) por sede, que sube el número SOLO
+  // donde el real ya lo exige (cambio mínimo respecto a lo publicado) y deja
+  // el resto exactamente igual. Aplica únicamente a MES_VIGENTE=9,
+  // ANIO_VIGENTE=2026 — no toca la metodología general (SHARE_CURVE_*,
+  // RATIO_*, proyectarPorTendencia) que sigue vigente para meses futuros.
+  const PROY_CONGELADA_SEP2026 = {
+    atenciones: { CDMX: 2057, GDL: 439, MTP: 163 },
+    pacientes:  { CDMX: 683,  GDL: 215, MTP: 55  },
+  };
   const out = {};
   const lyPorSede = {};
   let histTotal = meses.map(() => 0), actualTotal = 0, lyTotal = 0, tieneLYTotal = false;
@@ -765,7 +786,13 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
     const m = bySede[sede] || {};
     const hist = meses.map(n => m[n] || 0);
     const actual = m[MES_VIGENTE] || 0;
-    const proy = proyectarPorTendencia(actual, hist, sede);
+    let proy = proyectarPorTendencia(actual, hist, sede);
+    if (MES_VIGENTE === 9 && ANIO_VIGENTE === 2026 && anio === 2026) {
+      const tablaCongelada = esAtenciones ? PROY_CONGELADA_SEP2026.atenciones : PROY_CONGELADA_SEP2026.pacientes;
+      if (tablaCongelada && tablaCongelada[sede] != null) {
+        proy = Math.max(actual, tablaCongelada[sede]);
+      }
+    }
     hist.forEach((v,i) => histTotal[i] += v);
     actualTotal += actual;
     const lm = hist[hist.length-1] || 0;
