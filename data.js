@@ -52,9 +52,15 @@ window.DATA = {
     // base (lab, quirófano, admin, seguimiento) en vez de solo consultas de
     // Primera Vez — inflaba real/agendado ~4-5x. Filtro correcto: Grupo de
     // conceptos = "Primera Vez" (consistente con Ene-Ago, que ya venían así
-    // filtrados de origen). Agendado = solo Estado "Confirmada" (subtítulo
-    // del chart dice "citas agendadas confirmadas"). proy = real + agendado.
-    consultas: { hist: [166, 167, 233, 220, 225, 270, 255, 316], real: 223, agendado: 23, proy: 246, vsLM: -22, vsU3M: -12, nota: "actualizado 22-sep-2026 con archivo Consultas_15 ('limpio', ya filtrado a Primera Vez) que Marite subió — real sin cambio (223), agendado sube de 21 a 23 (2 citas más confirmadas en GDL); hist Ene/Mar/Jun bajan levemente (168→166/235→233/271→270) por depurar filas extra en CDMX" },
+    // filtrados de origen). ACTUALIZADO 22-sep-2026 (3ª pasada): Agendado =
+    // TODAS las citas de "Citas agendadas" (Citado + Confirmada), no solo
+    // Confirmada — decisión explícita de Marite tras preguntar por qué el
+    // dashboard mostraba 23 cuando la hoja tiene 125 citas para después del
+    // 21-sep (119 visibles por un filtro previo en la hoja, sin relación
+    // con Estado). "Citado" = agendada pero aún sin confirmar por
+    // paciente/staff — Marite prefiere la lectura más optimista aunque
+    // pueda incluir citas que se cancelen o reagenden. proy = real + agendado.
+    consultas: { hist: [166, 167, 233, 220, 225, 270, 255, 316], real: 223, agendado: 125, proy: 348, vsLM: 10, vsU3M: 24, nota: "actualizado 22-sep-2026 con Consultas_15.xlsx ('limpio') — real sin cambio (223); agendado redefinido a Citado+Confirmada (antes solo Confirmada) por instrucción de Marite: 21→125. hist Ene/Mar/Jun bajan levemente por depurar filas extra en CDMX" },
   },
 
   // ------------------------------------------------------------------------
@@ -66,21 +72,21 @@ window.DATA = {
       ingresos: { hist: [10.2, 9.8, 10.3, 10.5, 10.2, 9.3, 10.0, 12.5], actual: 9.18, proy: 12.36, vsLM: -1, vsU3M: 17 },
       atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2072], actual: 1917, proy: 2057, vsLM: -1, vsU3M: 8, nota: "topado por techo de ticket promedio (Ingresos CDMX proyectado no sostiene más atenciones este mes) — ver SEDES_CON_TECHO_TICKET en data-live.js. Proyección CONGELADA (no cambia con este corte)" },
       pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 621], actual: 714, proy: 714, vsLM: 15, vsU3M: 32, nota: "Proyección CONGELADA en 683 (valor ya comunicado); el real a corte-21 (714) ya la superó, así que proy = real (piso)" },
-      consultas: { hist: [125, 105, 142, 145, 133, 168, 141, 137], real: 104, agendado: 12, proy: 116, vsLM: -15, vsU3M: -22, top_cat: "Consulta primera vez", top_n: 39 },
+      consultas: { hist: [125, 105, 142, 145, 133, 168, 141, 137], real: 104, agendado: 56, proy: 160, vsLM: 17, vsU3M: 8, top_cat: "Consulta primera vez", top_n: 69 },
     },
     GDL: {
       nombre: "Guadalajara",
       ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5, 2.8], actual: 0.96, proy: 1.50, vsLM: -46, vsU3M: -33, nota: "incluye ajuste de pipeline comercial +$91k (Base!H, confirmado por Marite 22-sep) sobre el Proyectado base de $1.41M" },
       atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751], actual: 457, proy: 457, vsLM: -39, vsU3M: -19, nota: "Proyección CONGELADA en 439 (valor ya comunicado); el real a corte-21 (457) ya la superó, así que proy = real (piso) — ver PROY_CONGELADA_SEP2026 en data-live.js" },
       pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287], actual: 221, proy: 221, vsLM: -23, vsU3M: 1, nota: "Proyección CONGELADA en 215 (valor ya comunicado); el real a corte-21 (221) ya la superó, así que proy = real (piso)" },
-      consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133], real: 94, agendado: 6, proy: 100, vsLM: -25, vsU3M: -4, top_cat: "Check up Ginecológico", top_n: 23 },
+      consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133], real: 94, agendado: 40, proy: 134, vsLM: 1, vsU3M: 28, top_cat: "Check up Ginecológico", top_n: 29 },
     },
     MTP: {
       nombre: "Metepec",
       ingresos: { hist: [0.5, 0.7, 0.8, 0.5, 0.6, 0.4, 0.5, 0.9], actual: 0.30, proy: 0.30, vsLM: -66, vsU3M: -50 },
       atenciones: { hist: [138, 189, 213, 178, 169, 107, 223, 286], actual: 143, proy: 163, vsLM: -43, vsU3M: -21, nota: "Proyección CONGELADA (no cambia con este corte)" },
       pacientes: { hist: [31, 45, 47, 50, 33, 37, 60, 95], actual: 57, proy: 57, vsLM: -40, vsU3M: -11, nota: "Proyección CONGELADA en 55 (valor ya comunicado); el real a corte-21 (57) ya la superó, así que proy = real (piso)" },
-      consultas: { hist: [8, 21, 16, 20, 13, 9, 27, 46], real: 25, agendado: 5, proy: 30, vsLM: -35, vsU3M: 10, top_cat: "Consulta primera vez", top_n: 17 },
+      consultas: { hist: [8, 21, 16, 20, 13, 9, 27, 46], real: 25, agendado: 29, proy: 54, vsLM: 17, vsU3M: 98, top_cat: "Consulta primera vez", top_n: 33 },
     },
   },
 
@@ -152,10 +158,10 @@ window.DATA = {
   // actualizan aquí los valores estáticos de respaldo.
   highlights: {
     total: [
-      "Proyección de cierre: Ingresos $14.2M (sube de $14.07M por un ajuste de pipeline comercial de +$91k en Guadalajara, confirmado por Marite), Atenciones 2,677, Pacientes 992 — estos dos se mantienen en el valor ya comunicado (con ajuste de piso en Atenciones GDL 439→457 y en Pacientes de las 3 sedes, donde el Real a corte-21 ya lo superó). Consultas SÍ cambia este corte: proyección corregida a 246 (antes 1,658 — era un error de filtro, no una revisión de negocio; ver detalle abajo).",
+      "Proyección de cierre: Ingresos $14.2M (sube de $14.07M por un ajuste de pipeline comercial de +$91k en Guadalajara, confirmado por Marite), Atenciones 2,677, Pacientes 992 — estos dos se mantienen en el valor ya comunicado (con ajuste de piso en Atenciones GDL 439→457 y en Pacientes de las 3 sedes, donde el Real a corte-21 ya lo superó). Consultas SÍ cambia este corte: proyección corregida a 348 (antes 1,658 — combina el error de filtro corregido con la decisión de Marite de contar también las citas \"Citado\" sin confirmar, no solo \"Confirmada\"; ver detalle abajo).",
       "Ingresos: Real acumulado a corte-21 $10.44M (vs $9.81M a corte-19), Ratio a cierre 1.36x — el avance del Real no mueve la Proyección (Base!F es un valor fijo por Sede×Servicio, no recalculado por corte); el único movimiento de este corte es el ajuste de pipeline comercial +$91k en GDL (Base!H), que Marite confirmó como intencional.",
       "Pacientes: el Real (992) ya IGUALA a la Proyección congelada en las 3 sedes — es decir, septiembre alcanzó con 9 días de anticipación el nivel de pacientes que se había proyectado para el cierre del mes completo. Vale la pena revisar si el piso congelado sigue siendo conservador o si conviene reabrir la proyección el próximo corte.",
-      "Consultas: CORREGIDO este corte — la cifra anterior (1,036 real / 1,658 proyectado) contaba TODAS las citas de la base (laboratorio, quirófano, administrativo, seguimiento), no solo consultas de Primera Vez. Filtrando correctamente con el archivo limpio que Marite subió (Consultas_15.xlsx): 223 reales (1-21 sep) + 23 agendadas confirmadas = 246 proyectado, -22% vs agosto (316) — es una desaceleración real, no un salto; septiembre venía a buen ritmo diario pero se agendaron pocas citas ya confirmadas para el resto del mes (hay más citas \"citadas\" sin confirmar que no se cuentan aquí a propósito).",
+      "Consultas: CORREGIDO este corte — la cifra anterior (1,036 real / 1,658 proyectado) contaba TODAS las citas de la base (laboratorio, quirófano, administrativo, seguimiento), no solo consultas de Primera Vez. Filtrando correctamente con el archivo limpio que Marite subió (Consultas_15.xlsx): 223 reales (1-21 sep) + 125 agendadas (Citado + Confirmada) = 348 proyectado, +10% vs agosto (316) — Marite pidió explícitamente contar también las citas \"Citado\" (agendadas pero aún sin confirmar por paciente/staff), no solo las 23 ya \"Confirmada\"; es una lectura más optimista que puede incluir citas que se cancelen o reagenden.",
       "Subrogación: resuelto el desglose Valoración/Programa Activo con una metodología de clasificación por Concepto de cargo (Valoración subrogada vs. paquetes Surrogacy) — Programa Activo Sep reproduce EXACTO el valor ya publicado antes de este corte (2 pacientes, $286,207), lo que valida la metodología. Valoración sube a 54 pacientes ($75,388), casi el doble de las 28 del corte anterior.",
       "HubSpot: 1,365 leads y 328 citas agendadas a corte-21 (24% conversión), ritmo consistente con el mes cerrado de agosto (1,958 leads / 482 citas al cierre completo) — sin señales de desviación en el embudo.",
     ],
@@ -163,19 +169,19 @@ window.DATA = {
       "Ingresos MTD $9.18M (88% del Real total de la compañía), Proyección sin cambio en $12.36M.",
       "Atenciones: Real 1,917, Proyección se mantiene en 2,057 (aún no alcanza el piso, a diferencia de GDL) — sigue topada por el techo de ticket promedio (ver SEDES_CON_TECHO_TICKET en data-live.js).",
       "Pacientes: Real 714 ya superó el piso congelado (683) — Proyección = Real. Es la sede con el mayor volumen absoluto de pacientes nuevos del mes.",
-      "Consultas: CORREGIDO — 104 reales + 12 agendadas confirmadas = 116 proyectado, -15% vs agosto (137). La cifra previamente reportada (699/1,185) incluía citas que no son consultas de Primera Vez.",
+      "Consultas: CORREGIDO — 104 reales + 56 agendadas (Citado + Confirmada) = 160 proyectado, +17% vs agosto (137). La cifra previamente reportada (699/1,185) incluía citas que no son consultas de Primera Vez; el agendado ahora cuenta también las \"Citado\" sin confirmar (antes solo 12 Confirmada).",
     ],
     GDL: [
       "Ingresos MTD $0.96M, Proyección sube a $1.50M (antes $1.41M) por un ajuste de pipeline comercial de +$91k que Marite cargó en Base!H para septiembre — sigue siendo la sede con mayor brecha vs su propio Real (Ratio 1.56x).",
       "Atenciones: Real 457 YA SUPERÓ el piso congelado (439) — único ajuste de Proyección de Atenciones este corte (439→457, +18). Vale la pena revisar en el próximo corte si el pipeline comercial de GDL ya sostiene ese nivel o si el techo por ticket promedio debería reactivarse (ver nota histórica en data-live.js).",
       "Pacientes: Real 221 también superó su piso (215) — Proyección = Real.",
-      "Consultas: CORREGIDO — 94 reales + 6 agendadas confirmadas = 100 proyectado, -25% vs agosto (133). La cifra previamente reportada (252/343) incluía citas que no son consultas de Primera Vez; el archivo limpio (Consultas_15.xlsx) subió el agendado de 4 a 6 confirmadas.",
+      "Consultas: CORREGIDO — 94 reales + 40 agendadas (Citado + Confirmada) = 134 proyectado, +1% vs agosto (133). La cifra previamente reportada (252/343) incluía citas que no son consultas de Primera Vez; el agendado ahora cuenta también las \"Citado\" sin confirmar (antes solo 6 Confirmada).",
     ],
     MTP: [
       "Ingresos MTD $0.30M, Proyección prácticamente alcanzada ($301,852 vs. Real $300,805 — margen de apenas ~$1,000) — es la sede más cerca de agotar su Proyección antes de fin de mes; vigilar de cerca el próximo corte.",
       "Atenciones: Real 143, todavía por debajo del piso congelado (163) — es la única sede donde la Proyección de Atenciones no tuvo que ajustarse este corte.",
       "Pacientes: Real 57 superó su piso (55) — Proyección = Real.",
-      "Consultas: CORREGIDO — 25 reales + 5 agendadas confirmadas = 30 proyectado, -35% vs agosto (46). La cifra previamente reportada (85/130) incluía citas que no son consultas de Primera Vez.",
+      "Consultas: CORREGIDO — 25 reales + 29 agendadas (Citado + Confirmada) = 54 proyectado, +17% vs agosto (46). La cifra previamente reportada (85/130) incluía citas que no son consultas de Primera Vez; el agendado ahora cuenta también las \"Citado\" sin confirmar (antes solo 5 Confirmada).",
     ],
   },
 
@@ -183,42 +189,40 @@ window.DATA = {
   // RANKING DE CONSULTAS POR AGRUPACIÓN (Sep = real + agendado), vs LM (Ago
   // cerrado). CORREGIDO 22-sep-2026: filtrado a Grupo de conceptos =
   // "Primera Vez" (antes incluía laboratorio/quirófano/administrativo).
-  // ACTUALIZADO 22-sep-2026 (2ª pasada): recalculado con Consultas_15.xlsx
-  // ("archivo limpio" que Marite subió) — los valores por Concepto bajan
-  // vs. la primera corrección (que arrastraba filas que el archivo limpio
-  // ya no tiene); real Sep total (223) y por sede no cambian, ver nota en
-  // total.consultas.
+  // ACTUALIZADO 22-sep-2026 (3ª pasada): recalculado con Consultas_15.xlsx
+  // Y con Agendado redefinido a Citado+Confirmada (ver nota en
+  // total.consultas) — real Sep total (223) y por sede no cambian.
   // ------------------------------------------------------------------------
   consultas_ranking: {
     total: [
-      { nombre: "Consulta primera vez", valor: 70, vsLM: -28 },
-      { nombre: "Fertility Check up Mujeres", valor: 48, vsLM: 0 },
-      { nombre: "Consulta primera vez online", valor: 38, vsLM: 19 },
-      { nombre: "Check up Ginecológico", valor: 34, vsLM: -36 },
-      { nombre: "Fertility Check up Parejas", valor: 15, vsLM: -44 },
-      { nombre: "Check-up SOMP", valor: 14, vsLM: null, nuevo: true },
-      { nombre: "Check up Integral", valor: 13, vsLM: 550 },
+      { nombre: "Consulta primera vez", valor: 121, vsLM: 25 },
+      { nombre: "Consulta primera vez online", valor: 55, vsLM: 72 },
+      { nombre: "Fertility Check up Mujeres", valor: 54, vsLM: 12 },
+      { nombre: "Check up Ginecológico", valor: 41, vsLM: -23 },
+      { nombre: "Check-up SOMP", valor: 24, vsLM: null, nuevo: true },
+      { nombre: "Check up Integral", valor: 17, vsLM: 750 },
+      { nombre: "Fertility Check up Parejas", valor: 17, vsLM: -37 },
     ],
     CDMX: [
-      { nombre: "Consulta primera vez", valor: 39, vsLM: -25 },
-      { nombre: "Fertility Check up Mujeres", valor: 29, vsLM: 12 },
-      { nombre: "Consulta primera vez online", valor: 26, vsLM: 13 },
-      { nombre: "Fertility Check up Parejas", valor: 7, vsLM: -36 },
-      { nombre: "Check up Ginecológico", valor: 5, vsLM: -55 },
+      { nombre: "Consulta primera vez", valor: 69, vsLM: 33 },
+      { nombre: "Consulta primera vez online", valor: 33, vsLM: 43 },
+      { nombre: "Fertility Check up Mujeres", valor: 32, vsLM: 23 },
+      { nombre: "Fertility Check up Parejas", valor: 8, vsLM: -27 },
+      { nombre: "Check up Ginecológico", valor: 6, vsLM: -45 },
     ],
     GDL: [
-      { nombre: "Check up Ginecológico", valor: 23, vsLM: -21 },
-      { nombre: "Fertility Check up Mujeres", valor: 18, vsLM: -14 },
-      { nombre: "Consulta primera vez", valor: 14, vsLM: -46 },
-      { nombre: "Check-up SOMP", valor: 14, vsLM: null, nuevo: true },
-      { nombre: "Check up Integral", valor: 13, vsLM: 550 },
+      { nombre: "Check up Ginecológico", valor: 29, vsLM: 0 },
+      { nombre: "Check-up SOMP", valor: 22, vsLM: null, nuevo: true },
+      { nombre: "Fertility Check up Mujeres", valor: 19, vsLM: -10 },
+      { nombre: "Consulta primera vez", valor: 19, vsLM: -27 },
+      { nombre: "Check up Integral", valor: 17, vsLM: 750 },
     ],
     MTP: [
-      { nombre: "Consulta primera vez", valor: 17, vsLM: -11 },
+      { nombre: "Consulta primera vez", valor: 33, vsLM: 74 },
       { nombre: "Check up Ginecológico", valor: 6, vsLM: -54 },
+      { nombre: "Consulta primera vez online", valor: 6, vsLM: 100 },
       { nombre: "Fertility Check up Parejas", valor: 4, vsLM: 33 },
-      { nombre: "Consulta primera vez online", valor: 2, vsLM: -33 },
-      { nombre: "Fertility Check up Mujeres", valor: 1, vsLM: 0 },
+      { nombre: "Fertility Check up Mujeres", valor: 3, vsLM: 200 },
     ],
   },
 
