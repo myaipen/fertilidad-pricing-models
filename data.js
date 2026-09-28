@@ -25,7 +25,7 @@ window.DATA = {
   // Atenciones, Pacientes y Consultas ya vienen en vivo desde el Sheet (ver
   // sección 0 del README); HubSpot y Highlights siguen siendo manuales aquí
   // y quedan al corte que se indica abajo hasta que también se automaticen.
-  corte: "21-sep-2026",
+  corte: "27-sep-2026",
   meses_hist: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago"],
   mes_actual: "Sep",
 
@@ -45,22 +45,15 @@ window.DATA = {
   // falla — no tiene que ser exacto al peso.
   total: {
     nombre: "Todas las sedes",
-    ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.7, 12.1, 12.0, 16.2], actual: 10.44, proy: 14.16, vsLM: -13, vsU3M: 5, nota: "Real a la fecha (corte 21-sep) $10.4M, proyección $14.2M a cierre — sube de $14.07M por un ajuste de pipeline comercial de +$91k en Guadalajara (Base!H, confirmado por Marite 22-sep); Atenciones/Pacientes sí se mantienen congelados, ver nota Highlights" },
-    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3109], actual: 2517, proy: 2677, vsLM: -14, vsU3M: 0, nota: "suma CDMX+GDL+MTP, conteo de líneas de cargo (F. Cargo). Proyección CONGELADA al valor ya comunicado (2057/439/163 por sede), con piso en el real donde el real ya la superó (solo GDL: 439→457) — ver PROY_CONGELADA_SEP2026 en data-live.js" },
-    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1003], actual: 992, proy: 992, vsLM: -1, vsU3M: 20, nota: "suma CDMX+GDL+MTP. Proyección CONGELADA al valor ya comunicado (683/215/55 por sede); el real a corte-21 ya superó ese piso en las 3 sedes, así que proy = real (ver PROY_CONGELADA_SEP2026 en data-live.js)" },
-    // CORREGIDO 22-sep-2026: el corte anterior contaba TODAS las citas de la
-    // base (lab, quirófano, admin, seguimiento) en vez de solo consultas de
-    // Primera Vez — inflaba real/agendado ~4-5x. Filtro correcto: Grupo de
-    // conceptos = "Primera Vez" (consistente con Ene-Ago, que ya venían así
-    // filtrados de origen). ACTUALIZADO 22-sep-2026 (3ª pasada): Agendado =
-    // TODAS las citas de "Citas agendadas" (Citado + Confirmada), no solo
-    // Confirmada — decisión explícita de Marite tras preguntar por qué el
-    // dashboard mostraba 23 cuando la hoja tiene 125 citas para después del
-    // 21-sep (119 visibles por un filtro previo en la hoja, sin relación
-    // con Estado). "Citado" = agendada pero aún sin confirmar por
-    // paciente/staff — Marite prefiere la lectura más optimista aunque
-    // pueda incluir citas que se cancelen o reagenden. proy = real + agendado.
-    consultas: { hist: [166, 167, 233, 220, 225, 270, 255, 316], real: 223, agendado: 125, proy: 348, vsLM: 10, vsU3M: 24, nota: "actualizado 22-sep-2026 con Consultas_15.xlsx ('limpio') — real sin cambio (223); agendado redefinido a Citado+Confirmada (antes solo Confirmada) por instrucción de Marite: 21→125. hist Ene/Mar/Jun bajan levemente por depurar filas extra en CDMX" },
+    ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.7, 12.1, 12.0, 16.2], actual: 12.38, proy: 13.46, vsLM: -22, vsU3M: -6, nota: "CORREGIDO 28-sep-2026: se detectó que el 'máximo histórico' de la curva de pacing estaba determinado en las 3 sedes por febrero, un mes de 28 días — su día 27 equivale al 96% del mes vs. 90% en septiembre (30 días), lo que sesgaba el techo conservador y dejaba una proyección artificialmente baja para el cierre (antes $12.65M). Se recalculó excluyendo febrero de la calibración del pacing por día-calendario (Ene, Mar-Ago); Real y Proyectado por Sede×Servicio recalculados en Base con el factor sede-nivel resultante (no se recategorizó Concepto→Servicio). Incluye el ajuste de pipeline comercial +$91k de GDL (Base!H)." },
+    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3109], actual: 3212, proy: 3212, vsLM: 3, vsU3M: 20, nota: "suma CDMX+GDL+MTP, conteo de líneas de cargo (F. Cargo) hasta el 27-sep. DEJA DE ESTAR CONGELADA desde este corte (instrucción explícita de Marite) — se recalcula con la curva de pacing conservadora; a estas alturas del mes (día 27 de 30) la curva ya casi satura en 1.0, así que Proyectado = Real en las 3 sedes (no queda margen de extrapolación conservador)." },
+    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1003], actual: 1240, proy: 1240, vsLM: 24, vsU3M: 50, nota: "suma CDMX+GDL+MTP, pacientes ÚNICOS del mes (dedup por Historia). DEJA DE ESTAR CONGELADA desde este corte — Proyectado = max(Real, Atenciones_proy × ratio conservador); con Atenciones ya sin margen de extrapolación, Proyectado = Real en las 3 sedes." },
+    // ACTUALIZADO 27-sep-2026 con Consultas_16.xlsx: real Sep sube de 223 a
+    // 281 (crece con el corte, normal). Agendado se recalculó corrigiendo la
+    // fórmula en vivo de la hoja "Consultas" (columnas E26:E28), que seguía
+    // contando SOLO "Confirmada" pese a la decisión ya tomada de incluir
+    // también "Citado" — quedó en 48 (26+11+11). proy = real + agendado.
+    consultas: { hist: [168, 167, 235, 220, 225, 271, 255, 316], real: 281, agendado: 48, proy: 329, vsLM: 4, vsU3M: 17, nota: "actualizado 27-sep-2026 con Consultas_16.xlsx — real 281 (1-26 sep aprox.), agendado 48 (Citado+Confirmada, corrigiendo la fórmula en vivo que solo contaba Confirmada). hist sube levemente en Ene/Mar/Jun por datos más completos del archivo nuevo." },
   },
 
   // ------------------------------------------------------------------------
@@ -69,24 +62,24 @@ window.DATA = {
   sedes: {
     CDMX: {
       nombre: "Ciudad de México",
-      ingresos: { hist: [10.2, 9.8, 10.3, 10.5, 10.2, 9.3, 10.0, 12.5], actual: 9.18, proy: 12.36, vsLM: -1, vsU3M: 17 },
-      atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2072], actual: 1917, proy: 2057, vsLM: -1, vsU3M: 8, nota: "topado por techo de ticket promedio (Ingresos CDMX proyectado no sostiene más atenciones este mes) — ver SEDES_CON_TECHO_TICKET en data-live.js. Proyección CONGELADA (no cambia con este corte)" },
-      pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 621], actual: 714, proy: 714, vsLM: 15, vsU3M: 32, nota: "Proyección CONGELADA en 683 (valor ya comunicado); el real a corte-21 (714) ya la superó, así que proy = real (piso)" },
-      consultas: { hist: [125, 105, 142, 145, 133, 168, 141, 137], real: 104, agendado: 56, proy: 160, vsLM: 17, vsU3M: 8, top_cat: "Consulta primera vez", top_n: 69 },
+      ingresos: { hist: [10.2, 9.8, 10.3, 10.5, 10.2, 9.3, 10.0, 12.5], actual: 10.67, proy: 11.59, vsLM: -13, vsU3M: 2, nota: "CORREGIDO 28-sep-2026: proyección recalculada excluyendo febrero (mes de 28 días) del máximo histórico de la curva de pacing — antes $10.83M." },
+      atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2072], actual: 2404, proy: 2404, vsLM: 16, vsU3M: 27, nota: "Proyección = Real: a corte-27 la curva de pacing conservadora ya está casi saturada (día 27 de 30) y el techo de ticket promedio (ver SEDES_CON_TECHO_TICKET) no deja margen adicional. Ya no está congelada." },
+      pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 621], actual: 886, proy: 886, vsLM: 43, vsU3M: 63, nota: "pacientes únicos del mes (dedup Historia). Proyección = Real, ya no congelada." },
+      consultas: { hist: [127, 105, 144, 145, 133, 169, 141, 137], real: 129, agendado: 26, proy: 155, vsLM: 13, vsU3M: 4, top_cat: "Consulta primera vez", top_n: 69 },
     },
     GDL: {
       nombre: "Guadalajara",
-      ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5, 2.8], actual: 0.96, proy: 1.50, vsLM: -46, vsU3M: -33, nota: "incluye ajuste de pipeline comercial +$91k (Base!H, confirmado por Marite 22-sep) sobre el Proyectado base de $1.41M" },
-      atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751], actual: 457, proy: 457, vsLM: -39, vsU3M: -19, nota: "Proyección CONGELADA en 439 (valor ya comunicado); el real a corte-21 (457) ya la superó, así que proy = real (piso) — ver PROY_CONGELADA_SEP2026 en data-live.js" },
-      pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287], actual: 221, proy: 221, vsLM: -23, vsU3M: 1, nota: "Proyección CONGELADA en 215 (valor ya comunicado); el real a corte-21 (221) ya la superó, así que proy = real (piso)" },
-      consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133], real: 94, agendado: 40, proy: 134, vsLM: 1, vsU3M: 28, top_cat: "Check up Ginecológico", top_n: 29 },
+      ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5, 2.8], actual: 1.30, proy: 1.46, vsLM: -50, vsU3M: -37, nota: "CORREGIDO 28-sep-2026: proyección base recalculada excluyendo febrero del máximo histórico de la curva de pacing ($1.37M, antes $1.32M), más el ajuste de pipeline comercial +$91k (Base!H) = $1.46M (antes $1.41M)." },
+      atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751], actual: 613, proy: 613, vsLM: -18, vsU3M: 9, nota: "Proyección = Real (curva ya saturada a corte-27). Ya no está congelada." },
+      pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287], actual: 279, proy: 279, vsLM: -3, vsU3M: 27, nota: "pacientes únicos del mes. Proyección = Real, ya no congelada." },
+      consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133], real: 112, agendado: 11, proy: 123, vsLM: -8, vsU3M: 18, top_cat: "Check up Ginecológico", top_n: 29 },
     },
     MTP: {
       nombre: "Metepec",
-      ingresos: { hist: [0.5, 0.7, 0.8, 0.5, 0.6, 0.4, 0.5, 0.9], actual: 0.30, proy: 0.30, vsLM: -66, vsU3M: -50 },
-      atenciones: { hist: [138, 189, 213, 178, 169, 107, 223, 286], actual: 143, proy: 163, vsLM: -43, vsU3M: -21, nota: "Proyección CONGELADA (no cambia con este corte)" },
-      pacientes: { hist: [31, 45, 47, 50, 33, 37, 60, 95], actual: 57, proy: 57, vsLM: -40, vsU3M: -11, nota: "Proyección CONGELADA en 55 (valor ya comunicado); el real a corte-21 (57) ya la superó, así que proy = real (piso)" },
-      consultas: { hist: [8, 21, 16, 20, 13, 9, 27, 46], real: 25, agendado: 29, proy: 54, vsLM: 17, vsU3M: 98, top_cat: "Consulta primera vez", top_n: 33 },
+      ingresos: { hist: [0.5, 0.7, 0.8, 0.5, 0.6, 0.4, 0.5, 0.9], actual: 0.41, proy: 0.41, vsLM: -54, vsU3M: -32, nota: "sin cambio material tras excluir febrero: en MTP el máximo histórico del pacing lo pone junio (98.6%), no febrero, así que casi no hay margen de mes restante de cualquier forma." },
+      atenciones: { hist: [138, 189, 213, 178, 169, 107, 223, 286], actual: 195, proy: 195, vsLM: -32, vsU3M: -5, nota: "Proyección = Real (curva ya saturada a corte-27). Ya no está congelada." },
+      pacientes: { hist: [31, 45, 47, 50, 33, 37, 60, 95], actual: 75, proy: 75, vsLM: -21, vsU3M: 17, nota: "pacientes únicos del mes. Proyección = Real, ya no congelada." },
+      consultas: { hist: [8, 21, 16, 20, 13, 9, 27, 46], real: 40, agendado: 11, proy: 51, vsLM: 11, vsU3M: 87, top_cat: "Consulta primera vez", top_n: 33 },
     },
   },
 
@@ -94,45 +87,49 @@ window.DATA = {
   // SERVICIOS — Ingresos por servicio, proyectado (MDP), vs LM y vs U3M
   // ------------------------------------------------------------------------
   servicios: {
-    // Resincronizado 21-sep-2026 (3ª pasada — METODOLOGÍA CONSERVADORA, ver
-    // ingresos_projection_rows_v3_conservador en la sesión que generó este
-    // corte; vsLM = vs. agosto cerrado, vsU3M = vs. promedio jun/jul/ago
-    // cerrados). Misma curaduría de servicios por sede que la pasada
-    // anterior, solo con los valores recalculados al extremo conservador.
+    // CORREGIDO 28-sep-2026: la curva de pacing conservadora usaba febrero
+    // (28 días) como "máximo histórico" en las 3 sedes, lo que subestimaba
+    // la proyección de Ingresos por el sesgo de calendario (día 27 = 96%
+    // del mes en febrero vs. 90% en septiembre). Se recalculó excluyendo
+    // febrero de la calibración; los valores de esta tabla vienen de
+    // Base!F ya corregido, propagando el mismo factor sede-nivel a cada
+    // servicio (misma curaduría de servicios por sede que la pasada
+    // anterior). vsLM = vs. agosto cerrado, vsU3M = vs. promedio jun/jul/ago
+    // cerrados.
     total: [
-      { nombre: "Tratamientos FIV/ICSI", valor: 3.7, vsLM: -25, vsU3M: -10 },
-      { nombre: "Congelación de Gametos", valor: 3.7, vsLM: 29, vsU3M: 45 },
-      { nombre: "Farmacia", valor: 2.8, vsLM: -17, vsU3M: -6 },
-      { nombre: "Laboratorio", valor: 2.4, vsLM: -5, vsU3M: 14 },
-      { nombre: "Subrogación", valor: 0.5, vsLM: -65, vsU3M: -41 },
-      { nombre: "Consultas", valor: 0.5, vsLM: 0, vsU3M: 19 },
-      { nombre: "Procedimientos / Quirúrgicos", valor: 0.2, vsLM: -44, vsU3M: -26 },
-      { nombre: "Imágenes", valor: 0.2, vsLM: 218, vsU3M: 154 },
-      { nombre: "Wellness", valor: 0.1, vsLM: 262, vsU3M: 405 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 3.5, vsLM: -29, vsU3M: -15 },
+      { nombre: "Congelación de Gametos", valor: 3.5, vsLM: 21, vsU3M: 36 },
+      { nombre: "Farmacia", valor: 2.7, vsLM: -21, vsU3M: -11 },
+      { nombre: "Laboratorio", valor: 2.3, vsLM: -8, vsU3M: 10 },
+      { nombre: "Subrogación", valor: 0.5, vsLM: -66, vsU3M: -43 },
+      { nombre: "Consultas", valor: 0.4, vsLM: -10, vsU3M: 7 },
+      { nombre: "Procedimientos / Quirúrgicos", valor: 0.2, vsLM: -36, vsU3M: -15 },
+      { nombre: "Imágenes", valor: 0.2, vsLM: 183, vsU3M: 126 },
+      { nombre: "Wellness", valor: 0.1, vsLM: 107, vsU3M: 188 },
       { nombre: "Otros", valor: 0.0, vsLM: 49, vsU3M: 9 },
     ],
     CDMX: [
-      { nombre: "Tratamientos FIV/ICSI", valor: 3.3, vsLM: -17, vsU3M: 1 },
-      { nombre: "Congelación de Gametos", valor: 3.1, vsLM: 54, vsU3M: 55 },
-      { nombre: "Farmacia", valor: 2.5, vsLM: -3, vsU3M: 6 },
-      { nombre: "Laboratorio", valor: 2.2, vsLM: 26, vsU3M: 43 },
-      { nombre: "Subrogación", valor: 0.5, vsLM: -65, vsU3M: -41 },
-      { nombre: "Consultas", valor: 0.3, vsLM: 17, vsU3M: 18 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 3.1, vsLM: -23, vsU3M: -6 },
+      { nombre: "Congelación de Gametos", valor: 3.0, vsLM: 47, vsU3M: 48 },
+      { nombre: "Farmacia", valor: 2.3, vsLM: -9, vsU3M: -1 },
+      { nombre: "Laboratorio", valor: 2.0, vsLM: 17, vsU3M: 33 },
+      { nombre: "Subrogación", valor: 0.5, vsLM: -66, vsU3M: -43 },
+      { nombre: "Consultas", valor: 0.3, vsLM: 0, vsU3M: 1 },
       { nombre: "Procedimientos / Quirúrgicos", valor: 0.2, vsLM: -37, vsU3M: -18 },
     ],
     GDL: [
-      { nombre: "Congelación de Gametos", valor: 0.5, vsLM: -27, vsU3M: 12 },
-      { nombre: "Tratamientos FIV/ICSI", valor: 0.3, vsLM: -51, vsU3M: -48 },
-      { nombre: "Laboratorio", valor: 0.2, vsLM: -65, vsU3M: -56 },
-      { nombre: "Consultas", valor: 0.2, vsLM: -17, vsU3M: 24 },
-      { nombre: "Farmacia", valor: 0.1, vsLM: -77, vsU3M: -71 },
+      { nombre: "Congelación de Gametos", valor: 0.5, vsLM: -30, vsU3M: 8 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 0.3, vsLM: -45, vsU3M: -42 },
+      { nombre: "Laboratorio", valor: 0.2, vsLM: -63, vsU3M: -53 },
+      { nombre: "Consultas", valor: 0.2, vsLM: -27, vsU3M: 10 },
+      { nombre: "Farmacia", valor: 0.1, vsLM: -76, vsU3M: -70 },
       { nombre: "Procedimientos / Quirúrgicos", valor: 0.0, vsLM: -54, vsU3M: -49 },
       { nombre: "Imágenes", valor: 0.0, vsLM: 281, vsU3M: 53 },
     ],
     MTP: [
-      { nombre: "Farmacia", valor: 0.2, vsLM: -43, vsU3M: -24 },
-      { nombre: "Tratamientos FIV/ICSI", valor: 0.1, vsLM: -74, vsU3M: -67 },
-      { nombre: "Laboratorio", valor: 0.0, vsLM: -79, vsU3M: -60 },
+      { nombre: "Farmacia", valor: 0.2, vsLM: -41, vsU3M: -21 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 0.1, vsLM: -78, vsU3M: -72 },
+      { nombre: "Laboratorio", valor: 0.1, vsLM: -79, vsU3M: -60 },
       { nombre: "Congelación de Gametos", valor: 0.0, vsLM: -78, vsU3M: -56 },
       { nombre: "Consultas", valor: 0.0, vsLM: -15, vsU3M: -14 },
       { nombre: "Imágenes", valor: 0.0, vsLM: -79, vsU3M: -79 },
@@ -158,30 +155,28 @@ window.DATA = {
   // actualizan aquí los valores estáticos de respaldo.
   highlights: {
     total: [
-      "Proyección de cierre: Ingresos $14.2M (sube de $14.07M por un ajuste de pipeline comercial de +$91k en Guadalajara, confirmado por Marite), Atenciones 2,677, Pacientes 992 — estos dos se mantienen en el valor ya comunicado (con ajuste de piso en Atenciones GDL 439→457 y en Pacientes de las 3 sedes, donde el Real a corte-21 ya lo superó). Consultas SÍ cambia este corte: proyección corregida a 348 (antes 1,658 — combina el error de filtro corregido con la decisión de Marite de contar también las citas \"Citado\" sin confirmar, no solo \"Confirmada\"; ver detalle abajo).",
-      "Ingresos: Real acumulado a corte-21 $10.44M (vs $9.81M a corte-19), Ratio a cierre 1.36x — el avance del Real no mueve la Proyección (Base!F es un valor fijo por Sede×Servicio, no recalculado por corte); el único movimiento de este corte es el ajuste de pipeline comercial +$91k en GDL (Base!H), que Marite confirmó como intencional.",
-      "Pacientes: el Real (992) ya IGUALA a la Proyección congelada en las 3 sedes — es decir, septiembre alcanzó con 9 días de anticipación el nivel de pacientes que se había proyectado para el cierre del mes completo. Vale la pena revisar si el piso congelado sigue siendo conservador o si conviene reabrir la proyección el próximo corte.",
-      "Consultas: CORREGIDO este corte — la cifra anterior (1,036 real / 1,658 proyectado) contaba TODAS las citas de la base (laboratorio, quirófano, administrativo, seguimiento), no solo consultas de Primera Vez. Filtrando correctamente con el archivo limpio que Marite subió (Consultas_15.xlsx): 223 reales (1-21 sep) + 125 agendadas (Citado + Confirmada) = 348 proyectado, +10% vs agosto (316) — Marite pidió explícitamente contar también las citas \"Citado\" (agendadas pero aún sin confirmar por paciente/staff), no solo las 23 ya \"Confirmada\"; es una lectura más optimista que puede incluir citas que se cancelen o reagenden.",
-      "Subrogación: resuelto el desglose Valoración/Programa Activo con una metodología de clasificación por Concepto de cargo (Valoración subrogada vs. paquetes Surrogacy) — Programa Activo Sep reproduce EXACTO el valor ya publicado antes de este corte (2 pacientes, $286,207), lo que valida la metodología. Valoración sube a 54 pacientes ($75,388), casi el doble de las 28 del corte anterior.",
-      "HubSpot: 1,365 leads y 328 citas agendadas a corte-21 (24% conversión), ritmo consistente con el mes cerrado de agosto (1,958 leads / 482 citas al cierre completo) — sin señales de desviación en el embudo.",
+      "Corte 27-sep-2026 — cambio de metodología: Atenciones y Pacientes YA NO ESTÁN CONGELADAS. Desde este corte se recalculan cada vez con la curva de pacing conservadora (máximo histórico Ene-Ago), igual que Ingresos. A día 27 la curva ya está prácticamente saturada (~1.0 de share acumulado), así que en las 3 sedes Proyectado = Real: Atenciones 3,212 (+3% vs agosto, +20% vs prom. últimos 3 meses cerrados) y Pacientes ÚNICOS del mes 1,240 (+24% vs agosto, +50% vs U3M) — no queda margen de extrapolación conservador este mes.",
+      "Ingresos: Real acumulado a corte-27 $12.38M, Proyección $13.46M (Ratio a cierre 1.09x) — incluye el ajuste de pipeline comercial +$91k de Guadalajara (Base!H). CORREGIDO: la primera versión de este corte daba $12.65M porque el 'máximo histórico' de la curva de pacing estaba determinado en las 3 sedes por febrero (mes de 28 días — su día 27 ya es 96% del mes vs. 90% en septiembre), dejando casi sin margen los últimos 3 días. Se recalculó excluyendo febrero de la calibración por día-calendario. El Real/Proyectado por Sede×Servicio se recalculó propagando un factor a nivel sede a cada fila existente (no se rehizo la categorización Concepto→Servicio completa de los ~3,200 nuevos cargos de septiembre — ver nota de alcance).",
+      "Consultas: se corrigió un bug real en la fórmula en vivo de \"Agendado\" (RAW_CitasAgendadas) — solo contaba citas \"Confirmada\" y excluía \"Citado\", pese a que esa política ya se había decidido en cortes previos. Con la fórmula corregida: 281 reales + 48 agendadas = 329 proyectado (+4% vs agosto, +17% vs U3M).",
+      "Alcance de este corte: se actualizaron Ingresos/Atenciones/Pacientes/Consultas (Real y Proyección) y Mezcla de servicios (con propagación de factor por sede, sin recategorización). NO se refrescaron este pase: Subrogación, Evolutivo por médico, HubSpot ni el detalle de Consultas por concepto (consultas_ranking) — quedan con los valores del corte anterior.",
     ],
     CDMX: [
-      "Ingresos MTD $9.18M (88% del Real total de la compañía), Proyección sin cambio en $12.36M.",
-      "Atenciones: Real 1,917, Proyección se mantiene en 2,057 (aún no alcanza el piso, a diferencia de GDL) — sigue topada por el techo de ticket promedio (ver SEDES_CON_TECHO_TICKET en data-live.js).",
-      "Pacientes: Real 714 ya superó el piso congelado (683) — Proyección = Real. Es la sede con el mayor volumen absoluto de pacientes nuevos del mes.",
-      "Consultas: CORREGIDO — 104 reales + 56 agendadas (Citado + Confirmada) = 160 proyectado, +17% vs agosto (137). La cifra previamente reportada (699/1,185) incluía citas que no son consultas de Primera Vez; el agendado ahora cuenta también las \"Citado\" sin confirmar (antes solo 12 Confirmada).",
+      "Ingresos MTD $10.67M, Proyección $11.59M (+9% vs agosto) — corregida por el sesgo de febrero en la curva de pacing (antes $10.83M).",
+      "Atenciones: Real 2,404 = Proyección (ya no congelada) — +16% vs agosto, +27% vs U3M.",
+      "Pacientes únicos: Real 886 = Proyección — +43% vs agosto, +63% vs U3M. Es la sede con mayor volumen absoluto.",
+      "Consultas: 129 reales + 26 agendadas = 155 proyectado, +13% vs agosto.",
     ],
     GDL: [
-      "Ingresos MTD $0.96M, Proyección sube a $1.50M (antes $1.41M) por un ajuste de pipeline comercial de +$91k que Marite cargó en Base!H para septiembre — sigue siendo la sede con mayor brecha vs su propio Real (Ratio 1.56x).",
-      "Atenciones: Real 457 YA SUPERÓ el piso congelado (439) — único ajuste de Proyección de Atenciones este corte (439→457, +18). Vale la pena revisar en el próximo corte si el pipeline comercial de GDL ya sostiene ese nivel o si el techo por ticket promedio debería reactivarse (ver nota histórica en data-live.js).",
-      "Pacientes: Real 221 también superó su piso (215) — Proyección = Real.",
-      "Consultas: CORREGIDO — 94 reales + 40 agendadas (Citado + Confirmada) = 134 proyectado, +1% vs agosto (133). La cifra previamente reportada (252/343) incluía citas que no son consultas de Primera Vez; el agendado ahora cuenta también las \"Citado\" sin confirmar (antes solo 6 Confirmada).",
+      "Ingresos MTD $1.30M, Proyección $1.46M — incluye el ajuste de pipeline comercial +$91k en Base!H (sobre un Proyectado base de $1.37M, corregido por el sesgo de febrero; antes $1.41M).",
+      "Atenciones: Real 613 = Proyección — -18% vs agosto, +9% vs U3M.",
+      "Pacientes únicos: Real 279 = Proyección — -3% vs agosto, +27% vs U3M.",
+      "Consultas: 112 reales + 11 agendadas = 123 proyectado, -8% vs agosto.",
     ],
     MTP: [
-      "Ingresos MTD $0.30M, Proyección prácticamente alcanzada ($301,852 vs. Real $300,805 — margen de apenas ~$1,000) — es la sede más cerca de agotar su Proyección antes de fin de mes; vigilar de cerca el próximo corte.",
-      "Atenciones: Real 143, todavía por debajo del piso congelado (163) — es la única sede donde la Proyección de Atenciones no tuvo que ajustarse este corte.",
-      "Pacientes: Real 57 superó su piso (55) — Proyección = Real.",
-      "Consultas: CORREGIDO — 25 reales + 29 agendadas (Citado + Confirmada) = 54 proyectado, +17% vs agosto (46). La cifra previamente reportada (85/130) incluía citas que no son consultas de Primera Vez; el agendado ahora cuenta también las \"Citado\" sin confirmar (antes solo 5 Confirmada).",
+      "Ingresos MTD $0.41M, Proyección $0.41M — la sede con mayor caída relativa vs agosto (-54%) y vs U3M (-32%).",
+      "Atenciones: Real 195 = Proyección — -32% vs agosto.",
+      "Pacientes únicos: Real 75 = Proyección — -21% vs agosto, +17% vs U3M.",
+      "Consultas: 40 reales + 11 agendadas = 51 proyectado, +11% vs agosto, +87% vs U3M — el mayor repunte relativo de las 3 sedes.",
     ],
   },
 
