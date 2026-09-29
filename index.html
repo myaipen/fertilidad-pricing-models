@@ -1426,19 +1426,33 @@ function buildHubspotCharts(){
 function buildHubspotDetail(){
   const el = document.getElementById("hubspot-detail");
   const bySede = D.hubspot.conversion_por_sede;
+  // CORREGIDO 29-sep-2026: antes esta tabla decía "agosto" fijo en el título
+  // Y en los datos sin importar el mes elegido (bug reportado por Marite:
+  // "si tengo septiembre en el filtro por qué me sigue saliendo agosto?").
+  // Ahora usa el mismo selector global de "mes vigente" (Ene-Dic) que el
+  // resto del tablero — ver buildMesVigenteSelect() en index.html y
+  // MES_VIGENTE en data-live.js — así que el mes que se muestra aquí SIEMPRE
+  // es el que está seleccionado ahí, no un valor congelado.
+  const mesVig = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 9;
+  const mesLabelCorto = (window.MESES_12 || [])[mesVig-1] || "";
+  const mesLabelLargo = nombreMesLargo(mesVig);
   const rows = Object.entries(bySede).map(([code,v])=>{
-    const diff = v.agosto - v.total2026;
+    const valMes = (v.mensual || [])[mesVig-1];
+    if (valMes == null){
+      return `<tr><td>${code}</td><td class="num">—</td><td class="num">${v.total2026}%</td><td class="num">—</td></tr>`;
+    }
+    const diff = valMes - v.total2026;
     const cls = diff>=0 ? "up":"down"; const arrow = diff>=0?"▲":"▼";
-    return `<tr><td>${code}</td><td class="num">${v.agosto}%</td><td class="num">${v.total2026}%</td><td class="num"><span class="${cls}">${arrow} ${diff>=0?'+':''}${diff} pp</span></td></tr>`;
+    return `<tr><td>${code}</td><td class="num">${valMes}%</td><td class="num">${v.total2026}%</td><td class="num"><span class="${cls}">${arrow} ${diff>=0?'+':''}${diff} pp</span></td></tr>`;
   }).join("");
   const cohRows = D.hubspot.cohortes.map(r=>`
     <tr><td>${r.mes}</td><td class="num">${fmt(r.leads,0)}</td><td class="num">${r.m0}%</td><td class="num">${r.m1}%</td><td class="num">${r.m2}%</td><td class="num">${r.sin}%</td></tr>
   `).join("");
   el.innerHTML = `
     <div class="panel">
-      <div class="panel-title">Conversión % por sede — agosto vs. total 2026</div>
-      <table><thead><tr><th>Sede</th><th class="num">Agosto</th><th class="num">Total 2026</th><th class="num">Diferencia</th></tr></thead><tbody>${rows}</tbody></table>
-      <div style="font-size:11px; color:var(--axis); margin-top:8px; font-style:italic;">Fijo por sede (no cambia con el filtro de Periodo). Agosto es parcial: deals recientes aún no completan su ventana de conversión.</div>
+      <div class="panel-title">Conversión % por sede — ${mesLabelLargo} vs. total 2026</div>
+      <table><thead><tr><th>Sede</th><th class="num">${mesLabelCorto}</th><th class="num">Total 2026</th><th class="num">Diferencia</th></tr></thead><tbody>${rows}</tbody></table>
+      <div style="font-size:11px; color:var(--axis); margin-top:8px; font-style:italic;">Usa el selector de "mes vigente" (Ene-Dic), no el filtro de Periodo. Citas agendadas en ${mesLabelLargo} ÷ deals creados en ${mesLabelLargo}, por sede. Si es el mes en curso, es parcial: deals recientes aún no completan su ventana de conversión.</div>
     </div>
     <div class="panel">
       <div class="panel-title">Cohortes de deals: ¿cuántos meses después agenda cita?</div>
