@@ -54,6 +54,17 @@ window.DATA = {
     // contando SOLO "Confirmada" pese a la decisión ya tomada de incluir
     // también "Citado" — quedó en 48 (26+11+11). proy = real + agendado.
     consultas: { hist: [168, 167, 235, 220, 225, 271, 255, 316], real: 281, agendado: 48, proy: 329, vsLM: 4, vsU3M: 17, nota: "actualizado 27-sep-2026 con Consultas_16.xlsx — real 281 (1-26 sep aprox.), agendado 48 (Citado+Confirmada, corrigiendo la fórmula en vivo que solo contaba Confirmada). hist sube levemente en Ene/Mar/Jun por datos más completos del archivo nuevo." },
+    // NUEVO 28-sep-2026, a pedido de Marite: % de No show = no_show /
+    // (realizadas + no_show), tomado de la hoja "No show" de Consultas_16.xlsx
+    // (362 citas Ene-Sep, ya filtradas a Grupo de conceptos = "Primera Vez",
+    // mismo criterio que "Consultas"). hist = % de cada uno de los 8 meses
+    // cerrados; actual = % de septiembre (MTD, corte-27); prom = promedio
+    // simple de los 8 meses cerrados; deltaPts = actual - prom (en puntos
+    // porcentuales, no % relativo, para que la comparación sea legible).
+    // TODAVÍA ES MANUAL (como Highlights) — no hay una hoja "No show" en vivo
+    // en el Sheet todavía; si se agrega un tab RAW_NoShow con el mismo patrón
+    // que RAW_CitasAgendadas, se puede automatizar en data-live.js.
+    noshow: { hist: [8.7, 6.2, 13.9, 15.7, 19.1, 14.8, 14.7, 15.3], actual: 16.4, prom: 13.5, deltaPts: 2.8 },
   },
 
   // ------------------------------------------------------------------------
@@ -66,6 +77,7 @@ window.DATA = {
       atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2072], actual: 2404, proy: 2404, vsLM: 16, vsU3M: 27, nota: "Proyección = Real: a corte-27 la curva de pacing conservadora ya está casi saturada (día 27 de 30) y el techo de ticket promedio (ver SEDES_CON_TECHO_TICKET) no deja margen adicional. Ya no está congelada." },
       pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 621], actual: 886, proy: 886, vsLM: 43, vsU3M: 63, nota: "pacientes únicos del mes (dedup Historia). Proyección = Real, ya no congelada." },
       consultas: { hist: [127, 105, 144, 145, 133, 169, 141, 137], real: 129, agendado: 26, proy: 155, vsLM: 13, vsU3M: 4, top_cat: "Consulta primera vez", top_n: 69 },
+      noshow: { hist: [7.3, 7.9, 11.1, 14.2, 19.9, 10.1, 13.0, 11.0], actual: 12.8, prom: 11.8, deltaPts: 1.0 },
     },
     GDL: {
       nombre: "Guadalajara",
@@ -73,6 +85,7 @@ window.DATA = {
       atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751], actual: 613, proy: 613, vsLM: -18, vsU3M: 9, nota: "Proyección = Real (curva ya saturada a corte-27). Ya no está congelada." },
       pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287], actual: 279, proy: 279, vsLM: -3, vsU3M: 27, nota: "pacientes únicos del mes. Proyección = Real, ya no congelada." },
       consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133], real: 112, agendado: 11, proy: 123, vsLM: -8, vsU3M: 18, top_cat: "Check up Ginecológico", top_n: 29 },
+      noshow: { hist: [13.2, 2.4, 15.7, 17.9, 16.8, 19.1, 17.1, 14.2], actual: 15.8, prom: 14.6, deltaPts: 1.2 },
     },
     MTP: {
       nombre: "Metepec",
@@ -80,6 +93,7 @@ window.DATA = {
       atenciones: { hist: [138, 189, 213, 178, 169, 107, 223, 286], actual: 195, proy: 195, vsLM: -32, vsU3M: -5, nota: "Proyección = Real (curva ya saturada a corte-27). Ya no está congelada." },
       pacientes: { hist: [31, 45, 47, 50, 33, 37, 60, 95], actual: 75, proy: 75, vsLM: -21, vsU3M: 17, nota: "pacientes únicos del mes. Proyección = Real, ya no congelada." },
       consultas: { hist: [8, 21, 16, 20, 13, 9, 27, 46], real: 40, agendado: 11, proy: 51, vsLM: 11, vsU3M: 87, top_cat: "Consulta primera vez", top_n: 33 },
+      noshow: { hist: [11.1, 4.5, 27.3, 20.0, 23.5, 40.0, 15.6, 28.1], actual: 27.3, prom: 21.3, deltaPts: 6.0 },
     },
   },
 
