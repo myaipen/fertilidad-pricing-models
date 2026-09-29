@@ -45,7 +45,7 @@ window.DATA = {
   // falla — no tiene que ser exacto al peso.
   total: {
     nombre: "Todas las sedes",
-    ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.7, 12.1, 12.0, 16.2], actual: 12.99, proy: 13.63, vsLM: -22, vsU3M: -6, nota: "ACTUALIZADO 29-sep-2026 con Cargos_y_Facturas_36.xlsx (corte 28-sep): Real sube de $12.38M a $12.99M. Proyectado se recalculó con el mismo piso Proyectado=MAX(Proyectado,Real) fila por fila en Base (ya no hay violaciones) — sube de $13.59M a $13.63M. Incluye el ajuste de pipeline comercial de GDL (Base!H), que Marite bajó de $91k a $31k entre cortes — ver pregunta en highlights." },
+    ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.7, 12.1, 12.0, 16.2], actual: 12.99, proy: 13.61, vsLM: -22, vsU3M: -6, nota: "ACTUALIZADO 29-sep-2026 (2ª sync, mismo corte 28-sep): Marite volvió a ajustar el pipeline comercial de GDL en Base!H (bajó de $31k a $8,000 — ver detalle en highlight de GDL). Proyectado total baja de $13.63M a $13.61M (Base!F no cambió, solo H). Real se mantiene en $12.99M." },
     atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3109], actual: 3327, proy: 3327, vsLM: 7, vsU3M: 25, nota: "suma CDMX+GDL+MTP, conteo de líneas de cargo (F. Cargo) hasta el 28-sep. Se recalcula con la curva de pacing conservadora (ya no congelada); a día 28 de 30 la curva sigue prácticamente saturada, así que Proyectado = Real en las 3 sedes." },
     pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1003], actual: 1270, proy: 1270, vsLM: 27, vsU3M: 54, nota: "suma CDMX+GDL+MTP, pacientes ÚNICOS del mes (dedup por Historia). Proyectado = max(Real, Atenciones_proy × ratio conservador); con Atenciones ya sin margen de extrapolación, Proyectado = Real en las 3 sedes." },
     // ACTUALIZADO 29-sep-2026 con Consultas_17.xlsx (corte 28-sep): real sube
@@ -78,7 +78,7 @@ window.DATA = {
     },
     GDL: {
       nombre: "Guadalajara",
-      ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5, 2.8], actual: 1.32, proy: 1.46, vsLM: -51, vsU3M: -39, nota: "ACTUALIZADO 29-sep-2026 (corte 28-sep): Real sube de $1.30M a $1.32M; Proyectado baja de $1.50M a $1.46M — NO es un error: Marite bajó el ajuste de pipeline comercial de GDL (Base!H) de $91k a $31k entre el corte-27 y este corte (pregunta pendiente de confirmar, ver highlights). El Proyectado base (sin H) de hecho sube de $1.41M a $1.42M." },
+      ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5, 2.8], actual: 1.32, proy: 1.43, vsLM: -52, vsU3M: -40, nota: "ACTUALIZADO 29-sep-2026 (2ª sync, mismo corte 28-sep): Marite volvió a mover el ajuste de pipeline comercial de GDL en Base!H — ya no es $91k ni $31k, ahora es $8,000 en total (Farmacia $5,000 + Consultas $3,000, resto en blanco). Proyectado baja de $1.46M a $1.43M. El Proyectado base sin H (Base!F, con el piso MAX(Proyectado,Real) ya aplicado) no cambió: $1.42M." },
       atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751], actual: 627, proy: 627, vsLM: -17, vsU3M: 12, nota: "Proyección = Real (curva ya saturada a corte-28)." },
       pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287], actual: 286, proy: 286, vsLM: 0, vsU3M: 31, nota: "pacientes únicos del mes. Proyección = Real." },
       consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133], real: 116, agendado: 9, proy: 125, vsLM: -6, vsU3M: 20, top_cat: "Check up Ginecológico", top_n: 29 },
@@ -110,7 +110,7 @@ window.DATA = {
       { nombre: "Farmacia", valor: 2.7, vsLM: -21, vsU3M: -11 },
       { nombre: "Laboratorio", valor: 2.3, vsLM: -8, vsU3M: 10 },
       { nombre: "Subrogación", valor: 0.5, vsLM: -66, vsU3M: -43 },
-      { nombre: "Consultas", valor: 0.5, vsLM: -3, vsU3M: 15 }, // corte 28-sep: era -4, 14
+      { nombre: "Consultas", valor: 0.5, vsLM: -2, vsU3M: 16 }, // corte 28-sep (2ª sync): era -3, 15 — incluye el H de GDL·Consultas ($3,000)
       { nombre: "Procedimientos / Quirúrgicos", valor: 0.3, vsLM: -15, vsU3M: 12 }, // corte 28-sep: era -19, 7
       { nombre: "Imágenes", valor: 0.2, vsLM: 188, vsU3M: 130 },
       { nombre: "Wellness", valor: 0.1, vsLM: 107, vsU3M: 190 }, // corte 28-sep: era vsU3M 189
@@ -129,8 +129,8 @@ window.DATA = {
       { nombre: "Congelación de Gametos", valor: 0.5, vsLM: -30, vsU3M: 8 },
       { nombre: "Tratamientos FIV/ICSI", valor: 0.3, vsLM: -44, vsU3M: -41 }, // corte 28-sep: era -45, -42
       { nombre: "Laboratorio", valor: 0.2, vsLM: -63, vsU3M: -53 },
-      { nombre: "Consultas", valor: 0.2, vsLM: -13, vsU3M: 29 }, // corte 28-sep: era -15, 27
-      { nombre: "Farmacia", valor: 0.1, vsLM: -74, vsU3M: -66 }, // corte 28-sep: era -74, -67
+      { nombre: "Consultas", valor: 0.2, vsLM: -12, vsU3M: 31 }, // corte 28-sep (2ª sync): era -13, 29 — incluye H=$3,000 de Base
+      { nombre: "Farmacia", valor: 0.1, vsLM: -73, vsU3M: -65 }, // corte 28-sep (2ª sync): era -74, -66 — incluye H=$5,000 de Base
       { nombre: "Procedimientos / Quirúrgicos", valor: 0.0, vsLM: -54, vsU3M: -49 },
       { nombre: "Imágenes", valor: 0.0, vsLM: 281, vsU3M: 53 },
     ],
@@ -163,9 +163,10 @@ window.DATA = {
   // actualizan aquí los valores estáticos de respaldo.
   highlights: {
     total: [
-      "Corte 28-sep-2026 — actualización con Cargos_y_Facturas_36.xlsx y Consultas_17.xlsx (un día más de Real, sin tocar la metodología de proyección): Ingresos Real $12.99M / Proyección $13.63M; Atenciones 3,327 (Proyectado = Real, curva ya saturada); Pacientes únicos 1,270 (= Real); Consultas 293 reales + 33 agendadas = 326 proyectado; % No show 16.8% (prom. 8 meses cerrados 13.5%, +3.3 pts).",
+      "Corte 28-sep-2026 — actualización con Cargos_y_Facturas_36.xlsx y Consultas_17.xlsx (un día más de Real, sin tocar la metodología de proyección): Ingresos Real $12.99M / Proyección $13.61M; Atenciones 3,327 (Proyectado = Real, curva ya saturada); Pacientes únicos 1,270 (= Real); Consultas 293 reales + 33 agendadas = 326 proyectado; % No show 16.8% (prom. 8 meses cerrados 13.5%, +3.3 pts).",
       "Este corte SÍ incluye Subrogación (a diferencia del corte-27, que no la había refrescado): Valoración sube de 54 a 91 pacientes / $75,387.73 a $126,594.49 en el mes — es un catch-up de 7 días (el corte-27 se había quedado en el dato de corte-21), no un salto de un día. Programa Activo se mantiene en 2 pacientes / $286,206.89 (sin nuevos paquetes vendidos).",
-      "Pendiente de confirmar con Marite: el ajuste de pipeline comercial de Guadalajara en Base!H bajó de $91,000 a $31,000 entre el corte-27 y este corte (detalle nuevo: Tratamientos $10k, Farmacia $5k, Congelación $10k, Laboratorio $5k, Consultas $1k). No se tocó ese valor (es 100% manual de Marite) — solo se usa tal cual está en el Sheet. Si no fue intencional, avisar para corregirlo y yo recalculo Ingresos GDL/Total de inmediato.",
+      "Ajuste de pipeline comercial de Guadalajara (Base!H): Marite lo volvió a mover — de $91k (antes del corte-27) a $31k (corte-27) y ahora a $8,000 en total (Farmacia $5,000 + Consultas $3,000, resto en blanco). Es un valor 100% manual suyo, así que solo se refleja tal cual está en el Sheet — Proyección GDL/Total ya quedan sincronizados con este último valor ($1.43M / $13.61M).",
+      "Nota sobre 'Evolutivo 2026': esa hoja es un espejo en vivo de Base (fórmulas SUMAR.SI.CONJUNTO sobre Base!F y Base!H) — sirve para verificar, no para editar. Escribir un número directo en una celda de 'Evolutivo 2026' borra su fórmula y NO cambia nada en Base ni en el dashboard. Para mover una Proyección de verdad hay que editar Base!F (Proyectado) o Base!H (ajuste de pipeline), en la hoja 'Base'.",
       "Alcance de este corte: Ingresos/Atenciones/Pacientes/Consultas (Real y Proyección), Mezcla de servicios y Subrogación quedaron actualizados a día 28-sep. NO se pudo refrescar este pase: Evolutivo por médico (hoja PorMedico) ni HubSpot — el endpoint de Apps Script que las sirve estuvo repetidamente caído/con timeout durante este corte (mismo problema de cuota de ejecuciones concurrentes ya diagnosticado el 28-sep, ver data-live.js); PorMedico en particular es una tabla de ~680 filas que no se puede reescribir a mano de forma segura sin una lectura confiable. Quedan con los valores del corte anterior — reintentar en cuanto el Apps Script se estabilice.",
     ],
     CDMX: [
@@ -175,7 +176,7 @@ window.DATA = {
       "Consultas: 132 reales + 18 agendadas = 150 proyectado, +9% vs agosto.",
     ],
     GDL: [
-      "Ingresos MTD $1.32M, Proyección $1.46M — el ajuste de pipeline comercial en Base!H bajó de $91k a $31k entre cortes (pendiente de confirmar con Marite, ver highlight total); sin ese cambio de H, el Proyectado base sube de $1.41M a $1.42M.",
+      "Ingresos MTD $1.32M, Proyección $1.43M — el ajuste de pipeline comercial en Base!H bajó otra vez, ahora a $8,000 en total (Farmacia $5,000 + Consultas $3,000). El Proyectado base sin H (Base!F) es $1.42M — casi todo el Proyectado de GDL ya viene de ahí, el ajuste manual pesa poco este corte.",
       "Atenciones: Real 627 = Proyección — -17% vs agosto, +12% vs U3M.",
       "Pacientes únicos: Real 286 = Proyección — 0% vs agosto, +31% vs U3M.",
       "Consultas: 116 reales + 9 agendadas = 125 proyectado, -6% vs agosto.",
