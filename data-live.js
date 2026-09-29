@@ -86,15 +86,17 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // este valor a 12). Solo aplica al mes vigente EN CURSO (no cerrado) — para
 // meses ya cerrados (Real = mes completo) no se muestra ninguna nota de corte,
 // ver mesVigenteCerrado().
-// ACTUALIZADO 21-sep-2026 (2ª pasada, mismo día): corte sube de 19 a 21
-// (Cargos_y_Facturas_33.xlsx + Consultas_14.xlsx, ambos hasta 21-sep-2026).
-// Atenciones/Pacientes de sep-2026 quedan congelados vía
-// PROY_CONGELADA_SEP2026 (ver buildMonthlyRealMetric más abajo) por
-// instrucción explícita de Marite ("No cambien la proyección") — este bump
-// de corte NO recalibra shares/ratios de sep-2026 en la práctica porque el
-// freeze los sobreescribe; sí sigue afectando el texto de display
-// ("corte al día X") vía getCorteRealDia().
-let CORTE_REAL_DIA = 21;
+// ACTUALIZADO 28-sep-2026: corte sube de 21 a 27 (Cargos_y_Facturas_35.xlsx +
+// Consultas_16.xlsx, ambos hasta 27-sep-2026). Marite pidió explícitamente
+// DEJAR DE CONGELAR Atenciones/Pacientes: a partir de este corte se
+// recalculan cada vez con la metodología conservadora normal (curva de
+// pacing por máximo histórico, ver SHARE_CURVE_* y proyectarPorTendencia más
+// abajo) — el bloque PROY_CONGELADA_SEP2026 que las congelaba queda
+// DESACTIVADO (código conservado más abajo, comentado, por si hace falta
+// consultar el criterio que se usó del 21 al 27-sep). Pacientes se sigue
+// contando como pacientes ÚNICOS del mes (dedup por Historia), igual que
+// antes — eso no cambió, solo se quitó el freeze.
+let CORTE_REAL_DIA = 27;
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 
@@ -103,7 +105,7 @@ window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 // loadLiveDataIntoDashboard() lo autodetecta al último mes con datos reales
 // apenas carga (ver detectarMesVigente), y cambiar el selector dispara un
 // re-render completo con el nuevo mes como "vigente" y el anterior como LM.
-let MES_VIGENTE = 8;
+let MES_VIGENTE = 9;
 
 // Año vigente — GLOBAL, selector único en la barra de filtros de arriba
 // (junto a Sede/Periodo/Mes Vigente en index.html). Afecta TODO el tablero:
@@ -455,10 +457,21 @@ let _rawCache = {};
 // probando directo contra el Apps Script, "Atenciones" tardó ~28-40s y
 // "HubSpot" ~20s en responder con datos correctos (ConceptosMensual ya tiene
 // 13,392 filas y hay más hojas que nunca compitiendo por las ejecuciones
-// concurrentes que permite Apps Script) — 12s ya no alcanza. Este valor es
-// solo cuánto espera el navegador antes de reintentar/rendirse; no cambia
-// ninguna fórmula de datos ni de proyección.
-const TIMEOUT_SHEET_FETCH_MS = 30000;
+// concurrentes que permite Apps Script) — 12s ya no alcanza.
+// SUBIDO de nuevo a 45s (28-sep-2026, reporte de Marite: "Evolutivo por
+// médico" mostraba "Datos no disponibles"). Diagnóstico: probando en vivo
+// contra el mismo Apps Script se confirmó que "PorMedico" y "Base" pueden
+// tardar más de 30s o incluso devolver error temporalmente bajo carga (se
+// vio "Atenciones/Pacientes/Consultas/Conceptos/Subrogación" caer al
+// respaldo estático en la misma sesión de diagnóstico) — es una limitación
+// del lado de Apps Script (cuota de ejecuciones concurrentes de Google, no
+// un bug de este corte), que empeora con hojas cada vez más grandes
+// (PorMedico/ConceptosPorMedico). Con más hojas compitiendo, 30s ya no
+// siempre alcanza. Este valor es solo cuánto espera el navegador antes de
+// reintentar/rendirse; no cambia ninguna fórmula de datos ni de proyección
+// — cuando se agota, cada sección cae a su respaldo estático de data.js
+// (que siempre muestra el último corte guardado, nunca datos vacíos).
+const TIMEOUT_SHEET_FETCH_MS = 45000;
 
 async function fetchConTimeout(url, timeoutMs) {
   const controller = new AbortController();
@@ -762,23 +775,18 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
     }
     return proyBase;
   }
-  // CONGELAMIENTO (21-sep-2026, corte 19->21): Marite pidió explícitamente
-  // "No cambien la proyección" al mover el corte real de 19 a 21-sep. Los
-  // valores ya publicados (ver data.js pre-corte-21) son el piso a respetar:
-  // Atenciones {CDMX:2057, GDL:439, MTP:163}, Pacientes {CDMX:683, GDL:215,
-  // MTP:55}. PERO con el Real ya actualizado a corte-21, GDL en Atenciones
-  // (real 457) y las 3 sedes en Pacientes (real 714/221/57) YA SUPERAN esos
-  // pisos — dejarlos literales mostraría proyectado < real, inconsistente.
-  // Marite confirmó (21-sep-2026, vía pregunta explícita): usar
-  // Math.max(actual, piso_congelado) por sede, que sube el número SOLO
-  // donde el real ya lo exige (cambio mínimo respecto a lo publicado) y deja
-  // el resto exactamente igual. Aplica únicamente a MES_VIGENTE=9,
-  // ANIO_VIGENTE=2026 — no toca la metodología general (SHARE_CURVE_*,
-  // RATIO_*, proyectarPorTendencia) que sigue vigente para meses futuros.
-  const PROY_CONGELADA_SEP2026 = {
-    atenciones: { CDMX: 2057, GDL: 439, MTP: 163 },
-    pacientes:  { CDMX: 683,  GDL: 215, MTP: 55  },
-  };
+  // CONGELAMIENTO (21-sep-2026, corte 19->21) — DESACTIVADO desde el corte
+  // 27-sep-2026 (28-sep-2026, instrucción explícita de Marite: la
+  // proyección de Atenciones/Pacientes deja de congelarse y vuelve a
+  // recalcularse cada corte con la metodología conservadora normal, ver
+  // proyectarPorTendencia arriba). Se deja el bloque comentado como
+  // referencia histórica de cómo se manejó el freeze puntual de esa
+  // instrucción anterior ("No cambien la proyección"), no se usa más:
+  //
+  // const PROY_CONGELADA_SEP2026 = {
+  //   atenciones: { CDMX: 2057, GDL: 439, MTP: 163 },
+  //   pacientes:  { CDMX: 683,  GDL: 215, MTP: 55  },
+  // };
   const out = {};
   const lyPorSede = {};
   let histTotal = meses.map(() => 0), actualTotal = 0, lyTotal = 0, tieneLYTotal = false;
@@ -787,12 +795,6 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
     const hist = meses.map(n => m[n] || 0);
     const actual = m[MES_VIGENTE] || 0;
     let proy = proyectarPorTendencia(actual, hist, sede);
-    if (MES_VIGENTE === 9 && ANIO_VIGENTE === 2026 && anio === 2026) {
-      const tablaCongelada = esAtenciones ? PROY_CONGELADA_SEP2026.atenciones : PROY_CONGELADA_SEP2026.pacientes;
-      if (tablaCongelada && tablaCongelada[sede] != null) {
-        proy = Math.max(actual, tablaCongelada[sede]);
-      }
-    }
     hist.forEach((v,i) => histTotal[i] += v);
     actualTotal += actual;
     const lm = hist[hist.length-1] || 0;
