@@ -1155,18 +1155,33 @@ function buildHubspotMetric(rows) {
   };
 }
 
-function buildHubspotSedeMetric(rows) {
-  // Nota: esta hoja trae una sola foto (mes vigente + YTD), no un valor por
-  // cada uno de los 12 meses — así que "agosto" aquí es un nombre heredado,
-  // en realidad significa "el mes vigente al momento del último refresh de
-  // HubSpot" y no se mueve solo con el selector de mes del tablero.
+function buildHubspotSedeMensualMetric(rows) {
+  // CORREGIDO 29-sep-2026: reemplaza a la vieja "HubspotSede" (una sola foto
+  // fija, mal llamada "agosto" sin importar el mes elegido en el tablero —
+  // bug reportado por Marite). Esta hoja ("HubspotSedeMensual") trae Leads
+  // (createdate) y Citas (Fecha_CitaAgendada_Int2) por Sede para cada uno de
+  // los 9 meses con datos (Ene-Sep 2026), mismo criterio de "sucursal" que
+  // conversion_pct total. mensual[] tiene 12 casillas (Ene=0..Dic=11) para
+  // que el selector de mes vigente pueda indexar directo con MES_VIGENTE-1;
+  // los meses sin fila (Oct-Dic, aún no llegan) quedan en null. total2026 se
+  // recalcula sumando Leads/Citas de TODOS los meses con datos (no un valor
+  // aparte cacheado), así que se mantiene correcto automáticamente mes tras
+  // mes sin haber que tocar nada aquí.
+  // Filas: [MesNum, MesLabel, Sede, Leads, Citas].
   const out = {};
-  for (const [sede, leadsAgoRaw, citasAgoRaw, leadsYtdRaw, citasYtdRaw] of rows) {
+  for (const sede of SEDES) out[sede] = { mensual: Array(12).fill(null), leadsYtd: 0, citasYtd: 0 };
+  for (const [mesNumRaw, , sede, leadsRaw, citasRaw] of rows) {
     if (!SEDES.includes(sede)) continue;
-    out[sede] = {
-      agosto: pct(num(citasAgoRaw), num(leadsAgoRaw)),
-      total2026: pct(num(citasYtdRaw), num(leadsYtdRaw)),
-    };
+    const mesNum = Number(mesNumRaw);
+    if (mesNum < 1 || mesNum > 12) continue;
+    const leads = num(leadsRaw), citas = num(citasRaw);
+    out[sede].mensual[mesNum - 1] = pct(citas, leads);
+    out[sede].leadsYtd += leads;
+    out[sede].citasYtd += citas;
+  }
+  for (const sede of SEDES) {
+    out[sede].total2026 = pct(out[sede].citasYtd, out[sede].leadsYtd);
+    delete out[sede].leadsYtd; delete out[sede].citasYtd;
   }
   return out;
 }
@@ -1182,13 +1197,13 @@ function buildHubspotCohortes(rows) {
 async function fetchLiveHubspot() {
   const [hsRows, sedeRows, cohortRows] = await Promise.all([
     fetchSheetJson("Hubspot"),
-    fetchSheetJson("HubspotSede"),
+    fetchSheetJson("HubspotSedeMensual"),
     fetchSheetJson("HubspotCohortes"),
   ]);
   const base = buildHubspotMetric(hsRows);
   return {
     ...base,
-    conversion_por_sede: buildHubspotSedeMetric(sedeRows),
+    conversion_por_sede: buildHubspotSedeMensualMetric(sedeRows),
     cohortes: buildHubspotCohortes(cohortRows),
   };
 }
