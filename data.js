@@ -235,29 +235,47 @@ window.DATA = {
   // Fecha_CitaAgendada_Int2. ESTOS VALORES YA SE CARGAN EN VIVO (ver
   // data-live.js y la hoja "Hubspot"/"HubspotSede"/"HubspotCohortes" del
   // Sheet) — lo de aquí es solo el respaldo si el fetch en vivo falla.
-  // Corte de este respaldo: 21-sep-2026 (mes en curso; leads/citas de sep son
-  // MTD 1-21, conversion_por_sede.total2026 es acumulado Ene-21sep).
+  // Corte de este respaldo: 28-sep-2026 para leads/citas/conversion_pct (mes
+  // en curso, MTD 1-28). conversion_por_sede y cohortes siguen a corte-21sep
+  // (ver nota de metodología pendiente más abajo).
   // ------------------------------------------------------------------------
+  // ACTUALIZADO 29-sep-2026 con consulta directa a HubSpot (pipeline
+  // "Interesa2", id 100207220): Leads = deals creados por mes (createdate);
+  // Citas = deals con Fecha_CitaAgendada_Int2 en ese mes. Todo el bloque
+  // (leads/citas/conversion_pct, conversion_por_sede y cohortes) queda a
+  // corte-28sep. Marite confirmó la metodología: conversion_por_sede =
+  // citas agendadas del mes ÷ deals creados el mismo mes, por sede (campo
+  // "sucursal" del DEAL — Clínica), con filtro de mes. Los valores viejos de
+  // la hoja HubspotSede (CDMX 380/97, etc.) eran simplemente datos
+  // desactualizados/incorrectos, no una metodología distinta — ya se
+  // corrigieron ahí (tab HubspotSede) y aquí. Cohortes = por cada mes de
+  // alta (createdate), qué % agenda cita (Fecha_CitaAgendada_Int2) ese mismo
+  // mes (M0), al mes siguiente (M1) y dos meses después (M2, bucket exacto,
+  // no acumulado) — recalculado con crosstab createdate×fecha_citaagendada
+  // para los 9 meses y ya escrito también en la hoja HubspotCohortes.
   hubspot: {
-    leads: { hist: [836, 1068, 1023, 1015, 1759, 1438, 1538, 1958], actual: 1365 },
-    citas: { hist: [188, 230, 319, 334, 367, 314, 415, 482], actual: 328 },
-    conversion_pct: { hist: [22, 22, 31, 33, 21, 22, 27, 25], actual: 24 },
+    leads: { hist: [834, 1062, 1021, 1000, 1754, 1436, 1533, 1924], actual: 1932 },
+    citas: { hist: [188, 230, 318, 329, 367, 315, 416, 504], actual: 427 },
+    conversion_pct: { hist: [23, 22, 31, 33, 21, 22, 27, 26], actual: 22 },
     conversion_por_sede: {
-      // Agosto (cerrado) vs Total acumulado 2026 (Ene-21sep)
-      CDMX: { agosto: 23, total2026: 28 },
-      GDL: { agosto: 23, total2026: 21 },
-      MTP: { agosto: 34, total2026: 31 },
+      // Agosto (cerrado) vs Total acumulado 2026 (Ene-28sep), por "sucursal"
+      // del DEAL. Recalculado y confirmado a corte-28sep.
+      CDMX: { agosto: 24, total2026: 27 },
+      GDL: { agosto: 24, total2026: 21 },
+      MTP: { agosto: 36, total2026: 31 },
     },
+    // m0/m1/m2/sin en % del total de leads del mes (m2 = bucket exacto "2
+    // meses después", no acumulado); sin = 100 - m0 - m1 - m2.
     cohortes: [
-      { mes: "Ene-26", leads: 836, m0: 21, m1: 1, m2: 1, sin: 77 },
-      { mes: "Feb-26", leads: 1068, m0: 19, m1: 2, m2: 0, sin: 79 },
-      { mes: "Mar-26", leads: 1023, m0: 28, m1: 1, m2: 1, sin: 70 },
-      { mes: "Abr-26", leads: 1015, m0: 31, m1: 3, m2: 1, sin: 65 },
-      { mes: "May-26", leads: 1759, m0: 19, m1: 1, m2: 1, sin: 79 },
-      { mes: "Jun-26", leads: 1438, m0: 20, m1: 2, m2: 0, sin: 78 },
-      { mes: "Jul-26", leads: 1538, m0: 24, m1: 2, m2: 0, sin: 74 },
-      { mes: "Ago-26", leads: 1958, m0: 22, m1: 0, m2: 0, sin: 78 },
-      { mes: "Sep-26", leads: 1365, m0: 266, m1: 0, m2: 0, sin: 1099 },
+      { mes: "Ene-26", leads: 834, m0: 21, m1: 1, m2: 0, sin: 78 },
+      { mes: "Feb-26", leads: 1062, m0: 20, m1: 2, m2: 0, sin: 78 },
+      { mes: "Mar-26", leads: 1021, m0: 28, m1: 1, m2: 0, sin: 71 },
+      { mes: "Abr-26", leads: 1000, m0: 31, m1: 3, m2: 0, sin: 66 },
+      { mes: "May-26", leads: 1754, m0: 19, m1: 1, m2: 1, sin: 79 },
+      { mes: "Jun-26", leads: 1436, m0: 20, m1: 2, m2: 0, sin: 78 },
+      { mes: "Jul-26", leads: 1533, m0: 24, m1: 2, m2: 0, sin: 74 },
+      { mes: "Ago-26", leads: 1924, m0: 24, m1: 1, m2: 0, sin: 75 },
+      { mes: "Sep-26", leads: 1932, m0: 20, m1: 0, m2: 0, sin: 80 },
     ],
   },
 
