@@ -257,12 +257,17 @@ window.DATA = {
     leads: { hist: [834, 1062, 1021, 1000, 1754, 1436, 1533, 1924], actual: 1932 },
     citas: { hist: [188, 230, 318, 329, 367, 315, 416, 504], actual: 427 },
     conversion_pct: { hist: [23, 22, 31, 33, 21, 22, 27, 26], actual: 22 },
+    // CORREGIDO 29-sep-2026: antes solo traía "agosto" fijo (bug reportado
+    // por Marite: el panel decía "agosto" sin importar el mes elegido en el
+    // selector). Ahora mensual[] trae los 9 meses con dato (Ene=0..Sep=8;
+    // Oct-Dic quedan en null hasta que haya datos) para que el tablero
+    // muestre el mes que el selector de "mes vigente" tenga activo. En vivo
+    // esto se recalcula solo desde la hoja "HubspotSedeMensual" — esto es
+    // solo el respaldo estático si el fetch en vivo falla.
     conversion_por_sede: {
-      // Agosto (cerrado) vs Total acumulado 2026 (Ene-28sep), por "sucursal"
-      // del DEAL. Recalculado y confirmado a corte-28sep.
-      CDMX: { agosto: 24, total2026: 27 },
-      GDL: { agosto: 24, total2026: 21 },
-      MTP: { agosto: 36, total2026: 31 },
+      CDMX: { mensual: [26,27,38,41,21,25,32,24,22,null,null,null], total2026: 27 },
+      GDL: { mensual: [20,17,26,22,20,18,20,24,20,null,null,null], total2026: 21 },
+      MTP: { mensual: [24,28,38,46,19,14,32,36,32,null,null,null], total2026: 31 },
     },
     // m0/m1/m2/sin en % del total de leads del mes (m2 = bucket exacto "2
     // meses después", no acumulado); sin = 100 - m0 - m1 - m2.
