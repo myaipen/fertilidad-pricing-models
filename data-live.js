@@ -96,7 +96,15 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // consultar el criterio que se usó del 21 al 27-sep). Pacientes se sigue
 // contando como pacientes ÚNICOS del mes (dedup por Historia), igual que
 // antes — eso no cambió, solo se quitó el freeze.
-let CORTE_REAL_DIA = 27;
+// ACTUALIZADO 29-sep-2026: corte sube de 27 a 28 (Cargos_y_Facturas_36.xlsx +
+// Consultas_17.xlsx, ambos hasta 28-sep-2026). Solo se mueve el puntero de
+// día — la curva de pacing (SHARE_CURVE_*) y los ratios/techos no cambian,
+// así que esto NO es un cambio de metodología de proyección, solo el ajuste
+// obligatorio para que shareEnDia() lea el punto correcto de la curva con
+// el nuevo Real ya acumulado un día más. Ingresos (Base!F, ya floor-fixed en
+// el Sheet) no depende de este valor, por lo que su proyección tampoco se
+// mueve por este cambio.
+let CORTE_REAL_DIA = 28;
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 
