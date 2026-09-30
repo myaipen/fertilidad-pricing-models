@@ -163,31 +163,23 @@ window.DATA = {
   // actualizan aquí los valores estáticos de respaldo.
   highlights: {
     total: [
-      "Corte 29-sep-2026 — actualización con Cargos_y_Facturas_37.xlsx y Consultas_18.xlsx (mes prácticamente cerrado, día 29 de 30): Ingresos Real $13.94M / Proyección $14.42M (+$0.95M de Real y +$0.81M de Proyección vs corte-28); Atenciones 3,461 (Proyectado = Real, curva ya saturada); Pacientes únicos 1,299 (= Real); Consultas 303 reales + 19 agendadas = 322 proyectado; % No show 16.5% (prom. 8 meses cerrados 13.6%, +3.0 pts).",
-      "Mezcla de servicios: el salto de Ingresos lo explican sobre todo Tratamientos FIV/ICSI (+$0.5M, de $3.5M a $4.0M, la línea de mayor ticket) y Congelación de Gametos (se mantiene como #2, $3.6M). En Metepec, Congelación de Gametos casi se triplicó vs el corte anterior (de ~$40k a ~$99k) y Consultas subió fuerte también — ambos quedan marcados en la tabla de servicios por sede para que Marite los revise si no corresponden a un patrón esperado.",
-      "Subrogación: Valoración CDMX se mantiene en 91 pacientes pero el ingreso del mes baja ligeramente ($126,594.49 → $125,172.08, -$1,422 — una diferencia pequeña al recalcular contra el archivo más reciente, no se identificó una causa puntual, vale la pena revisar con el equipo de facturación si es relevante). Programa Activo CDMX SUBE de 2 a 3 pacientes / $286,206.89 a $306,034.48 (entró una transferencia de congelados de un caso de subrogación, +$19,827.59). Novedad: aparece por primera vez actividad de Subrogación en Guadalajara — 1 paciente en Valoración, $16,379.31 — se agregó como fila nueva en la hoja SubrogacionPacientes.",
-      "HubSpot (pipeline Interesa2, corte 29-sep, incluye todas las sucursales no solo las 3 sedes del dashboard): Leads 2,315 (vs 1,932 al corte anterior — no es un salto de 1 día, es una ventana más completa del mes), Citas agendadas 441, Conversión 19% (vs 22% anterior — normal: los leads más recientes del mes aún no han tenido tiempo de agendar). Por sede: CDMX 19% (antes 22%), GDL 17% (antes 20%), MTP 26% (antes 32%) — mismo patrón, leads de fin de mes sin madurar todavía. Conversión acumulada 2026 también se recalculó con la ventana completa a día 29: CDMX 23% (antes 27%), GDL 18% (antes 21%), MTP 26% (antes 31%) — bajan porque la metodología usa citas agendadas ÷ leads creados en la misma ventana de fechas sin ajustar por cohortes, así que meses recientes con leads aún en proceso de conversión bajan el promedio; no es una caída real en la tasa de conversión del negocio.",
-      "Ajuste de pipeline comercial de Guadalajara (Base!H) sin cambios este corte: se mantiene en $8,000 en total (Farmacia $5,000 + Consultas $3,000, resto en blanco) — Marite no lo tocó desde el corte-28.",
-      "Nota sobre 'Evolutivo 2026': esa hoja es un espejo en vivo de Base (fórmulas SUMAR.SI.CONJUNTO sobre Base!F y Base!H) — sirve para verificar, no para editar. Escribir un número directo en una celda de 'Evolutivo 2026' borra su fórmula y NO cambia nada en Base ni en el dashboard. Para mover una Proyección de verdad hay que editar Base!F (Proyectado) o Base!H (ajuste de pipeline), en la hoja 'Base'.",
-      "Alcance de este corte: Ingresos/Atenciones/Pacientes/Consultas (Real y Proyección), Mezcla de servicios, Subrogación y HubSpot quedaron actualizados a día 29-sep. NO se tocó este pase: Evolutivo por médico (hoja PorMedico) ni el ranking detallado de Consultas por concepto (consultas_ranking) — ambos siguen alimentándose en vivo desde sus hojas del Sheet (PorMedico, ConsultasRankingLive) y no formaban parte explícita de este encargo; si Marite los necesita actualizados en el respaldo estático, avisar para el próximo corte.",
+      "Metepec enciende una alerta positiva: Congelación de Gametos y Consultas aceleran con fuerza este corte, algo que no se veía en meses anteriores. Vale la pena confirmar con el equipo local si responde a una acción comercial puntual o es el inicio de una recuperación sostenida antes de ajustar la proyección hacia arriba.",
+      "Tratamientos FIV/ICSI y Congelación de Gametos siguen siendo, por mucho, los dos motores de ingreso de la compañía. Concentrar esfuerzo comercial y de pricing ahí (paquetes combinados, upsell de almacenamiento) sigue siendo la palanca de mayor impacto.",
+      "Subrogación gana tracción fuera de CDMX: Guadalajara registró su primer paciente del programa. Es una señal temprana de que la propuesta de valor puede replicarse en otras sedes — vale la pena dar seguimiento comercial cercano para no perder el momentum.",
+      "HubSpot: la conversión de Leads a Citas bajó en las tres sedes este corte. Antes de tratarlo como una alerta de funnel, hay que considerar que los leads de los últimos días del mes aún no han tenido tiempo de agendar — conviene confirmar en el próximo corte si la caída se sostiene o es un efecto de calendario.",
+      "El % de No Show sigue por encima del promedio histórico de la compañía, con Metepec como la sede más afectada. Si el repunte de volumen en esa sede se mantiene, reforzar confirmación de citas ahí evitaría perder parte de esa ganancia.",
     ],
     CDMX: [
-      "Ingresos MTD $12.13M, Proyección $12.38M (-3% vs agosto, +13% vs U3M).",
-      "Atenciones: Real 2,605 = Proyección (ya no congelada) — +26% vs agosto, +37% vs U3M.",
-      "Pacientes únicos: Real 921 = Proyección — +48% vs agosto, +70% vs U3M. Sigue siendo la sede con mayor volumen absoluto.",
-      "Consultas: 137 reales + 11 agendadas = 148 proyectado, +8% vs agosto.",
+      "Sede con el mejor momentum de volumen: Atenciones y Pacientes únicos crecen con fuerza vs agosto y vs el trimestre — la capacidad está respondiendo bien a la demanda.",
+      "El ingreso crece menos que el volumen de atención — vale la pena revisar si el ticket promedio se está diluyendo por una mezcla con más peso en servicios de menor valor.",
     ],
     GDL: [
-      "Ingresos MTD $1.39M, Proyección $1.53M — el ajuste de pipeline comercial en Base!H se mantiene en $8,000 en total (Farmacia $5,000 + Consultas $3,000), sin cambios vs el corte anterior.",
-      "Atenciones: Real 643 = Proyección — -14% vs agosto, +14% vs U3M.",
-      "Pacientes únicos: Real 292 = Proyección — +2% vs agosto, +33% vs U3M.",
-      "Consultas: 119 reales + 3 agendadas = 122 proyectado, -8% vs agosto.",
+      "Las Atenciones bajan vs agosto pero Pacientes únicos y Consultas se mantienen estables — sugiere que la caída es más de frecuencia de visita por paciente que de captación de nuevos pacientes, vale la pena revisar retención/recompra.",
+      "El mix de ingreso sigue concentrado en Congelación y Tratamientos FIV/ICSI, y ambos vienen a la baja vs agosto — es la sede a vigilar más de cerca este corte.",
     ],
     MTP: [
-      "Ingresos MTD $0.42M, Proyección $0.51M — sigue con caída vs agosto (-43%) aunque menos pronunciada que el corte anterior (-53%); Congelación de Gametos y Consultas subieron con fuerza este mes (ver Mezcla de servicios).",
-      "Atenciones: Real 213 = Proyección — -26% vs agosto, +4% vs U3M.",
-      "Pacientes únicos: Real 86 = Proyección — -9% vs agosto, +34% vs U3M.",
-      "Consultas: 47 reales + 5 agendadas = 52 proyectado — +13% vs agosto, +90% vs U3M.",
+      "Congelación de Gametos y Consultas muestran un salto fuerte este corte — si se sostiene, podría ser la señal de recuperación que la sede necesitaba tras varios cortes consecutivos de caída.",
+      "Sigue siendo la sede más pequeña y con mayor variabilidad relativa — mantenerla bajo observación un corte más antes de proyectar una tendencia sostenida.",
     ],
   },
 
