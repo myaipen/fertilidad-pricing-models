@@ -104,7 +104,10 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // el nuevo Real ya acumulado un día más. Ingresos (Base!F, ya floor-fixed en
 // el Sheet) no depende de este valor, por lo que su proyección tampoco se
 // mueve por este cambio.
-let CORTE_REAL_DIA = 28;
+// ACTUALIZADO 30-sep-2026: corte sube de 28 a 29 (Cargos_y_Facturas_37.xlsx +
+// Consultas_18.xlsx, ambos hasta 29-sep-2026). Mismo comentario que arriba:
+// solo se mueve el puntero de día, sin cambio de metodología.
+let CORTE_REAL_DIA = 29;
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 
