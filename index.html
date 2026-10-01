@@ -1,1542 +1,1080 @@
-<!-- rebuild: fix mezcla-servicios/highlights sep-2026 -->
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard de Productividad — FI</title>
-<script src="chart.min.js"></script>
-<script src="data.js"></script>
-<script src="data_periods.js"></script>
-<script src="data-live.js"></script>
-<style>
-  :root{
-    --gray:#C9CDD3; --red:#B66863; --blue:#7096B0; --pink:#D46A93;
-    --teal:#0F766E; --amber:#B45309; --text:#1F2937; --axis:#6B7280;
-    --card-bg:#F4F4F2; --page-bg:#FAFAF9; --border:#E5E5E2; --white:#FFFFFF;
+<title>Cruce de Cargos</title>
+<style id="fi-style">
+:root{
+  --ink:#221D19; --muted:#6E655C; --paper:#F5F7F6; --surface:#FFFFFF;
+  --line:#E3E1DC; --line-strong:#CFCBC2;
+  --accent:#2D7B6B;
+  --good:#2D7B6B; --good-bg:#E4F1EE;
+  --warn:#B8712F; --warn-bg:#F8ECDD;
+  --bad:#A6433D; --bad-bg:#F7E6E4;
+  --neutral:#6B7581; --neutral-bg:#EBEAE7;
+  --shadow: 0 1px 2px rgba(34,29,25,0.06), 0 8px 24px -12px rgba(34,29,25,0.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#ECE8E1; --muted:#A79E92; --paper:#141B19; --surface:#1B2422;
+    --line:#2B3532; --line-strong:#3A4642;
+    --accent:#59B39F;
+    --good:#59B39F; --good-bg:#1E3833;
+    --warn:#E0A15C; --warn-bg:#3A2E1D;
+    --bad:#E08880; --bad-bg:#3B2422;
+    --neutral:#9AA3AC; --neutral-bg:#2A2F33;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
   }
-  *{box-sizing:border-box;}
-  body{
-    margin:0; padding:0; background:var(--page-bg); color:var(--text);
-    font-family:Calibri, "Segoe UI", Arial, sans-serif;
-  }
-  .wrap{ max-width:1280px; margin:0 auto; padding:32px 28px 60px; }
-  h1{
-    font-family:Cambria, Georgia, serif; font-size:28px; font-weight:700;
-    margin:0 0 6px; color:var(--text);
-  }
-  .subtitle{ font-style:italic; color:var(--axis); font-size:13px; margin:0 0 18px; }
-
-  .filters-row{ display:flex; flex-wrap:wrap; gap:22px; align-items:center; margin-bottom:22px; }
-  .filter-group{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .filter-label{ font-size:11px; font-weight:700; color:var(--axis); text-transform:uppercase; letter-spacing:.03em; margin-right:2px; }
-  .tab-btn{
-    font-family:Calibri, sans-serif; font-size:13px; font-weight:700;
-    padding:8px 16px; border-radius:8px; border:1px solid var(--border);
-    background:var(--white); color:var(--text); cursor:pointer;
-  }
-  .tab-btn.active{ background:var(--red); color:#fff; border-color:var(--red); }
-  .tab-btn.period.active{ background:var(--blue); border-color:var(--blue); }
-
-  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:10px; }
-  .kpi-card{ background:var(--card-bg); border-radius:12px; padding:16px 18px; }
-  .kpi-label{ font-size:12px; color:var(--axis); font-weight:700; text-transform:uppercase; letter-spacing:.03em; margin-bottom:6px;}
-  .kpi-big{ font-family:Cambria, Georgia, serif; font-weight:700; font-size:26px; color:var(--text); margin-bottom:4px;}
-  .kpi-sub{ font-size:12px; color:var(--axis); margin-bottom:6px;}
-  .kpi-badges{ display:flex; gap:10px; font-size:12px; font-weight:700; flex-wrap:wrap; }
-  .up{ color:var(--teal); } .down{ color:var(--amber); } .neutral{ color:var(--axis); font-weight:400; }
-  .period-note{ font-size:11.5px; color:var(--axis); font-style:italic; margin:0 0 22px; }
-
-  .section-title{ font-family:Cambria, Georgia, serif; font-size:19px; font-weight:700; margin:30px 0 4px; }
-  .section-sub{ font-style:italic; color:var(--axis); font-size:12.5px; margin:0 0 14px; }
-
-  .grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
-  .grid-2{ display:grid; grid-template-columns:1.1fr 1fr; gap:16px; }
-  .panel{ background:var(--white); border:1px solid var(--border); border-radius:12px; padding:16px 18px 12px; }
-  .panel-title{ font-weight:700; font-size:13.5px; margin-bottom:2px; }
-  .panel-badges{ display:flex; gap:14px; font-size:11.5px; font-weight:700; margin-bottom:6px; flex-wrap:wrap; }
-  .chart-box{ position:relative; height:230px; }
-  .chart-box.tall{ height:320px; }
-  .unavailable{
-    height:230px; display:flex; align-items:center; justify-content:center; text-align:center;
-    color:var(--axis); font-size:12.5px; font-style:italic; background:var(--card-bg); border-radius:8px; padding:16px;
-  }
-
-  table{ width:100%; border-collapse:collapse; font-size:13px; }
-  th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--axis); padding:6px 8px; border-bottom:2px solid var(--border); }
-  td{ padding:8px 8px; border-bottom:1px solid var(--border); }
-  td.num{ text-align:right; font-variant-numeric:tabular-nums; }
-
-  .highlights{ list-style:none; margin:0; padding:0; }
-  .highlights li{ font-size:12.5px; line-height:1.5; margin-bottom:12px; padding-left:14px; position:relative; color:var(--text); }
-  .highlights li::before{ content:"●"; position:absolute; left:0; color:var(--red); font-size:9px; top:5px; }
-
-  .footnote{ font-style:italic; color:var(--axis); font-size:11px; margin-top:26px; line-height:1.5; }
-  .footer{ text-align:center; font-style:italic; color:var(--axis); font-size:12px; margin-top:36px; }
-
-  .servicio-row{ cursor:pointer; }
-  .servicio-row:hover{ background:var(--card-bg); }
-  .drill-hint{ font-size:10.5px; color:var(--blue); font-weight:700; margin-left:6px; opacity:.75; }
-  .servicio-row:hover .drill-hint{ opacity:1; text-decoration:underline; }
-  /* Concepto sin venta en el mes vigente: se muestra igual (no se omite),
-     pero atenuado, para que la ausencia de venta salte a la vista sin
-     tener que leer la columna "vs LM" fila por fila. */
-  .concept-zero-row td:first-child{ color:var(--axis); }
-  .concept-zero-row td.num{ opacity:.7; }
-  .concept-group-row{ cursor:pointer; }
-  .concept-group-row:hover{ background:var(--card-bg); }
-  .concept-crumb{ font-size:14px; }
-  .concept-crumb:hover{ text-decoration:underline !important; }
-  .concept-back{ display:inline-block; }
-  .concept-back:hover{ text-decoration:underline; }
-  .concept-detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:14px 0 10px; }
-  @media (max-width:520px){ .concept-detail-grid{ grid-template-columns:1fr; } }
-  .concept-detail-box{ position:relative; height:160px; }
-  .concept-detail-title{ font-weight:700; font-size:12px; color:var(--axis); margin-bottom:4px; }
-  .concept-doctors-title{ font-weight:700; font-size:13px; color:var(--text); margin:16px 0 2px; }
-  .concept-doctors-sub{ font-size:11px; color:var(--axis); font-style:italic; margin-bottom:6px; }
-
-  .modal-overlay{
-    display:none; position:fixed; inset:0; background:rgba(31,41,55,.45); z-index:1000;
-    align-items:center; justify-content:center; padding:24px;
-  }
-  .modal-box{
-    background:var(--white); border-radius:14px; max-width:760px; width:100%; max-height:80vh;
-    overflow-y:auto; padding:22px 24px; box-shadow:0 10px 40px rgba(0,0,0,.25);
-  }
-  .modal-header{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:6px; }
-  .modal-title{ font-family:Cambria, Georgia, serif; font-size:16.5px; font-weight:700; color:var(--text); }
-  .modal-close{
-    border:none; background:var(--card-bg); color:var(--axis); font-size:16px; font-weight:700;
-    width:28px; height:28px; border-radius:50%; cursor:pointer; flex:none;
-  }
-  .modal-close:hover{ background:var(--border); color:var(--text); }
-
-  .patient-kpi-row{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:10px; }
-  .patient-note{ font-size:11.5px; color:var(--axis); font-style:italic; margin:6px 0 14px; line-height:1.5; }
-  .scroll-table{ max-height:560px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; }
-  .scroll-table table{ font-size:12.5px; }
-  .scroll-table thead th{ position:sticky; top:0; background:var(--white); z-index:1; }
-
-  @media (max-width:900px){
-    .kpi-row{ grid-template-columns:repeat(2,1fr); }
-    .grid-3{ grid-template-columns:1fr; }
-    .grid-2{ grid-template-columns:1fr; }
-  }
+}
+:root[data-theme="dark"]{
+  --ink:#ECE8E1; --muted:#A79E92; --paper:#141B19; --surface:#1B2422;
+  --line:#2B3532; --line-strong:#3A4642;
+  --accent:#59B39F;
+  --good:#59B39F; --good-bg:#1E3833;
+  --warn:#E0A15C; --warn-bg:#3A2E1D;
+  --bad:#E08880; --bad-bg:#3B2422;
+  --neutral:#9AA3AC; --neutral-bg:#2A2F33;
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;line-height:1.45}
+h1,h2,h3{font-family:'Fraunces',Georgia,serif;text-wrap:balance;margin:0}
+a{color:var(--accent)}
+#root{max-width:1180px;margin:0 auto;padding:0 20px 64px}
+.topbar{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);padding:18px 20px 14px}
+.topbar-inner{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:12px 24px}
+.brand h1{font-size:22px;font-weight:600;letter-spacing:-0.01em}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:12.5px}
+.pillrow{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:99px;border:1px solid var(--line-strong);background:var(--surface);color:var(--muted);cursor:pointer;transition:background .12s,color .12s,border-color .12s}
+.pill:hover{border-color:var(--accent)}
+.pill.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.readonly-banner{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn);border-radius:8px;padding:8px 14px;font-size:12.5px;margin:14px 0}
+section{margin-top:34px}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:14px;flex-wrap:wrap}
+.section-head h2{font-size:19px;font-weight:600}
+.section-head .note{color:var(--muted);font-size:12.5px;max-width:540px}
+.kpi-grid{display:grid;grid-template-columns:1.05fr 2fr;gap:16px}
+@media (max-width:820px){.kpi-grid{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.hero-card{padding:26px 26px 22px;display:flex;flex-direction:column;justify-content:center}
+.hero-label{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.hero-num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:54px;font-weight:600;line-height:1;margin-top:10px;font-variant-numeric:tabular-nums}
+.hero-sub{color:var(--muted);font-size:13px;margin-top:10px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:12px}
+.stat{padding:16px 16px 14px;display:flex;flex-direction:column;gap:6px}
+.stat .n{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:25px;font-weight:600}
+.stat .lbl{font-size:11.5px;color:var(--muted);font-weight:600}
+.stat .pct{font-size:12px;font-family:'IBM Plex Mono',ui-monospace,monospace}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.bars{padding:18px 22px 20px;display:flex;flex-direction:column;gap:13px}
+.bar-row{display:grid;grid-template-columns:150px 1fr 104px;align-items:center;gap:10px}
+.bar-row .name{font-size:13px;font-weight:600}
+.bar-track{background:var(--neutral-bg);border-radius:5px;height:10px;overflow:hidden}
+.bar-fill{height:100%;border-radius:5px}
+.bar-val{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12.5px;text-align:right;color:var(--muted)}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.search{flex:1;min-width:200px;padding:9px 13px;border-radius:9px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);font-size:13.5px;font-family:inherit}
+.search:focus{outline:2px solid var(--accent);outline-offset:1px}
+.count-badge{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12.5px;color:var(--muted)}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;min-width:1120px;font-size:13px}
+thead th{position:sticky;top:0;background:var(--surface);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;padding:11px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--paper)}
+.chip{display:inline-flex;align-items:center;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.chip.sin{background:var(--bad-bg);color:var(--bad)}
+.chip.fuera{background:var(--warn-bg);color:var(--warn)}
+.chip.sede{background:var(--neutral-bg);color:var(--neutral);font-weight:600}
+.chip.confirm{background:var(--good-bg);color:var(--good)}
+tr.row-confirmed td{background:var(--good-bg)}
+tr.row-confirmed:hover td{background:var(--good-bg)}
+tr.row-justified td{background:var(--neutral-bg)}
+tr.row-justified:hover td{background:var(--neutral-bg)}
+.chip.justified{background:var(--surface);color:var(--neutral);border:1px solid var(--line-strong)}
+tr.row-falta-check td{background:var(--warn-bg)}
+tr.row-falta-check:hover td{background:var(--warn-bg)}
+.chip.falta-check{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}
+.confirm-check{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:5px;cursor:pointer}
+.confirm-check input{accent-color:var(--good);cursor:pointer}
+.cargo-cell{font-size:12px;color:var(--muted);max-width:220px}
+.cargo-cell .cc{color:var(--ink);display:block;margin-bottom:1px}
+.diff{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12.5px;white-space:nowrap}
+.comment-input{width:220px;min-height:42px;resize:vertical;padding:7px 9px;border-radius:8px;border:1px solid var(--line-strong);background:var(--paper);color:var(--ink);font-family:inherit;font-size:12.5px}
+.comment-input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.comment-input:disabled{opacity:.65;cursor:not-allowed}
+.save-state{font-size:10.5px;color:var(--muted);margin-top:3px;min-height:12px}
+.descuento-grid{display:flex;flex-direction:column;gap:16px}
+.descuento-card-title{font-size:14px;font-weight:600;padding:16px 18px 2px}
+.descuento-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
+.descuento-table th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;padding:8px 18px;border-bottom:1px solid var(--line);white-space:nowrap}
+.descuento-table td{padding:9px 18px;border-bottom:1px solid var(--line)}
+.descuento-table tr:last-child td{border-bottom:none;padding-bottom:16px}
+.descuento-table td.money{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:13.5px}
+footer{margin-top:48px;color:var(--muted);font-size:11.5px;text-align:center}
 </style>
-</head>
-<body>
-<div class="wrap">
+<link rel="stylesheet" id="fi-font-link" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 
-  <h1>Dashboard de Productividad — FI</h1>
-  <p class="subtitle" id="page-subtitle"></p>
-  <p id="live-status-banner" style="display:none; font-size:12px; background:#FEF3C7; color:#92400E; padding:6px 10px; border-radius:6px; margin:0 0 14px;"></p>
-
-  <div class="filters-row">
-    <div class="filter-group">
-      <span class="filter-label">Sede</span>
-      <div id="tabs-sede"></div>
-    </div>
-    <div class="filter-group">
-      <span class="filter-label">Periodo</span>
-      <div id="tabs-periodo"></div>
-    </div>
-    <div class="filter-group">
-      <span class="filter-label">Mes vigente</span>
-      <select id="mes-vigente-select" style="font-size:12.5px; font-weight:700; padding:5px 8px; border-radius:6px; border:1px solid var(--gray); background:#fff; color:var(--text); cursor:pointer;"></select>
-    </div>
-    <div class="filter-group">
-      <span class="filter-label">Año</span>
-      <select id="anio-vigente-select" style="font-size:12.5px; font-weight:700; padding:5px 8px; border-radius:6px; border:1px solid var(--gray); background:#fff; color:var(--text); cursor:pointer;"></select>
-    </div>
-  </div>
-  <p style="font-size:11px; color:var(--axis); margin:-4px 0 12px;"><b>LM</b> = mes anterior · <b>LY</b> = mismo mes, año anterior · <b>U3M</b> = promedio de los últimos 3 meses cerrados</p>
-
-  <div class="kpi-row" id="kpi-row"></div>
-  <p class="period-note" id="period-note"></p>
-
-  <div class="section-title">Evolutivo con proyección</div>
-  <p class="section-sub" id="evolutivo-sub"></p>
-  <div class="grid-3" id="evolutivos"></div>
-
-  <div class="section-title">Mezcla de servicios (mes vigente: <span id="mezcla-mes-label">agosto</span>)</div>
-  <p class="section-sub">Ingresos proyectados por servicio (MDP) del mes en curso — no varía con el filtro de Periodo, sí con Sede</p>
-  <div class="grid-2" id="servicios-section"></div>
-
-  <div class="section-title">HubSpot — Deals y conversión</div>
-  <p class="section-sub">Pipeline "Interesa2" · compañía completa (no varía con el filtro de Sede) · reacciona al filtro de Periodo</p>
-  <div class="grid-3" id="hubspot-charts"></div>
-  <div class="grid-2" id="hubspot-detail" style="margin-top:16px;"></div>
-
-  <div class="section-title">Consultas: evolutivo y agenda</div>
-  <p class="section-sub">Consultas terminadas (real) + citas agendadas confirmadas para completar el mes</p>
-  <div class="grid-2" id="consultas-section"></div>
-
-  <div class="section-title">Subrogación — pacientes</div>
-  <p class="section-sub">Pipeline de candidatas gestantes en valoración vs. programas activos contratados (padres intencionales) · datos agregados, sin nombres · reacciona a Sede y Periodo</p>
-  <p class="section-sub" id="subrogacion-corte-nota"></p>
-  <div class="grid-2" id="subrogacion-section"></div>
-
-  <div class="section-title">Evolutivo por médico</div>
-  <p class="section-sub">Ingresos, Atenciones y Pacientes Únicos por médico (Profesional Historia) — misma fuente y criterio que arriba (línea de cargo = atención) · top 20 por ingresos + "Otros" agregado · reacciona a Sede y Periodo</p>
-  <div id="medicos-section"></div>
-
-  <p class="footnote" id="page-footnote"></p>
-  <p class="footer">Fertilidad Integral</p>
-</div>
-
-<div class="modal-overlay" id="concept-modal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <div class="modal-title" id="concept-modal-title">Desglose por concepto</div>
-      <button class="modal-close" id="concept-modal-close" aria-label="Cerrar">✕</button>
-    </div>
-    <div id="concept-modal-body"></div>
-  </div>
-</div>
+<div id="root"></div>
 
 <script>
-const D = window.DATA;
-const P = window.PERIODS;
-const COLORS = { gray:"#C9CDD3", red:"#B66863", blue:"#7096B0", pink:"#D46A93", teal:"#0F766E", amber:"#B45309", text:"#1F2937", axis:"#6B7280" };
-Chart.defaults.font.family = "Calibri, sans-serif";
-Chart.defaults.color = COLORS.axis;
-
-let currentScope = "total";     // "total" | "CDMX" | "GDL" | "MTP"
-let currentPeriod = "mes";      // "anio" | "trimestre" | "mes" | "semana" | "dia"
-const charts = {};
-
-// ---------------------------------------------------------------- generic helpers
-function fmt(v, decimals){
-  if (v === null || v === undefined || Number.isNaN(v)) return "—";
-  return v.toLocaleString("es-MX", { minimumFractionDigits: decimals || 0, maximumFractionDigits: decimals || 0 });
-}
-// nomStr (opcional): texto ya formateado del valor nominal (ej. "+$2.6M",
-// "-12") que se añade entre paréntesis después del %, para que cada
-// comparación muestre siempre el % Y el número absoluto detrás.
-function pctBadge(v, label, nomStr){
-  if (v === null || v === undefined || Number.isNaN(v)) return `<span class="neutral">${label}: —</span>`;
-  const cls = v >= 0 ? "up" : "down";
-  const arrow = v >= 0 ? "▲" : "▼";
-  const sign = v >= 0 ? "+" : "";
-  const nomPart = nomStr ? ` (${nomStr})` : "";
-  return `<span class="${cls}">${arrow} ${label}: ${sign}${v.toFixed(0)}%${nomPart}</span>`;
-}
-// Badge para % de No show (consultas no asistidas / (realizadas + no
-// asistidas)). Semántica INVERTIDA respecto a pctBadge: aquí subir es malo
-// (más pacientes no se presentan) y bajar es bueno, así que el color/flecha
-// se define por el cambio (deltaPts, en puntos porcentuales vs. el promedio
-// de los meses cerrados), no por el signo del valor absoluto.
-function noShowBadge(pct, deltaPts){
-  if (pct === null || pct === undefined || Number.isNaN(pct)) return `<span class="neutral">No show: —</span>`;
-  const deltaPart = (deltaPts === null || deltaPts === undefined || Number.isNaN(deltaPts)) ? "" :
-    ` (${deltaPts>=0?"+":""}${deltaPts.toFixed(1)}pts vs prom. meses cerrados)`;
-  const cls = (deltaPts === null || deltaPts === undefined || Number.isNaN(deltaPts)) ? "neutral" : (deltaPts > 0 ? "down" : "up");
-  const arrow = (deltaPts === null || deltaPts === undefined || Number.isNaN(deltaPts)) ? "" : (deltaPts > 0 ? "▲ " : "▼ ");
-  return `<span class="${cls}">${arrow}No show: ${pct.toFixed(0)}%${deltaPart}</span>`;
-}
-// Formatea un valor nominal (puede ser negativo) con signo explícito,
-// usando la misma función de formato que ya se usa para el valor principal
-// (ej. v=>`$${fmt(v,1)}M` o fmt(v,0)) — así el nominal siempre luce
-// consistente con el número grande que acompaña.
-function fmtSignedFn(v, fn){
-  if (v === null || v === undefined || Number.isNaN(v)) return null;
-  const sign = v >= 0 ? "+" : "-";
-  return `${sign}${fn(Math.abs(v))}`;
-}
-// Versión compacta de pctBadge para celdas de tabla (sin la etiqueta "vs LM:").
-function miniPct(v, nomStr){
-  if (v === null || v === undefined || Number.isNaN(v)) return '<span style="color:var(--axis);">—</span>';
-  const cls = v >= 0 ? "up" : "down";
-  const arrow = v >= 0 ? "▲" : "▼";
-  const sign = v >= 0 ? "+" : "";
-  const nomPart = nomStr ? ` <span style="font-weight:400;">(${nomStr})</span>` : "";
-  return `<span class="${cls}">${arrow} ${sign}${v.toFixed(0)}%${nomPart}</span>`;
-}
-// vs LM / vs U3M / nominal genérico para una serie mensual {hist:[7], actual}
-// dado el periodo activo — mismo criterio que ya usaba buildSeries para
-// Ingresos/Atenciones/Pacientes/Consultas, reutilizado aquí para Subrogación
-// y para la nueva sección "Evolutivo por médico".
-function periodStats(hist, actual, period){
-  if (period === "mes"){
-    const base = hist[6], baseU3M = (hist[4]+hist[5]+hist[6])/3;
-    return { current: actual, vsLM: pctOrNull(actual,base), vsU3M: pctOrNull(actual,baseU3M), nomLM: actual-base, nomU3M: actual-baseU3M };
-  }
-  if (period === "trimestre"){
-    const [e,f,m,a,my,j,jl] = hist;
-    const Q1=e+f+m, Q2=a+my+j, Q3=jl+actual;
-    return { current:Q3, vsLM: pctOrNull(Q3,Q2), vsU3M: pctOrNull(Q3,(Q1+Q2)/2), nomLM:Q3-Q2, nomU3M:Q3-(Q1+Q2)/2 };
-  }
-  if (period === "anio"){
-    return { current: hist.reduce((a,b)=>a+b,0)+actual, vsLM:null, vsU3M:null, nomLM:null, nomU3M:null };
-  }
-  return null; // semana/dia: sin fuente día a día
-}
-function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
-function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
-function avg(arr){ return arr.length ? sum(arr)/arr.length : null; }
-
-// ---------------------------------------------------------------- value-label plugins (numbers above bars)
-const barValueLabels = {
-  id: "barValueLabels",
-  afterDatasetsDraw(chart){
-    if (chart.options.indexAxis === "y") return; // handled by hBarValueLabels
-    if (chart.data.datasets.length > 1) return;   // stacked charts handled separately
-    const {ctx} = chart;
-    const ds = chart.data.datasets[0];
-    const meta = chart.getDatasetMeta(0);
-    ctx.save();
-    ctx.font = "700 11px Calibri, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    meta.data.forEach((bar, i)=>{
-      const v = ds.data[i];
-      if (v === null || v === undefined) return;
-      ctx.fillStyle = COLORS.text;
-      ctx.fillText(ds._fmt ? ds._fmt(v) : fmt(v), bar.x, bar.y - 4);
-    });
-    ctx.restore();
-  }
-};
-const hBarValueLabels = {
-  id: "hBarValueLabels",
-  afterDatasetsDraw(chart){
-    if (chart.options.indexAxis !== "y") return;
-    const {ctx} = chart;
-    const ds = chart.data.datasets[0];
-    const meta = chart.getDatasetMeta(0);
-    ctx.save();
-    ctx.font = "700 11px Calibri, sans-serif";
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = COLORS.text;
-    meta.data.forEach((bar, i)=>{
-      const v = ds.data[i];
-      if (v === null || v === undefined) return;
-      ctx.fillText(ds._fmt ? ds._fmt(v, i) : fmt(v), bar.x + 6, bar.y);
-    });
-    ctx.restore();
-  }
-};
-const groupedValueLabels = {
-  // Para gráficas de barras agrupadas (varios datasets lado a lado, NO apiladas):
-  // pone el número encima de cada barra individual (una etiqueta por dataset).
-  id: "groupedValueLabels",
-  afterDatasetsDraw(chart){
-    if (chart.data.datasets.length < 2) return;
-    if (chart.options.scales?.x?.stacked || chart.options.scales?.y?.stacked) return; // las apiladas las maneja stackedTotalLabels
-    const {ctx} = chart;
-    ctx.save();
-    ctx.font = "700 11px Calibri, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    ctx.fillStyle = COLORS.text;
-    chart.data.datasets.forEach((ds, dIdx)=>{
-      if (ds.type === "line") return; // la línea de meta no lleva etiqueta por punto (ver panel-badges "vs Meta")
-      const meta = chart.getDatasetMeta(dIdx);
-      meta.data.forEach((bar, i)=>{
-        const v = ds.data[i];
-        if (v === null || v === undefined || v === 0) return;
-        ctx.fillText(ds._fmt ? ds._fmt(v) : fmt(v), bar.x, bar.y - 4);
-      });
-    });
-    ctx.restore();
-  }
-};
-const stackedTotalLabels = {
-  id: "stackedTotalLabels",
-  afterDatasetsDraw(chart){
-    if (chart.data.datasets.length < 2) return;
-    if (!(chart.options.scales?.x?.stacked || chart.options.scales?.y?.stacked)) return; // solo gráficas realmente apiladas
-    const {ctx} = chart;
-    const [ds0, ds1] = chart.data.datasets;
-    const meta0 = chart.getDatasetMeta(0);
-    ctx.save();
-    ctx.font = "700 11px Calibri, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    ctx.fillStyle = COLORS.text;
-    meta0.data.forEach((bar, i)=>{
-      const total = (ds0.data[i]||0) + (ds1.data[i]||0);
-      if (!total) return;
-      const topBar = ds1.data[i] ? chart.getDatasetMeta(1).data[i] : bar;
-      ctx.fillText(fmt(total), topBar.x, topBar.y - 4);
-    });
-    ctx.restore();
-  }
-};
-Chart.register(barValueLabels, hBarValueLabels, groupedValueLabels, stackedTotalLabels);
-
-// ---------------------------------------------------------------- período: config + series builders
-const PERIOD_LABELS = { anio:"Año", trimestre:"Trimestre", mes:"Mes", semana:"Semana", dia:"Día" };
-const PERIOD_BADGES = {
-  anio:      [null, null],
-  trimestre: ["vs trim. anterior", "vs prom. trim. cerrados"],
-  mes:       ["vs LM", "vs U3M"],
-  semana:    ["vs semana anterior", "vs prom. 4 sem. cerradas"],
-  dia:       ["vs día anterior", "vs prom. 7 días cerrados"],
-};
-
-function monthlySeries(scope, key){
-  const base = scope === "total" ? D.total : D.sedes[scope];
-  return base[key]; // {hist:[7], actual, proy, vsLM, vsU3M}
-}
-
-// Builds a uniform series object for a given metric + period:
-// { labels:[...], values:[...], currentIndex, hasProy(bool), proyIndex, badge1, badge2, note }
-function buildSeries(kind, scope, opts){
-  opts = opts || {};
-  if (kind === "monthly"){
-    const s = monthlySeries(scope, opts.key);
-    if (currentPeriod === "mes"){
-      return {
-        labels: [...D.meses_hist, D.mes_actual, "Proy."],
-        values: [...s.hist, s.actual, s.proy],
-        currentIndex: s.hist.length, proyIndex: s.hist.length+1,
-        badge1: s.vsLM, badge2: s.vsU3M,
-        nomLM: s.proy - s.hist[6], nomU3M: s.proy - (s.hist[4]+s.hist[5]+s.hist[6])/3,
-        vsLY: s.vsLY != null ? s.vsLY : null, nomLY: s.nomLY != null ? s.nomLY : null,
-      };
-    }
-    if (currentPeriod === "trimestre"){
-      const [e,f,m,a,my,j,jl] = s.hist;
-      const Q1 = e+f+m, Q2 = a+my+j;
-      const Q3actual = jl + s.actual, Q3proy = jl + s.proy;
-      const vsLQ = (Q3proy/Q2 - 1) * 100;
-      const vsAvgClosed = (Q3proy/((Q1+Q2)/2) - 1) * 100;
-      return {
-        labels: ["Q1", "Q2", "Q3", "Q3 proy."],
-        values: [Q1, Q2, Q3actual, Q3proy],
-        currentIndex: 2, proyIndex: 3,
-        badge1: vsLQ, badge2: vsAvgClosed,
-        nomLM: Q3proy - Q2, nomU3M: Q3proy - (Q1+Q2)/2,
-      };
-    }
-    if (currentPeriod === "anio"){
-      const ytd = sum(s.hist) + s.actual;
-      return { labels: ["2026 (YTD)"], values: [ytd], currentIndex: 0, proyIndex: null, badge1: null, badge2: null, nomLM: null, nomU3M: null };
-    }
-    // semana / día -> fine-grain (only ingresos & pacientes have this; atenciones doesn't)
-    return buildFineGrain(opts.fineKey, scope);
-  }
-  if (kind === "hubspot"){
-    return buildHubspotSeries(opts.key);
-  }
-}
-
-function windowLastN(obj, n){
-  // obj: {dateStr: value}. Returns [ [date,val], ... ] sorted, last n entries.
-  const entries = Object.entries(obj).sort((a,b)=> a[0] < b[0] ? -1 : 1);
-  return entries.slice(-n);
-}
-function weekLabel(wk, startStr){
-  const d = new Date(startStr + "T00:00:00");
-  return `${d.getDate()}/${d.getMonth()+1}`;
-}
-function dayLabel(dateStr){
-  const d = new Date(dateStr + "T00:00:00");
-  return `${d.getDate()}/${d.getMonth()+1}`;
-}
-
-function buildFineGrain(metricKey, scope){
-  if (!metricKey) return null; // not available at this grain (e.g. atenciones)
-  if (currentPeriod === "semana"){
-    const raw = P.weekly[scope][metricKey]; // {wk: {start, valor}}
-    const entries = Object.entries(raw).sort((a,b)=> a[0] < b[0] ? -1 : 1).slice(-13);
-    const labels = entries.map(([wk,v]) => weekLabel(wk, v.start));
-    const values = entries.map(([wk,v]) => v.valor);
-    const n = values.length;
-    const lw = values[n-2], avgClosed = avg(values.slice(Math.max(0,n-5), n-1));
-    const badge1 = lw ? (values[n-1]/lw - 1) * 100 : null;
-    const badge2 = avgClosed ? (values[n-1]/avgClosed - 1) * 100 : null;
-    const nomLM = lw!=null ? values[n-1]-lw : null, nomU3M = avgClosed!=null ? values[n-1]-avgClosed : null;
-    return { labels, values, currentIndex: n-1, proyIndex: null, badge1, badge2, nomLM, nomU3M };
-  }
-  if (currentPeriod === "dia"){
-    const raw = P.daily[scope][metricKey]; // {date: value}
-    const entries = windowLastN(raw, 21);
-    const labels = entries.map(([d]) => dayLabel(d));
-    const values = entries.map(([,v]) => v);
-    const n = values.length;
-    const prev = values[n-2], avg7 = avg(values.slice(Math.max(0,n-8), n-1));
-    const badge1 = prev ? (values[n-1]/prev - 1) * 100 : null;
-    const badge2 = avg7 ? (values[n-1]/avg7 - 1) * 100 : null;
-    const nomLM = prev!=null ? values[n-1]-prev : null, nomU3M = avg7!=null ? values[n-1]-avg7 : null;
-    return { labels, values, currentIndex: n-1, proyIndex: null, badge1, badge2, nomLM, nomU3M };
-  }
-}
-
-function buildHubspotSeries(metricKey){
-  // metricKey: 'leads' | 'citas' | 'conversion'
-  if (currentPeriod === "mes"){
-    const h = D.hubspot;
-    if (metricKey === "conversion"){
-      const values = h.leads.hist.map((l,i)=> l ? Math.round(h.citas.hist[i]/l*100) : 0).concat([Math.round(h.citas.actual/h.leads.actual*100)]);
-      return { labels: [...D.meses_hist, D.mes_actual], values, currentIndex: values.length-1, proyIndex:null, badge1:null, badge2:null };
-    }
-    const m = h[metricKey];
-    return { labels: [...D.meses_hist, D.mes_actual], values: [...m.hist, m.actual], currentIndex: m.hist.length, proyIndex:null, badge1:null, badge2:null };
-  }
-  if (currentPeriod === "trimestre" || currentPeriod === "anio"){
-    const h = D.hubspot;
-    const leadsAll = [...h.leads.hist, h.leads.actual];
-    const citasAll = [...h.citas.hist, h.citas.actual];
-    if (currentPeriod === "anio"){
-      const l = sum(leadsAll), c = sum(citasAll);
-      const v = metricKey === "leads" ? l : metricKey === "citas" ? c : Math.round(c/l*100);
-      return { labels:["2026 (YTD)"], values:[v], currentIndex:0, proyIndex:null, badge1:null, badge2:null };
-    }
-    const bucket = (arr) => [arr[0]+arr[1]+arr[2], arr[3]+arr[4]+arr[5], arr[6]+arr[7]];
-    const lQ = bucket(leadsAll), cQ = bucket(citasAll);
-    const values = metricKey === "leads" ? lQ : metricKey === "citas" ? cQ : lQ.map((l,i)=> l ? Math.round(cQ[i]/l*100) : 0);
-    return { labels:["Q1","Q2","Q3"], values, currentIndex:2, proyIndex:null, badge1:null, badge2:null };
-  }
-  // semana / día
-  const raw = currentPeriod === "semana" ? P.weekly.hubspot : P.daily.hubspot;
-  const n = currentPeriod === "semana" ? 13 : 21;
-  const leadsEntries = currentPeriod === "semana"
-    ? Object.entries(raw.leads).sort((a,b)=> a[0]<b[0]?-1:1).slice(-n)
-    : windowLastN(raw.leads, n);
-  const citasEntries = currentPeriod === "semana"
-    ? Object.entries(raw.citas).sort((a,b)=> a[0]<b[0]?-1:1).slice(-n)
-    : windowLastN(raw.citas, n);
-  const labels = currentPeriod === "semana"
-    ? leadsEntries.map(([wk,v])=>weekLabel(wk, v.start))
-    : leadsEntries.map(([d])=>dayLabel(d));
-  const leadsVals = currentPeriod === "semana" ? leadsEntries.map(([,v])=>v.valor) : leadsEntries.map(([,v])=>v);
-  const citasVals = currentPeriod === "semana" ? citasEntries.map(([,v])=>v.valor) : citasEntries.map(([,v])=>v);
-  let values;
-  if (metricKey === "leads") values = leadsVals;
-  else if (metricKey === "citas") values = citasVals;
-  else values = leadsVals.map((l,i)=> l ? Math.round(citasVals[i]/l*100) : 0);
-  return { labels, values, currentIndex: values.length-1, proyIndex:null, badge1:null, badge2:null };
-}
-
-// ---------------------------------------------------------------- tabs
-function buildTabs(){
-  const sedeEl = document.getElementById("tabs-sede");
-  const sedeOpts = [["total","Todas las sedes"], ["CDMX","CDMX"], ["GDL","Guadalajara"], ["MTP","Metepec"]];
-  sedeEl.innerHTML = sedeOpts.map(([key,label]) =>
-    `<button class="tab-btn ${key===currentScope?'active':''}" data-scope="${key}">${label}</button>`
-  ).join("");
-  sedeEl.querySelectorAll(".tab-btn").forEach(btn=>{
-    btn.addEventListener("click", ()=>{ currentScope = btn.dataset.scope; renderAll(); });
-  });
-
-  const perEl = document.getElementById("tabs-periodo");
-  perEl.innerHTML = Object.entries(PERIOD_LABELS).map(([key,label]) =>
-    `<button class="tab-btn period ${key===currentPeriod?'active':''}" data-period="${key}">${label}</button>`
-  ).join("");
-  perEl.querySelectorAll(".tab-btn").forEach(btn=>{
-    btn.addEventListener("click", ()=>{ currentPeriod = btn.dataset.period; renderAll(); });
-  });
-
-  buildMesVigenteSelect();
-  buildAnioVigenteSelect();
-}
-
-// Selector Ene-Dic que cambia MES_VIGENTE (definida en data-live.js) y
-// recalcula todo el tablero desde la cache de filas ya descargadas — no
-// vuelve a pedirle nada a Google Sheets, solo reacomoda "mes vigente" / "LM".
-// Los meses sin datos todavía (ej. Oct-Dic recién empezando el año) se
-// pueden elegir igual: las vistas simplemente muestran $0 / "sin venta".
-function buildMesVigenteSelect(){
-  const sel = document.getElementById("mes-vigente-select");
-  if (!sel) return;
-  const mesActual = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 8;
-  const meses = (window.MESES_12 || ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]);
-  sel.innerHTML = meses.map((label, i) => `<option value="${i+1}" ${i+1===mesActual?'selected':''}>${label}</option>`).join("");
-  sel.onchange = () => {
-    const nuevoMes = Number(sel.value);
-    if (typeof window.changeMesVigente === "function") {
-      window.changeMesVigente(nuevoMes);
-    }
-  };
-}
-
-// Selector 2025/2026 GLOBAL, junto a Sede/Periodo/Mes vigente. Cambia
-// ANIO_VIGENTE (definida en data-live.js) y afecta TODO el tablero —
-// Ingresos, Atenciones, Pacientes, Consultas y el Ranking por agrupación de
-// consulta (HubSpot es la excepción: sin fuente 2025, se deja en 0).
-function buildAnioVigenteSelect(){
-  const sel = document.getElementById("anio-vigente-select");
-  if (!sel) return;
-  const anioActual = (typeof window.getAnioVigente === "function") ? window.getAnioVigente() : 2026;
-  const anios = [2026, 2025];
-  sel.innerHTML = anios.map(a => `<option value="${a}" ${a===anioActual?'selected':''}>${a}</option>`).join("");
-  sel.onchange = () => {
-    const nuevoAnio = Number(sel.value);
-    if (typeof window.changeAnioVigente === "function") {
-      window.changeAnioVigente(nuevoAnio);
-    }
-  };
-}
-
-// ---------------------------------------------------------------- KPI row
-function buildKPIs(){
-  const items = [
-    { label:"Ingresos (MDP)", series: buildSeries("monthly", currentScope, {key:"ingresos", fineKey:"ingresos"}), dec:1, prefix:"$", suffix:"M" },
-    { label:"Atenciones", series: buildSeries("monthly", currentScope, {key:"atenciones", fineKey:"atenciones"}), dec:0, prefix:"", suffix:"" },
-    { label:"Pacientes Únicos", series: buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"}), dec:0, prefix:"", suffix:"" },
-    { label:"Consultas", series: buildConsultasSeries(currentScope), dec:0, prefix:"", suffix:"" },
-  ];
-  const el = document.getElementById("kpi-row");
-  el.innerHTML = items.map(it=>{
-    const s = it.series;
-    if (!s){
-      return `<div class="kpi-card"><div class="kpi-label">${it.label}</div><div class="unavailable" style="height:auto; padding:18px 8px;">No disponible a nivel ${PERIOD_LABELS[currentPeriod].toLowerCase()}</div></div>`;
-    }
-    const current = s.proyIndex!=null ? s.values[s.proyIndex] : s.values[s.currentIndex];
-    const real = s.values[s.currentIndex];
-    const showReal = s.proyIndex != null;
-    const [b1label, b2label] = PERIOD_BADGES[currentPeriod];
-    // vs LY solo existe a nivel Mes (data-live.js lo calcula comparando el
-    // mes vigente contra el mismo mes del año anterior) — y solo se muestra
-    // si hay dato real de ese año anterior (ver nota de HubSpot/2025 más
-    // arriba: si no hay fuente, s.vsLY llega en null y simplemente se omite).
-    const hasLY = currentPeriod === "mes" && s.vsLY != null;
-    return `
-      <div class="kpi-card">
-        <div class="kpi-label">${it.label}</div>
-        <div class="kpi-big">${it.prefix}${fmt(current, it.dec)}${it.suffix}${s.proyIndex!=null ? ' <span style="font-size:12px; font-weight:400; color:var(--axis);">proy.</span>' : ''}</div>
-        ${showReal ? `<div class="kpi-sub">Real a la fecha: ${it.prefix}${fmt(real, it.dec)}${it.suffix}</div>` : ""}
-        ${b1label ? `<div class="kpi-badges">${pctBadge(s.badge1,b1label,fmtSignedFn(s.nomLM,v=>`${it.prefix}${fmt(v,it.dec)}${it.suffix}`))} ${pctBadge(s.badge2,b2label,fmtSignedFn(s.nomU3M,v=>`${it.prefix}${fmt(v,it.dec)}${it.suffix}`))}</div>` : ""}
-        ${hasLY ? `<div class="kpi-badges">${pctBadge(s.vsLY,"vs LY",fmtSignedFn(s.nomLY,v=>`${it.prefix}${fmt(v,it.dec)}${it.suffix}`))}</div>` : ""}
-      </div>`;
-  }).join("");
-}
-
-function buildConsultasSeries(scope){
-  const s = monthlySeries(scope, "consultas");
-  if (currentPeriod === "mes"){
-    const proy = s.real+s.agendado;
-    return { labels:[...D.meses_hist, D.mes_actual], values:[...s.hist, proy], currentIndex:s.hist.length, proyIndex:s.hist.length, badge1:s.vsLM, badge2:s.vsU3M,
-      nomLM: proy - s.hist[6], nomU3M: proy - (s.hist[4]+s.hist[5]+s.hist[6])/3,
-      vsLY: s.vsLY != null ? s.vsLY : null, nomLY: s.nomLY != null ? s.nomLY : null };
-  }
-  if (currentPeriod === "trimestre"){
-    const [e,f,m,a,my,j,jl] = s.hist;
-    const Q1=e+f+m, Q2=a+my+j, Q3 = jl + s.real + s.agendado;
-    return { labels:["Q1","Q2","Q3"], values:[Q1,Q2,Q3], currentIndex:2, proyIndex:2, badge1:(Q3/Q2-1)*100, badge2:(Q3/((Q1+Q2)/2)-1)*100,
-      nomLM: Q3-Q2, nomU3M: Q3-(Q1+Q2)/2 };
-  }
-  if (currentPeriod === "anio"){
-    const ytd = sum(s.hist) + s.real + s.agendado;
-    return { labels:["2026 (YTD)"], values:[ytd], currentIndex:0, proyIndex:0, badge1:null, badge2:null, nomLM:null, nomU3M:null };
-  }
-  return buildFineGrain("consultas_real", scope);
-}
-
-// ---------------------------------------------------------------- evolutivo bar (hist gray, actual blue, proy red)
-// metaValues (opcional): arreglo alineado con series.values con la meta de
-// venta por punto -> se dibuja como línea punteada teal encima de las barras.
-function drawEvolutivoBar(canvasId, series, valueFmt, metaValues){
-  destroyChart(canvasId);
-  const ctx = document.getElementById(canvasId).getContext("2d");
-  const bg = series.labels.map((_,i)=>{
-    if (series.proyIndex != null && i === series.proyIndex) return COLORS.red;
-    if (i === series.currentIndex) return COLORS.blue;
-    return COLORS.gray;
-  });
-  const hasMeta = metaValues && metaValues.some(v => v != null);
-  const datasets = [{ label:"Real", data: series.values, backgroundColor: bg, borderRadius:4, maxBarThickness:30, _fmt: valueFmt }];
-  if (hasMeta){
-    datasets.push({
-      type:"line", label:"Meta", data: metaValues,
-      borderColor: COLORS.teal, borderWidth:2, borderDash:[6,4],
-      pointRadius:3, pointBackgroundColor: COLORS.teal, pointBorderColor: COLORS.teal,
-      fill:false, spanGaps:true, order:0, _fmt: valueFmt,
-    });
-  }
-  charts[canvasId] = new Chart(ctx, {
-    type:"bar",
-    data:{ labels:series.labels, datasets },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      layout:{ padding:{ top:20 } },
-      plugins:{
-        legend:{ display: hasMeta, position:"bottom", labels:{ boxWidth:12, font:{ size:11 }, filter:(item)=> item.text === "Meta" } },
-        tooltip:{ callbacks:{ label:(c)=> `${c.dataset.label==="Meta"?"Meta: ":""}${valueFmt(c.raw)}` } },
-      },
-      scales:{ y:{ display:false, beginAtZero:true, grace:"20%" }, x:{ grid:{ display:false }, ticks:{ font:{ size: series.labels.length>10 ? 9 : 11 }, maxRotation: series.labels.length>10 ? 60 : 0 } } },
-    },
-  });
-}
-
-// Meta de venta (sede/compañía), si la hoja "Metas" del Sheet trae datos para
-// el periodo actual. Por ahora solo disponible a nivel Mes (la hoja Metas
-// es mensual) — en Trimestre/Año/Semana/Día la gráfica de Ingresos se ve
-// igual que antes, sin línea de meta.
-function buildMetaValuesForIngresos(ing){
-  if (currentPeriod !== "mes") return null;
-  const base = currentScope === "total" ? D.total : D.sedes[currentScope];
-  const meta = base && base.meta;
-  if (!meta) return null;
-  // ing.labels = [...meses_hist, mes_actual, "Proy."] -> la meta del mes en
-  // curso aplica igual al bloque "actual" (real a la fecha) y a "Proy."
-  const values = [...meta.hist, meta.actual, meta.actual];
-  const hasAny = values.some(v => v != null);
-  if (!hasAny) return null;
-  const metaActual = meta.actual;
-  const vsMeta = (metaActual != null) ? pctOrNull(ing.values[ing.proyIndex], metaActual) : null;
-  return { values, vsMeta };
-}
-
-function buildEvolutivos(){
-  const el = document.getElementById("evolutivos");
-  const ing = buildSeries("monthly", currentScope, {key:"ingresos", fineKey:"ingresos"});
-  const at = buildSeries("monthly", currentScope, {key:"atenciones", fineKey:"atenciones"});
-  const pu = buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"});
-  const [b1,b2] = PERIOD_BADGES[currentPeriod];
-  const meta = ing ? buildMetaValuesForIngresos(ing) : null;
-
-  function panel(id, title, series, valueFmt, extraBadge){
-    if (!series){
-      return `<div class="panel"><div class="panel-title">${title}</div><div class="unavailable">No disponible a nivel ${PERIOD_LABELS[currentPeriod].toLowerCase()}<br>(sin fuente día a día para esta métrica)</div></div>`;
-    }
-    // vs LY solo existe a nivel Mes (mismo criterio que buildKPIs: null si no
-    // hay dato real del año anterior para esta métrica/sede).
-    const hasLY = currentPeriod === "mes" && series.vsLY != null;
-    const lyBadge = hasLY ? ` ${pctBadge(series.vsLY,"vs LY",fmtSignedFn(series.nomLY,valueFmt))}` : "";
-    return `<div class="panel">
-      <div class="panel-title">${title}</div>
-      <div class="panel-badges">${b1?pctBadge(series.badge1,b1,fmtSignedFn(series.nomLM,valueFmt)):""} ${b2?pctBadge(series.badge2,b2,fmtSignedFn(series.nomU3M,valueFmt)):""}${extraBadge||""}${lyBadge}</div>
-      <div class="chart-box"><canvas id="${id}"></canvas></div>
-    </div>`;
-  }
-
-  const metaBadge = meta ? ` ${pctBadge(meta.vsMeta, "vs Meta")}` : "";
-
-  el.innerHTML =
-    panel("chart-ingresos", "Ingresos — MDP", ing, v=>`$${fmt(v,1)}M`, metaBadge) +
-    panel("chart-atenciones", "Atenciones (#)", at, v=>`${fmt(v,0)}`) +
-    panel("chart-pacientes", "Pacientes Únicos (#)", pu, v=>`${fmt(v,0)}`);
-
-  if (ing) drawEvolutivoBar("chart-ingresos", ing, v=>`$${fmt(v,1)}M`, meta ? meta.values : null);
-  if (at) drawEvolutivoBar("chart-atenciones", at, v=>`${fmt(v,0)}`);
-  if (pu) drawEvolutivoBar("chart-pacientes", pu, v=>`${fmt(v,0)}`);
-}
-
-// ---------------------------------------------------------------- consultas (stacked mes/trim/año, simple bar semana/día) + ranking
-function drawConsultasChart(){
-  destroyChart("chart-consultas-stack");
-  const ctx = document.getElementById("chart-consultas-stack").getContext("2d");
-  const fine = (currentPeriod === "semana" || currentPeriod === "dia");
-  if (fine){
-    const series = buildFineGrain("consultas_real", currentScope);
-    const bg = series.labels.map((_,i)=> i===series.currentIndex ? COLORS.blue : COLORS.gray);
-    charts["chart-consultas-stack"] = new Chart(ctx, {
-      type:"bar",
-      data:{ labels: series.labels, datasets:[{ data: series.values, backgroundColor: bg, borderRadius:4, maxBarThickness:26, _fmt:(v)=>`${fmt(v,0)}` }] },
-      options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:20}},
-        plugins:{ legend:{ display:false } },
-        scales:{ y:{ display:false, beginAtZero:true, grace:"20%" }, x:{ grid:{ display:false }, ticks:{ font:{ size:9 }, maxRotation:60 } } } },
-    });
-    return series;
-  }
-  const s = monthlySeries(currentScope, "consultas");
-  let labels, real, agen;
-  if (currentPeriod === "mes"){
-    labels = [...D.meses_hist, D.mes_actual];
-    real = [...s.hist, s.real];
-    agen = s.hist.map(()=>0).concat([s.agendado]);
-  } else if (currentPeriod === "trimestre"){
-    const [e,f,m,a,my,j,jl] = s.hist;
-    labels = ["Q1","Q2","Q3"];
-    real = [e+f+m, a+my+j, jl+s.real];
-    agen = [0,0,s.agendado];
-  } else {
-    labels = ["2026 (YTD)"];
-    real = [sum(s.hist)+s.real];
-    agen = [s.agendado];
-  }
-  charts["chart-consultas-stack"] = new Chart(ctx, {
-    type:"bar",
-    data:{ labels, datasets:[
-      { label:"Real", data:real, backgroundColor: labels.map((_,i)=> i===labels.length-1 ? COLORS.blue : COLORS.gray), borderRadius:4, maxBarThickness:34, stack:"s" },
-      { label:"Agendado", data:agen, backgroundColor: COLORS.pink, borderRadius:4, maxBarThickness:34, stack:"s" },
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:20}},
-      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:12, font:{ size:11 } } } },
-      scales:{ y:{ display:false, beginAtZero:true, grace:"20%", stacked:true }, x:{ grid:{ display:false }, stacked:true, ticks:{ font:{ size:11 } } } } },
-  });
-}
-// Etiqueta que se dibuja al costado (a la derecha) de cada barra: valor +
-// % vs LM + nominal vs LM, todo junto — así no falta ninguna comparación en
-// ninguna categoría (todas las categorías del mes se traen del Sheet, sin
-// truncar a un top-N).
-function rankingBarLabel(r){
-  const v = `${fmt(r.valor,0)}`;
-  if (r.nuevo) return `${v} · Nuevo`;
-  if (r.vsLM === null || r.vsLM === undefined) return v;
-  const pctStr = `${r.vsLM>=0?'+':''}${r.vsLM}%`;
-  const nomStr = `${r.nomLM>=0?'+':''}${fmt(r.nomLM,0)}`;
-  return `${v} · ${pctStr} (${nomStr})`;
-}
-function drawRanking(){
-  destroyChart("chart-ranking");
-  const rows = D.consultas_ranking[currentScope];
-  const canvas = document.getElementById("chart-ranking");
-  canvas.parentElement.style.height = `${Math.max(260, rows.length*32 + 30)}px`;
-  const ctx = canvas.getContext("2d");
-  charts["chart-ranking"] = new Chart(ctx, {
-    type:"bar",
-    data:{ labels: rows.map(r=>r.nombre), datasets:[{ data: rows.map(r=>r.valor), backgroundColor: rows.map((r,i)=> i===0 ? COLORS.red : COLORS.gray), borderRadius:4, maxBarThickness:20, _fmt:(v,i)=>rankingBarLabel(rows[i]) }] },
-    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:(c)=>{
-        const r = rows[c.dataIndex];
-        const pctLM = r.nuevo ? "Nuevo" : (r.vsLM===null||r.vsLM===undefined ? "—" : `${r.vsLM>=0?'+':''}${r.vsLM}% (${r.nomLM>=0?'+':''}${fmt(r.nomLM,0)}) vs LM`);
-        const pctLY = (r.vsLY===null||r.vsLY===undefined) ? null : `${r.vsLY>=0?'+':''}${r.vsLY}% (${r.nomLY>=0?'+':''}${fmt(r.nomLY,0)}) vs LY`;
-        return `${c.raw} — ${pctLM}${pctLY ? " · "+pctLY : ""}`;
-      }}}},
-      scales:{ x:{ display:false, beginAtZero:true, grace:"70%" }, y:{ grid:{ display:false }, ticks:{ font:{ size:11.5 } } } } },
-  });
-}
-// % de No show (consultas no asistidas / (realizadas + no asistidas)) para
-// el scope actual, a nivel Mes. D.total.noshow / D.sedes[x].noshow traen
-// {hist:[8 meses cerrados, %], actual (% del mes en curso), prom (promedio
-// de los 8 meses cerrados), deltaPts (actual - prom, en puntos)} — ver
-// buildNoShowMetric en data-live.js (o el respaldo estático en data.js si el
-// fetch en vivo no está disponible). Devuelve null si no hay dato (todavía
-// no se ha cargado ninguna fuente de No show).
-function noShowSeries(scope){
-  const base = scope === "total" ? D.total : D.sedes[scope];
-  const ns = base && base.noshow;
-  if (!ns || ns.actual === null || ns.actual === undefined) return null;
-  return { actual: ns.actual, prom: ns.prom, deltaPts: ns.deltaPts };
-}
-function buildConsultas(){
-  const el = document.getElementById("consultas-section");
-  const s = monthlySeries(currentScope, "consultas");
-  const fine = (currentPeriod === "semana" || currentPeriod === "dia");
-  const [b1,b2] = fine ? PERIOD_BADGES[currentPeriod] : ["vs LM","vs U3M"];
-  el.innerHTML = `
-    <div class="panel">
-      <div class="panel-title">Consultas ${currentScope==='total'?'':currentScope} — ${PERIOD_LABELS[currentPeriod]}</div>
-      <div class="panel-badges" id="consultas-badges"></div>
-      <div class="chart-box tall"><canvas id="chart-consultas-stack"></canvas></div>
-      <div style="font-size:11.5px; color:var(--axis); margin-top:6px;">
-        ${fine ? "Vista día/semana: solo consultas ya realizadas (real), sin agenda futura." :
-          `Real MTD: <b style="color:var(--text)">${s.real}</b> · Agendado 25–31: <b style="color:var(--text)">${s.agendado}</b> · Proyección: <b style="color:var(--text)">${s.real+s.agendado}</b>`}
-      </div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">Ranking por agrupación de consulta — ${D.mes_actual} ${(typeof window.getAnioVigente==="function")?window.getAnioVigente():2026}</div>
-      <div class="chart-box tall"><canvas id="chart-ranking"></canvas></div>
-    </div>
-  `;
-  const series = drawConsultasChart();
-  const badgesEl = document.getElementById("consultas-badges");
-  const intFmt = v=>fmt(v,0);
-  if (fine && series){
-    badgesEl.innerHTML = `${pctBadge(series.badge1,b1,fmtSignedFn(series.nomLM,intFmt))} ${pctBadge(series.badge2,b2,fmtSignedFn(series.nomU3M,intFmt))}`;
-  } else if (currentPeriod === "mes"){
-    const proy = s.real+s.agendado;
-    const nomLM = proy - s.hist[6], nomU3M = proy - (s.hist[4]+s.hist[5]+s.hist[6])/3;
-    const ns = noShowSeries(currentScope);
-    const nsBadge = ns ? noShowBadge(ns.actual, ns.deltaPts) : "";
-    badgesEl.innerHTML = `${pctBadge(s.vsLM,"vs LM",fmtSignedFn(nomLM,intFmt))} ${pctBadge(s.vsU3M,"vs U3M",fmtSignedFn(nomU3M,intFmt))} ${nsBadge}`;
-  } else if (currentPeriod === "trimestre"){
-    const [e,f,m,a,my,j,jl] = s.hist;
-    const Q1=e+f+m, Q2=a+my+j, Q3=jl+s.real+s.agendado;
-    badgesEl.innerHTML = `${pctBadge((Q3/Q2-1)*100,"vs trim. anterior",fmtSignedFn(Q3-Q2,intFmt))} ${pctBadge((Q3/((Q1+Q2)/2)-1)*100,"vs prom. trim. cerrados",fmtSignedFn(Q3-(Q1+Q2)/2,intFmt))}`;
-  } else {
-    badgesEl.innerHTML = "";
-  }
-  drawRanking();
-}
-
-// ---------------------------------------------------------------- servicios + highlights (siempre mes vigente)
-// Highlights automáticos: se usan cuando el selector de mes se mueve fuera
-// del mes con el que se redactaron a mano los de data.js (ver
-// window.MES_HIGHLIGHTS_CURADOS en data-live.js). Arma frases cortas con lo que
-// ya está calculado para currentScope en ese mes vigente — no reemplaza la
-// curaduría manual del corte vigente, solo evita dejar el texto de Agosto
-// pegado cuando se está viendo otro mes.
-//
-// Estructura/redacción (sep-2026, a pedido de Marite): se busca imitar el
-// tono de los Highlights redactados a mano — Ingresos primero, luego el
-// servicio con mayor movimiento del mes, Subrogación, y la sede más notable
-// — agregando "vs LY" (año anterior, mismo mes) en todo lo que ya trae ese
-// dato (Ingresos/Atenciones/Pacientes/Consultas/Ranking vienen de
-// buildIngresosMetric/buildMonthlyRealMetric/buildConsultasRankingLive en
-// data-live.js, que ya calculan vsLY comparando contra el Real cerrado del
-// mismo mes en anio-1; si esa hoja no tiene ese año todavía, vsLY llega en
-// null y el fragmento simplemente se omite, nunca se inventa un dato).
-//
-// LIMITACIÓN CONOCIDA: a diferencia de los Highlights manuales de Agosto
-// (que sí desglosan un servicio en sus subclasificaciones, ej. "Laboratorio
-// FI/Clínico/Externo"), esta versión automática se queda a nivel Servicio
-// (misma fuente que la tabla "Ingresos por servicio", ya con el ajuste de
-// Cargos al día aplicado) y NO baja a Subclasificación/Concepto — esa vista
-// ("ver conceptos") sale de la hoja ConceptosMensual, que todavía no se
-// actualiza en el mismo momento que Base!E y puede ir rezagada.
-function buildHighlightsAuto(scope){
-  const base = scope === "total" ? D.total : (D.sedes && D.sedes[scope]);
-  if (!base) return [];
-  const out = [];
-  const mesVigenteNum = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 8;
-  const mesLargo = nombreMesLargo(mesVigenteNum);
-  const cerrado = (typeof window.mesVigenteEstaCerrado === "function") ? window.mesVigenteEstaCerrado() : true;
-  const corteDia = (typeof window.getCorteRealDia === "function") ? window.getCorteRealDia() : null;
-
-  function pctFrag(v, label){ return (v===null||v===undefined) ? "" : `${v>=0?'+':''}${v}% ${label}`; }
-  function joinFrags(frags){ const f = frags.filter(Boolean); return f.length ? ` (${f.join(", ")})` : ""; }
-
-  // 1) Ingresos — proyección a cierre + vs LM/vs U3M/vs LY (cuando haya dato)
-  if (base.ingresos){
-    const ing = base.ingresos;
-    const corteTxt = cerrado
-      ? `al cierre de ${mesLargo} (mes cerrado, Real = Proyectado)`
-      : `acumulado al ${corteDia || "?"} de ${mesLargo} (mes en curso, cifra proyectada a cierre)`;
-    const frags = [pctFrag(ing.vsLM,"vs LM"), pctFrag(ing.vsU3M,"vs U3M"), pctFrag(ing.vsLY,"vs LY")];
-    out.push(`Ingresos: $${fmt(ing.proy,1)}M ${corteTxt}${joinFrags(frags)}.`);
-  }
-
-  // 2) Servicio con mayor movimiento NOMINAL del mes (mismo dato que la tabla
-  // "Ingresos por servicio", ya reactivo a Sede) — la variación en pesos suele
-  // ser más relevante para negocio que la variación %, sobre todo en
-  // servicios chicos donde un % grande no dice mucho en dinero real.
-  const servRows = (D.servicios && D.servicios[scope]) || [];
-  const conMovimiento = servRows.filter(r => !r.nuevo && r.nomLM != null && r.nomLM !== 0);
-  if (conMovimiento.length){
-    const top = conMovimiento.slice().sort((a,b)=>Math.abs(b.nomLM)-Math.abs(a.nomLM))[0];
-    const frags = [pctFrag(top.vsLM,"vs LM")];
-    if (top.vsU3M != null) frags.push(pctFrag(top.vsU3M,"vs U3M"));
-    out.push(`${top.nombre}: $${fmt(top.valor,1)}M${joinFrags(frags)} — el mayor movimiento en pesos del mes dentro de Ingresos por servicio.`);
-  }
-
-  // 3) Subrogación — destacado aparte (línea de negocio propia, ticket alto,
-  // 100% CDMX históricamente) usando el pipeline de pacientes ya corregido
-  // con lo realmente facturado en Cargos (ver hoja SubrogacionPacientes).
-  const sub = D.subrogacion && D.subrogacion[scope];
-  if (sub && sub.actual){
-    const val = sub.actual["Valoración"] || {pacientes:0, ingreso:0};
-    const prog = sub.actual["Programa Activo"] || {pacientes:0, ingreso:0};
-    const totalIngSub = (val.ingreso||0) + (prog.ingreso||0);
-    if (val.pacientes || prog.pacientes || totalIngSub){
-      const corteTxt = cerrado ? `en ${mesLargo}` : `acumulado al ${corteDia || "?"} de ${mesLargo}`;
-      const progTxt = prog.pacientes
-        ? `${fmt(prog.pacientes,0)} programa(s) activo(s) nuevo(s) ($${fmt(prog.ingreso,0)})`
-        : "sin programas activos nuevos contratados en el periodo";
-      out.push(`Subrogación ${corteTxt}: $${fmt(totalIngSub,0)} — ${fmt(val.pacientes,0)} valoración(es) realizada(s) ($${fmt(val.ingreso,0)}), ${progTxt}.`);
-    }
-  }
-
-  // 4) Sede con mayor variación % del mes (solo tiene sentido en la vista
-  // "Todas las sedes" — si ya se filtró a una sede específica, sería
-  // redundante con el bullet de Ingresos de arriba).
-  if (scope === "total" && D.sedes){
-    const nombreSede = { CDMX: "CDMX", GDL: "Guadalajara", MTP: "Metepec" };
-    const candidatos = Object.keys(D.sedes)
-      .map(code => (D.sedes[code].ingresos ? { code, ...D.sedes[code].ingresos } : null))
-      .filter(c => c && c.vsLM != null);
-    if (candidatos.length){
-      const top = candidatos.slice().sort((a,b)=>Math.abs(b.vsLM)-Math.abs(a.vsLM))[0];
-      const frags = [pctFrag(top.vsLM,"vs LM")];
-      if (top.vsLY != null) frags.push(pctFrag(top.vsLY,"vs LY"));
-      out.push(`${nombreSede[top.code] || top.code}: $${fmt(top.proy,1)}M${joinFrags(frags)} — la sede con mayor variación porcentual del mes.`);
-    }
-  }
-
-  // 5) Atenciones / Pacientes únicos / Consultas — proyección + vs LM + vs LY
-  function pushProyMetric(label, m, fmtDec){
-    if (!m) return;
-    const frags = [pctFrag(m.vsLM,"vs LM"), pctFrag(m.vsLY,"vs LY")];
-    out.push(`${label}: ${fmt(m.proy,fmtDec)}${joinFrags(frags)}.`);
-  }
-  pushProyMetric("Atenciones proyectadas", base.atenciones, 0);
-  pushProyMetric("Pacientes únicos proyectados", base.pacientes, 0);
-  if (base.consultas){
-    const proy = (base.consultas.real||0) + (base.consultas.agendado||0);
-    const frags = [pctFrag(base.consultas.vsLM,"vs LM"), pctFrag(base.consultas.vsLY,"vs LY")];
-    out.push(`Consultas proyectadas: ${fmt(proy,0)}${joinFrags(frags)}.`);
-  }
-
-  // 6) Motivo de consulta más frecuente (ranking agrupado, ya con vs LY)
-  const ranking = (D.consultas_ranking && D.consultas_ranking[scope]) || [];
-  if (ranking.length){
-    const top = ranking[0];
-    const frags = top.nuevo ? [] : [pctFrag(top.vsLM,"vs LM"), pctFrag(top.vsLY,"vs LY")];
-    out.push(`Motivo de consulta más frecuente: "${top.nombre}" con ${fmt(top.valor,0)}${top.nuevo ? " (nuevo este mes)" : joinFrags(frags)}.`);
-  }
-
-  return out;
-}
-const MES_NOMBRES_LARGOS = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-function nombreMesLargo(num){ return MES_NOMBRES_LARGOS[num-1] || ""; }
-
-function buildServicios(){
-  const rows = D.servicios[currentScope];
-  const mesVigenteNum = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 8;
-  // Mes al que corresponden los Highlights redactados A MANO en data.js — window.
-  // MES_HIGHLIGHTS_CURADOS es un snapshot tomado por data-live.js al cargar, ANTES de que
-  // D.mes_actual empiece a pisarse solo con cada cambio de selector (ver
-  // syncMesesHistYActual en data-live.js), así que sigue apuntando al corte real aunque el
-  // mes vigente ya haya avanzado. (Fix sep-2026: antes se comparaba contra
-  // window.MES_CORTE_ORIGINAL —el mes con el que el tablero autodetectó arrancar según
-  // Base—, que avanza solo en cuanto Base trae ALGO de Real del mes siguiente, sin que
-  // alguien haya actualizado a mano los Highlights de data.js todavía. Bug reportado por
-  // Marite: "pongo filtro de septiembre y me sale en mezcla de servicios y highlights
-  // agosto".)
-  const mesHighlightsCurados = (typeof window.MES_HIGHLIGHTS_CURADOS === "number") ? window.MES_HIGHLIGHTS_CURADOS : mesVigenteNum;
-  const esMesCorteOriginal = mesVigenteNum === mesHighlightsCurados;
-  const hi = esMesCorteOriginal ? (D.highlights[currentScope] || []) : buildHighlightsAuto(currentScope);
-  const highlightsNota = esMesCorteOriginal ? "" : `<div style="font-size:10.5px; color:var(--axis); margin-bottom:8px;">Highlights automáticos para ${nombreMesLargo(mesVigenteNum)} — los redactados a mano son del corte de ${nombreMesLargo(mesHighlightsCurados)}.</div>`;
-  const mesLabelEl = document.getElementById("mezcla-mes-label");
-  if (mesLabelEl) mesLabelEl.textContent = nombreMesLargo(mesVigenteNum);
-  const el = document.getElementById("servicios-section");
-  const rowsHtml = rows.map(r=>{
-    const nomLMStr = fmtSignedFn(r.nomLM, v=>`$${fmt(v,1)}M`);
-    const nomU3MStr = fmtSignedFn(r.nomU3M, v=>`$${fmt(v,1)}M`);
-    const nomLYStr = fmtSignedFn(r.nomLY, v=>`$${fmt(v,1)}M`);
-    const lm = r.nuevo ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : miniPct(r.vsLM, nomLMStr);
-    const u3m = (r.vsU3M===null || r.vsU3M===undefined) ? '<span style="color:var(--axis);">—</span>' : (r.nuevo ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : miniPct(r.vsU3M, nomU3MStr));
-    const ly = (r.vsLY===null || r.vsLY===undefined) ? '<span style="color:var(--axis);">—</span>' : miniPct(r.vsLY, nomLYStr);
-    const clickable = !!r.servKey;
-    return `<tr class="${clickable?'servicio-row':''}" ${clickable?`data-servkey="${r.servKey}" data-nombre="${r.nombre}"`:''}>
-      <td>${r.nombre}${clickable?' <span class="drill-hint">▸ ver conceptos</span>':''}</td>
-      <td class="num">${fmt(r.valor,1)}</td><td class="num">${lm}</td><td class="num">${u3m}</td><td class="num">${ly}</td></tr>`;
-  }).join("");
-  el.innerHTML = `
-    <div class="panel">
-      <div class="panel-title">Ingresos por servicio (MDP)</div>
-      <div class="section-sub" style="margin:0 0 8px;">Clic en un servicio para ver el desglose por concepto (mes vigente)</div>
-      <table><thead><tr><th>Servicio</th><th class="num">MDP</th><th class="num">vs LM</th><th class="num">vs U3M</th><th class="num">vs LY</th></tr></thead><tbody>${rowsHtml}</tbody></table>
-    </div>
-    <div class="panel">
-      <div class="panel-title">Highlights</div>
-      ${highlightsNota}
-      <ul class="highlights">${hi.map(h=>`<li>${h}</li>`).join("") || '<li>Sin highlights registrados para esta sede.</li>'}</ul>
-    </div>
-  `;
-  el.querySelectorAll(".servicio-row").forEach(tr=>{
-    tr.addEventListener("click", ()=> openConceptModal(tr.dataset.servkey, tr.dataset.nombre));
-  });
-}
-
-// ---------------------------------------------------------------- modal: desglose dinámico por concepto
-// Jerarquía: Servicio > Subclasificación > Subclasificación 2 > Concepto — se adapta sola: si un
-// servicio no tiene Subclas (ej. Farmacia) salta directo a Concepto; si tiene Subclas pero no
-// Subclas2 (ej. FIV/ICSI) se detiene ahí; Laboratorio sí trae los 3 niveles. vs LM se recalcula en
-// cada nivel a partir de las sumas de Ago y Jul de ese grupo (no es un promedio de porcentajes).
-let conceptModalRows = [];   // filas hoja del servicio+sede actual: {subclas, subclas2, concepto, ago, jul}
-let conceptModalPath = [];   // ej. ["Laboratorio Clínico", "Hormonas, Sangre y Perfiles"]
-let conceptModalServNombre = "";
-let conceptModalDetail = null;  // nombre del concepto hoja cuyo evolutivo mensual se está viendo, o null
-
-function openConceptModal(servKey, servNombre){
-  conceptModalRows = (D.conceptos && D.conceptos[currentScope] && D.conceptos[currentScope][servKey]) || [];
-  conceptModalServNombre = servNombre;
-  conceptModalPath = [];
-  conceptModalDetail = null;
-  renderConceptModalLevel();
-  document.getElementById("concept-modal").style.display = "flex";
-}
-
-function conceptRowsAtPath(path){
-  // OJO: la tabla de grupos (arriba) etiqueta las filas sin subclas/subclas2
-  // como "(sin subclasificar)" (línea `r[nextField] || "(sin subclasificar)"`),
-  // así que al filtrar hay que normalizar el mismo sentinel — comparar
-  // r.subclas directo contra path[0] deja SIEMPRE en 0 el grupo
-  // "(sin subclasificar)" porque null !== "(sin subclasificar)".
-  return conceptModalRows.filter(r =>
-    (path.length < 1 || (r.subclas || "(sin subclasificar)") === path[0]) &&
-    (path.length < 2 || (r.subclas2 || "(sin subclasificar)") === path[1])
-  );
-}
-
-function conceptVsLMHtml(ago, jul){
-  // Un concepto con $0 este mes (aunque sí haya vendido en algún momento de
-  // Ene-Ago, que es la única razón por la que aparece en esta tabla) se
-  // marca como alerta explícita — no se confunde con "Nuevo" (que es cuando
-  // el mes anterior fue $0 pero el vigente sí tiene venta).
-  if (!ago) return '<span style="color:var(--red); font-weight:700;" title="Sin cargos registrados este mes para este concepto">⚠ Sin venta</span>';
-  const v = pctOrNull(ago, jul);
-  if (v === null) return '<span style="color:var(--axis); font-weight:700;">Nuevo</span>';
-  const nomStr = fmtSignedFn(ago - jul, x => `$${fmt(x,0)}`);
-  return miniPct(v, nomStr);
-}
-
-// UDS solo tiene sentido como métrica en Farmacia (unidades de medicamento);
-// en el resto de servicios (consultas, procedimientos, laboratorio...) cada
-// atención ya ES la unidad, así que la columna/():dato se oculta fuera de
-// Farmacia para no duplicar información.
-function conceptModalShowUds(){
-  return conceptModalServNombre === "Farmacia";
-}
-
-function renderConceptModalLevel(){
-  const title = document.getElementById("concept-modal-title");
-  const body = document.getElementById("concept-modal-body");
-  const showUds = conceptModalShowUds();
-
-  const crumbs = [conceptModalServNombre, ...conceptModalPath];
-  if (conceptModalDetail) crumbs.push(conceptModalDetail);
-  title.innerHTML = crumbs.map((c,i)=>{
-    if (i === crumbs.length-1) return `<span style="color:var(--text);">${c}</span>`;
-    return `<a href="#" class="concept-crumb" data-depth="${i}" style="color:var(--blue); text-decoration:none;">${c}</a> <span style="color:var(--axis); font-weight:400;">›</span> `;
-  }).join("");
-
-  const backBtn = (conceptModalPath.length || conceptModalDetail)
-    ? `<div class="concept-back" style="cursor:pointer; color:var(--blue); font-size:12px; font-weight:700; margin-bottom:10px;">‹ volver</div>` : '';
-
-  if (conceptModalDetail){
-    body.innerHTML = backBtn + renderConceptDetailHtml(conceptModalDetail, showUds);
-    const back = body.querySelector(".concept-back");
-    if (back) back.addEventListener("click", ()=>{ conceptModalDetail = null; renderConceptModalLevel(); });
-    title.querySelectorAll(".concept-crumb").forEach(a=>{
-      a.addEventListener("click", (e)=>{
-        e.preventDefault();
-        conceptModalDetail = null;
-        conceptModalPath = conceptModalPath.slice(0, Number(a.dataset.depth));
-        renderConceptModalLevel();
-      });
-    });
-    drawConceptDetailCharts(conceptModalDetail, showUds);
-    return;
-  }
-
-  const rowsHere = conceptRowsAtPath(conceptModalPath);
-  if (!rowsHere.length){
-    body.innerHTML = `<div class="unavailable" style="height:auto; padding:24px;">No hay datos de conceptos disponibles para "${conceptModalServNombre}" en esta sede.</div>`;
-    return;
-  }
-  const totalAgo = sum(rowsHere.map(r=>r.ago));
-  const totalJul = sum(rowsHere.map(r=>r.jul));
-  const totalCount = sum(rowsHere.map(r=>r.count||0));
-  const totalUds = sum(rowsHere.map(r=>r.uds||0));
-
-  // ¿el siguiente nivel es agrupable (Subclas / Subclas2), o ya estamos a nivel Concepto?
-  const nextField = conceptModalPath.length === 0 ? 'subclas' : (conceptModalPath.length === 1 ? 'subclas2' : null);
-  const canGroup = nextField && rowsHere.some(r => r[nextField]);
-
-  const summaryHtml = `<div style="font-size:12px; color:var(--axis); margin-bottom:10px;">Total: <b style="color:var(--text);">$${fmt(totalAgo,0)}</b> · vs LM ${conceptVsLMHtml(totalAgo,totalJul)} · ${fmt(totalCount,0)} atenciones${showUds?` · ${fmt(totalUds,0)} UDS`:''} · ${rowsHere.length} concepto${rowsHere.length===1?'':'s'} en este nivel${canGroup?'':' · ordenado de mayor a menor'}</div>`;
-
-  let tableHtml;
-  if (canGroup){
-    const groups = {};
-    for (const r of rowsHere){
-      const key = r[nextField] || "(sin subclasificar)";
-      groups[key] = groups[key] || { ago:0, jul:0, n:0, count:0, uds:0 };
-      groups[key].ago += r.ago; groups[key].jul += r.jul; groups[key].n += 1;
-      groups[key].count += (r.count||0); groups[key].uds += (r.uds||0);
-    }
-    const groupEntries = Object.entries(groups).sort((a,b)=>b[1].ago-a[1].ago);
-    const colLabel = nextField === 'subclas' ? 'Subclasificación' : 'Subclasificación 2';
-    tableHtml = `<table><thead><tr><th>${colLabel}</th><th class="num">MDP</th><th class="num">Atenciones</th>${showUds?'<th class="num">UDS</th>':''}<th class="num">vs LM</th></tr></thead><tbody>` +
-      groupEntries.map(([name,g])=>
-        `<tr class="servicio-row concept-group-row" data-key="${name}"><td>${name} <span class="drill-hint">▸ ${g.n} concepto${g.n===1?'':'s'}</span></td><td class="num">$${fmt(g.ago,0)}</td><td class="num">${fmt(g.count,0)}</td>${showUds?`<td class="num">${fmt(g.uds,0)}</td>`:''}<td class="num">${conceptVsLMHtml(g.ago,g.jul)}</td></tr>`
-      ).join("") + `</tbody></table>`;
-  } else {
-    const sorted = [...rowsHere].sort((a,b)=>b.ago-a.ago);
-    tableHtml = `<table><thead><tr><th>Concepto</th><th class="num">MDP (pesos)</th><th class="num">Atenciones</th>${showUds?'<th class="num">UDS</th>':''}<th class="num">vs LM</th></tr></thead><tbody>` +
-      sorted.map(r=>`<tr class="servicio-row concept-leaf-row${r.ago?'':' concept-zero-row'}" data-concepto="${r.concepto.replace(/"/g,'&quot;')}"><td>${r.concepto} <span class="drill-hint">▸ evolutivo</span></td><td class="num">$${fmt(r.ago,0)}</td><td class="num">${fmt(r.count||0,0)}</td>${showUds?`<td class="num">${fmt(r.uds||0,0)}</td>`:''}<td class="num">${conceptVsLMHtml(r.ago,r.jul)}</td></tr>`).join("") + `</tbody></table>`;
-  }
-
-  body.innerHTML = backBtn + summaryHtml + tableHtml;
-
-  body.querySelectorAll(".concept-group-row").forEach(tr=>{
-    tr.addEventListener("click", ()=>{ conceptModalPath.push(tr.dataset.key); renderConceptModalLevel(); });
-  });
-  body.querySelectorAll(".concept-leaf-row").forEach(tr=>{
-    tr.addEventListener("click", ()=>{ conceptModalDetail = tr.dataset.concepto; renderConceptModalLevel(); });
-  });
-  const back = body.querySelector(".concept-back");
-  if (back) back.addEventListener("click", ()=>{ conceptModalPath.pop(); renderConceptModalLevel(); });
-  title.querySelectorAll(".concept-crumb").forEach(a=>{
-    a.addEventListener("click", (e)=>{
-      e.preventDefault();
-      conceptModalPath = conceptModalPath.slice(0, Number(a.dataset.depth));
-      renderConceptModalLevel();
-    });
-  });
-}
-
-// ------------------------------------------------------------- evolutivo por concepto (detalle al hacer clic en una hoja)
-// Ingresos/Atenciones/Ticket medio siempre; UDS solo si el servicio es
-// Farmacia. Fuente: D.conceptosMensual[currentScope][concepto] (Ene-Ago,
-// cargado desde la hoja "ConceptosMensual"). Ago/Jul de Ingresos ya vienen
-// pisados con el valor validado de "Conceptos" desde data-live.js, así que
-// coinciden exactamente con lo que se ve en la fila de la tabla.
-// Ingresos siempre se muestran en miles de pesos (K) en esta vista — los
-// montos MXN de un solo concepto ya caben cómodos en K y así el número no
-// se corta arriba de la barra más alta.
-function fmtKPesos(v){ return `$${fmt(Math.round((v||0)/1000),0)}K`; }
-
-function renderConceptDetailHtml(concepto, showUds){
-  const row = conceptModalRows.find(r => r.concepto === concepto);
-  const series = D.conceptosMensual && D.conceptosMensual[currentScope] && D.conceptosMensual[currentScope][concepto];
-
-  const summaryHtml = row
-    ? `<div style="font-size:12px; color:var(--axis); margin-bottom:6px;">Mes vigente: <b style="color:var(--text);">${fmtKPesos(row.ago)}</b> · vs LM ${conceptVsLMHtml(row.ago,row.jul)} · ${fmt(row.count||0,0)} atenciones${showUds?` · ${fmt(row.uds||0,0)} UDS`:''}</div>`
-    : '';
-
-  const chartsHtml = (()=>{
-    if (!series) return `<div class="unavailable" style="height:auto; padding:20px;">No hay histórico mensual disponible para este concepto en esta sede.</div>`;
-    const panels = [
-      { id:"ingresos", title:"Ingresos — miles de $ (MXN)" },
-      { id:"atenciones", title:"Atenciones (#)" },
-      { id:"ticket", title:"Ticket medio (pesos)" },
-    ];
-    if (showUds) panels.push({ id:"uds", title:"UDS (#)" });
-    const panelsHtml = panels.map(p =>
-      `<div><div class="concept-detail-title">${p.title}</div><div class="concept-detail-box"><canvas id="concept-detail-chart-${p.id}"></canvas></div></div>`
-    ).join("");
-    return `<div class="concept-detail-grid">${panelsHtml}</div>`;
-  })();
-
-  return summaryHtml + chartsHtml + renderConceptDoctorsHtml(concepto, showUds);
-}
-
-// Tabla "por médico" — para saber qué médico usa/receta más este concepto.
-// Fuente: D.conceptosPorMedico[currentScope][concepto] (Profesional Historia,
-// acumulado Ene–Ago 2026). Se ordena por UDS cuando aplica (Farmacia) o por
-// Atenciones en los demás servicios — esa es la mejor proxy de "quién más lo usa".
-// Top 8 médicos + fila "Otros médicos" agregada para no desbordar el modal.
-function renderConceptDoctorsHtml(concepto, showUds){
-  const list = D.conceptosPorMedico && D.conceptosPorMedico[currentScope] && D.conceptosPorMedico[currentScope][concepto];
-  if (!list || !list.length){
-    return `<div class="concept-doctors-title">Por médico (Profesional Historia)</div><div class="unavailable" style="height:auto; padding:16px;">No hay desglose por médico disponible para este concepto en esta sede.</div>`;
-  }
-  const sortKey = showUds ? "uds" : "atenciones";
-  const sorted = [...list].sort((a,b)=> b[sortKey]-a[sortKey]);
-  const TOP_N = 8;
-  const top = sorted.slice(0, TOP_N);
-  const rest = sorted.slice(TOP_N);
-
-  const rowHtml = (d)=> `<tr><td>${d.medico}</td><td class="num">${fmt(d.atenciones,0)}</td>${showUds?`<td class="num">${fmt(d.uds,0)}</td>`:''}<td class="num">${fmtKPesos(d.ingresos)}</td></tr>`;
-
-  let rowsHtml = top.map(rowHtml).join("");
-  if (rest.length){
-    const agg = rest.reduce((a,d)=>({ atenciones:a.atenciones+d.atenciones, uds:a.uds+d.uds, ingresos:a.ingresos+d.ingresos }), {atenciones:0,uds:0,ingresos:0});
-    rowsHtml += `<tr style="font-style:italic; color:var(--axis);"><td>Otros médicos (${rest.length})</td><td class="num">${fmt(agg.atenciones,0)}</td>${showUds?`<td class="num">${fmt(agg.uds,0)}</td>`:''}<td class="num">${fmtKPesos(agg.ingresos)}</td></tr>`;
-  }
-
-  const mesVig = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 8;
-  const mesesTxt = "Ene–" + (window.MESES_12 || [])[mesVig-1];
-  return `<div class="concept-doctors-title">Por médico (Profesional Historia)</div>` +
-    `<div class="concept-doctors-sub">Acumulado ${mesesTxt} 2026 · ${list.length} médico${list.length===1?'':'s'} en total · ordenado por ${showUds?'UDS':'atenciones'}</div>` +
-    `<table><thead><tr><th>Médico</th><th class="num">Atenciones</th>${showUds?'<th class="num">UDS</th>':''}<th class="num">Ingresos</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
-}
-
-function drawMiniMonthBarChart(canvasId, values, valueFmt){
-  destroyChart(canvasId);
-  const canvas = document.getElementById(canvasId);
-  if (!canvas) return;
-  const bg = values.map((_,i)=> i === values.length-1 ? COLORS.blue : COLORS.gray);
-  charts[canvasId] = new Chart(canvas.getContext("2d"), {
-    type:"bar",
-    data:{ labels: MESES_12.slice(0, values.length), datasets:[{ data: values, backgroundColor: bg, borderRadius:4, maxBarThickness:22, _fmt: valueFmt }] },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      layout:{ padding:{ top:18 } },
-      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(c)=> valueFmt(c.raw) } } },
-      scales:{ y:{ display:false, beginAtZero:true, grace:"20%" }, x:{ grid:{display:false}, ticks:{font:{size:9.5}} } },
-    },
-  });
-}
-
-function drawConceptDetailCharts(concepto, showUds){
-  const series = D.conceptosMensual && D.conceptosMensual[currentScope] && D.conceptosMensual[currentScope][concepto];
-  if (!series) return;
-  const ticket = series.ingresos.map((ing,i)=> series.atenciones[i] ? Math.round(ing/series.atenciones[i]) : 0);
-  drawMiniMonthBarChart("concept-detail-chart-ingresos", series.ingresos, fmtKPesos);
-  drawMiniMonthBarChart("concept-detail-chart-atenciones", series.atenciones, v=>`${fmt(v,0)}`);
-  drawMiniMonthBarChart("concept-detail-chart-ticket", ticket, v=>`$${fmt(v,0)}`);
-  if (showUds) drawMiniMonthBarChart("concept-detail-chart-uds", series.uds, v=>`${fmt(v,0)}`);
-}
-
-function closeConceptModal(){
-  document.getElementById("concept-modal").style.display = "none";
-}
-function setupConceptModalHandlers(){
-  const overlay = document.getElementById("concept-modal");
-  document.getElementById("concept-modal-close").addEventListener("click", closeConceptModal);
-  overlay.addEventListener("click", (e)=>{ if (e.target === overlay) closeConceptModal(); });
-  document.addEventListener("keydown", (e)=>{ if (e.key === "Escape") closeConceptModal(); });
-}
-
-// ---------------------------------------------------------------- Subrogación (pacientes) — reacciona a Sede y Periodo
-function buildSubrogacion(){
-  const el = document.getElementById("subrogacion-section");
-  const notaEl = document.getElementById("subrogacion-corte-nota");
-  // Nota de corte (sep-2026): "Valoración"/"Programa activo" del mes vigente se
-  // llenan a mano en la hoja SubrogacionPacientes con lo YA REALIZADO en
-  // Cargos (facturado) hasta el día que se haya podido cargar — no es un
-  // cierre de mes. Se avisa igual que el resto del tablero ya avisa qué mes
-  // está viendo (ver mezcla-mes-label), para que nadie lea el número parcial
-  // como si fuera el total del mes.
-  if (notaEl){
-    const mesVigenteNum = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 8;
-    const cerrado = (typeof window.mesVigenteEstaCerrado === "function") ? window.mesVigenteEstaCerrado() : true;
-    const dia = (typeof window.getCorteRealDia === "function") ? window.getCorteRealDia() : null;
-    notaEl.textContent = (!cerrado && dia)
-      ? `Real acumulado al ${dia} de ${nombreMesLargo(mesVigenteNum)} (mes en curso, aún no cierra) — no es el total del mes.`
-      : "";
-  }
-  const subAll = D.subrogacion;
-  const sub = subAll && subAll[currentScope];
-  if (!sub || !sub.labels || !sub.labels.length){
-    el.innerHTML = `<div class="panel" style="grid-column:1 / -1;"><div class="unavailable" style="height:auto; padding:24px;">Datos de Subrogación no disponibles en este momento.</div></div>`;
-    return;
-  }
-  if (currentPeriod === "semana" || currentPeriod === "dia"){
-    el.innerHTML = `<div class="panel" style="grid-column:1 / -1;"><div class="unavailable" style="height:auto; padding:24px;">Subrogación no tiene datos día a día — cambia a Mes, Trimestre o Año.</div></div>`;
-    return;
-  }
-  const val = sub.actual["Valoración"] || {pacientes:0, ingreso:0, ticket:0};
-  const prog = sub.actual["Programa Activo"] || {pacientes:0, ingreso:0, ticket:0};
-  const statsVal = periodStats(sub.hist["Valoración"], val.pacientes, currentPeriod);
-  const statsProg = periodStats(sub.hist["Programa Activo"], prog.pacientes, currentPeriod);
-  const badgeVal = statsVal ? miniPct(statsVal.vsLM, fmtSignedFn(statsVal.nomLM, v=>fmt(v,0))) : '<span style="color:var(--axis);">—</span>';
-  const badgeProg = statsProg ? miniPct(statsProg.vsLM, fmtSignedFn(statsProg.nomLM, v=>fmt(v,0))) : '<span style="color:var(--axis);">—</span>';
-  const chartLabels = [...sub.labels, D.mes_actual];
-  const chartVal = [...sub.hist["Valoración"], val.pacientes];
-  const chartProg = [...sub.hist["Programa Activo"], prog.pacientes];
-  el.innerHTML = `
-    <div class="panel">
-      <div class="panel-title">${D.mes_actual} — estado del pipeline (${PERIOD_LABELS[currentPeriod]})</div>
-      <div class="patient-kpi-row">
-        <div class="kpi-card">
-          <div class="kpi-label">Valoración (candidatas)</div>
-          <div class="kpi-big">${fmt(val.pacientes,0)}</div>
-          <div class="kpi-sub">$${fmt(val.ingreso,0)} en valoraciones</div>
-          <div class="kpi-sub">${badgeVal}</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Programa activo</div>
-          <div class="kpi-big">${fmt(prog.pacientes,0)}</div>
-          <div class="kpi-sub">$${fmt(prog.ingreso,0)} · ticket prom. $${fmt(prog.ticket,0)}</div>
-          <div class="kpi-sub">${badgeProg}</div>
-        </div>
-      </div>
-      <div class="patient-note">
-        Son dos poblaciones distintas de personas, no una tasa de conversión: "Valoración" cuenta candidatas gestantes evaluadas médicamente;
-        "Programa activo" cuenta padres intencionales con un paquete de subrogación ya contratado. Acumulado ${(typeof window.getAnioVigente==="function")?window.getAnioVigente():2026} (${D.meses_hist[0]||D.mes_actual}–${D.mes_actual}):
-        ${fmt(sub.totalPacientesYTD["Valoración"],0)} valoraciones · ${fmt(sub.totalPacientesYTD["Programa Activo"],0)} programas activos ·
-        $${fmt(sub.ingresoYTD,0)} en ingresos de Subrogación.
-      </div>
-      <div class="chart-box"><canvas id="chart-subrogacion"></canvas></div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">Pacientes por mes y etapa</div>
-      <table>
-        <thead><tr><th>Mes</th><th class="num">Valoración</th><th class="num">Programa activo</th></tr></thead>
-        <tbody>${chartLabels.map((lbl,i)=>`<tr><td>${lbl}</td><td class="num">${chartVal[i]}</td><td class="num">${chartProg[i]}</td></tr>`).join("")}</tbody>
-      </table>
-    </div>
-  `;
-  destroyChart("chart-subrogacion");
-  const ctx = document.getElementById("chart-subrogacion").getContext("2d");
-  charts["chart-subrogacion"] = new Chart(ctx, {
-    type:"bar",
-    data:{ labels: chartLabels, datasets:[
-      { label:"Valoración", data: chartVal, backgroundColor: COLORS.gray, borderRadius:4, maxBarThickness:26 },
-      { label:"Programa activo", data: chartProg, backgroundColor: COLORS.red, borderRadius:4, maxBarThickness:26 },
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:10}},
-      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:12, font:{ size:11 } } } },
-      scales:{ y:{ display:false, beginAtZero:true, grace:"20%" }, x:{ grid:{ display:false }, ticks:{ font:{ size:11 } } } } },
-  });
-}
-
-// ---------------------------------------------------------------- Evolutivo por médico (Profesional Historia) — top 20 + Otros
-function buildMedicos(){
-  const el = document.getElementById("medicos-section");
-  const doctoresAll = D.doctores;
-  const doctores = doctoresAll && doctoresAll[currentScope];
-  if (!doctores || !Object.keys(doctores).length){
-    el.innerHTML = `<div class="panel" style="grid-column:1 / -1;"><div class="unavailable" style="height:auto; padding:24px;">Datos por médico no disponibles en este momento.</div></div>`;
-    return;
-  }
-  if (currentPeriod === "semana" || currentPeriod === "dia"){
-    el.innerHTML = `<div class="panel" style="grid-column:1 / -1;"><div class="unavailable" style="height:auto; padding:24px;">Evolutivo por médico no tiene datos día a día — cambia a Mes, Trimestre o Año.</div></div>`;
-    return;
-  }
-  const rows = Object.entries(doctores).map(([nombre, d])=>{
-    const ing = periodStats(d.ingreso.hist, d.ingreso.actual, currentPeriod);
-    const at = periodStats(d.atenciones.hist, d.atenciones.actual, currentPeriod);
-    const pac = periodStats(d.pacientes.hist, d.pacientes.actual, currentPeriod);
-    return { nombre, ing, at, pac };
-  }).filter(r => (r.ing && r.ing.current > 0) || (r.at && r.at.current > 0));
-  rows.sort((a,b)=> (b.ing?.current||0) - (a.ing?.current||0));
-  const top = rows.slice(0,20);
-  const rest = rows.slice(20);
-  function sumStat(list, key, field){
-    return list.reduce((s,r)=> s + (r[key] && r[key][field]!=null ? r[key][field] : 0), 0);
-  }
-  const otros = rest.length ? {
-    nombre: `Otros (${rest.length} médicos)`,
-    ing: { current: sumStat(rest,"ing","current"), vsLM: null, nomLM: null },
-    at: { current: sumStat(rest,"at","current"), vsLM: null, nomLM: null },
-    pac: { current: sumStat(rest,"pac","current"), vsLM: null, nomLM: null },
-  } : null;
-  function rowHtml(r, isOtros){
-    const ingBadge = (r.ing && r.ing.vsLM!=null) ? miniPct(r.ing.vsLM, fmtSignedFn(r.ing.nomLM, v=>`$${fmt(v,0)}`)) : '<span style="color:var(--axis);">—</span>';
-    const atBadge = (r.at && r.at.vsLM!=null) ? miniPct(r.at.vsLM, fmtSignedFn(r.at.nomLM, v=>fmt(v,0))) : '<span style="color:var(--axis);">—</span>';
-    const pacBadge = (r.pac && r.pac.vsLM!=null) ? miniPct(r.pac.vsLM, fmtSignedFn(r.pac.nomLM, v=>fmt(v,0))) : '<span style="color:var(--axis);">—</span>';
-    return `<tr style="${isOtros?'font-style:italic; color:var(--axis);':''}">
-      <td>${r.nombre}</td>
-      <td class="num">$${fmt(r.ing?.current||0,0)}</td><td class="num">${ingBadge}</td>
-      <td class="num">${fmt(r.at?.current||0,0)}</td><td class="num">${atBadge}</td>
-      <td class="num">${fmt(r.pac?.current||0,0)}</td><td class="num">${pacBadge}</td>
-    </tr>`;
-  }
-  const bodyRows = top.map(r=>rowHtml(r,false)).join("") + (otros ? rowHtml(otros, true) : "");
-  el.innerHTML = `
-    <div class="panel" style="grid-column:1 / -1;">
-      <div class="panel-title">Top 20 médicos por ingresos — ${PERIOD_LABELS[currentPeriod]}${currentPeriod==='anio'?' (acumulado, sin vs LM)':' (badge = vs LM)'}</div>
-      <div class="section-sub" style="margin:0 0 8px;">${rows.length} médicos con actividad en este filtro · el resto se agrupa en "Otros"</div>
-      <div class="scroll-table">
-        <table>
-          <thead><tr><th>Médico</th><th class="num">Ingresos</th><th class="num">vs LM</th><th class="num">Atenciones</th><th class="num">vs LM</th><th class="num">Pac. Únicos</th><th class="num">vs LM</th></tr></thead>
-          <tbody>${bodyRows}</tbody>
-        </table>
-      </div>
-    </div>
-  `;
-}
-
-// ---------------------------------------------------------------- HubSpot
-function buildHubspotCharts(){
-  const el = document.getElementById("hubspot-charts");
-  el.innerHTML = `
-    <div class="panel"><div class="panel-title">Deals — ${PERIOD_LABELS[currentPeriod]}</div><div class="chart-box"><canvas id="chart-leads"></canvas></div></div>
-    <div class="panel"><div class="panel-title">Citas agendadas — ${PERIOD_LABELS[currentPeriod]}</div><div class="chart-box"><canvas id="chart-citas"></canvas></div></div>
-    <div class="panel"><div class="panel-title">Conversión % — ${PERIOD_LABELS[currentPeriod]}</div><div class="chart-box"><canvas id="chart-conv"></canvas></div></div>
-  `;
-  function draw(id, metricKey, color, vf){
-    destroyChart(id);
-    const series = buildHubspotSeries(metricKey);
-    const bg = series.labels.map((_,i)=> i===series.currentIndex ? color : COLORS.gray);
-    const ctx = document.getElementById(id).getContext("2d");
-    charts[id] = new Chart(ctx, {
-      type:"bar",
-      data:{ labels: series.labels, datasets:[{ data: series.values, backgroundColor: bg, borderRadius:4, maxBarThickness: series.labels.length>15?14:28, _fmt: vf }] },
-      options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:20}},
-        plugins:{ legend:{ display:false } },
-        scales:{ y:{ display:false, beginAtZero:true, grace:"20%" }, x:{ grid:{ display:false }, ticks:{ font:{ size: series.labels.length>10?8:11 }, maxRotation: series.labels.length>10?60:0 } } } },
-    });
-  }
-  draw("chart-leads", "leads", COLORS.blue, v=>`${fmt(v,0)}`);
-  draw("chart-citas", "citas", COLORS.pink, v=>`${fmt(v,0)}`);
-  draw("chart-conv", "conversion", COLORS.red, v=>`${fmt(v,0)}%`);
-}
-function buildHubspotDetail(){
-  const el = document.getElementById("hubspot-detail");
-  const bySede = D.hubspot.conversion_por_sede;
-  // CORREGIDO 29-sep-2026: antes esta tabla decía "agosto" fijo en el título
-  // Y en los datos sin importar el mes elegido (bug reportado por Marite:
-  // "si tengo septiembre en el filtro por qué me sigue saliendo agosto?").
-  // Ahora usa el mismo selector global de "mes vigente" (Ene-Dic) que el
-  // resto del tablero — ver buildMesVigenteSelect() en index.html y
-  // MES_VIGENTE en data-live.js — así que el mes que se muestra aquí SIEMPRE
-  // es el que está seleccionado ahí, no un valor congelado.
-  const mesVig = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 9;
-  const mesLabelCorto = (window.MESES_12 || [])[mesVig-1] || "";
-  const mesLabelLargo = nombreMesLargo(mesVig);
-  const rows = Object.entries(bySede).map(([code,v])=>{
-    const valMes = (v.mensual || [])[mesVig-1];
-    if (valMes == null){
-      return `<tr><td>${code}</td><td class="num">—</td><td class="num">${v.total2026}%</td><td class="num">—</td></tr>`;
-    }
-    const diff = valMes - v.total2026;
-    const cls = diff>=0 ? "up":"down"; const arrow = diff>=0?"▲":"▼";
-    return `<tr><td>${code}</td><td class="num">${valMes}%</td><td class="num">${v.total2026}%</td><td class="num"><span class="${cls}">${arrow} ${diff>=0?'+':''}${diff} pp</span></td></tr>`;
-  }).join("");
-  const cohRows = D.hubspot.cohortes.map(r=>`
-    <tr><td>${r.mes}</td><td class="num">${fmt(r.leads,0)}</td><td class="num">${r.m0}%</td><td class="num">${r.m1}%</td><td class="num">${r.m2}%</td><td class="num">${r.sin}%</td></tr>
-  `).join("");
-  el.innerHTML = `
-    <div class="panel">
-      <div class="panel-title">Conversión % por sede — ${mesLabelLargo} vs. total 2026</div>
-      <table><thead><tr><th>Sede</th><th class="num">${mesLabelCorto}</th><th class="num">Total 2026</th><th class="num">Diferencia</th></tr></thead><tbody>${rows}</tbody></table>
-      <div style="font-size:11px; color:var(--axis); margin-top:8px; font-style:italic;">Usa el selector de "mes vigente" (Ene-Dic), no el filtro de Periodo. Citas agendadas en ${mesLabelLargo} ÷ deals creados en ${mesLabelLargo}, por sede. Si es el mes en curso, es parcial: deals recientes aún no completan su ventana de conversión.</div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">Cohortes de deals: ¿cuántos meses después agenda cita?</div>
-      <table><thead><tr><th>Mes</th><th class="num">Deals</th><th class="num">+0</th><th class="num">+1</th><th class="num">+2 o más</th><th class="num">Sin cita</th></tr></thead><tbody>${cohRows}</tbody></table>
-    </div>
-  `;
-}
-
-// ---------------------------------------------------------------- header / notes
-function buildHeader(){
-  const scopeLabel = currentScope === "total" ? D.total.nombre : D.sedes[currentScope].nombre;
-  document.getElementById("page-subtitle").textContent =
-    `Vista: ${scopeLabel} · Periodo: ${PERIOD_LABELS[currentPeriod]} · Real acumulado al ${D.corte} + proyección donde aplica`;
-  const notes = {
-    anio: "Año: único año con datos completos (2026) — se muestra el acumulado a la fecha, sin proyección a cierre de año.",
-    trimestre: "Trimestre: Q1 y Q2 cerrados; Q3 = julio real + agosto (real + proyección a cierre de mes).",
-    mes: "",
-    semana: "Semana: últimas 13 semanas. Ingresos, Atenciones, Pacientes Únicos, Consultas y HubSpot con datos reales día a día.",
-    dia: "Día: últimos 21 días. Ingresos, Atenciones, Pacientes Únicos, Consultas y HubSpot con datos reales día a día.",
-  };
-  document.getElementById("period-note").textContent = notes[currentPeriod];
-  document.getElementById("evolutivo-sub").textContent =
-    (currentPeriod==="semana"||currentPeriod==="dia")
-      ? "Histórico real (gris) · periodo más reciente (azul) — a este nivel de detalle no se proyecta un cierre."
-      : "Histórico real (gris) · periodo actual real (azul) · proyección a cierre (rojo)";
-  document.getElementById("page-footnote").innerHTML =
-    `*Ingresos, Atenciones y Pacientes Únicos: los tres se cuentan desde el mismo archivo de cargos (línea de cargo = atención, fecha = F. Cargo), igual que Consultas desde el sistema de agenda. La proyección de Atenciones a cierre de mes usa el ratio real/agenda ya validado por sede (CDMX 1.16×, GDL 1.19×, MTP 1.26×) aplicado sobre el real acumulado del mes; Semana/Día muestran solo lo real (sin proyección). ` +
-    `vs LM/vs U3M (mes), vs trimestre/vs U3M (trimestre), vs semana/4 semanas y vs día/7 días son siempre "periodo actual ÷ periodo(s) de comparación − 1". ` +
-    `HubSpot: pipeline "Interesa2", deals por fecha de creación, citas por fecha de cita agendada; siempre a nivel compañía.`;
-}
-
-function renderAll(){
-  buildTabs();
-  buildHeader();
-  buildKPIs();
-  buildEvolutivos();
-  buildConsultas();
-  buildServicios();
-  buildSubrogacion();
-  buildHubspotCharts();
-  buildHubspotDetail();
-  buildMedicos();
-}
-
-(async function start(){
-  const banner = document.getElementById("live-status-banner");
-  // Mostrar de inmediato un aviso de "cargando": las hojas de Sheets pueden
-  // tardar varios segundos (Apps Script) y antes de este cambio la página se
-  // quedaba con los encabezados vacíos y SIN ningún aviso durante toda esa
-  // espera — parecía "no carga" cuando en realidad seguía cargando.
-  banner.style.display = "block";
-  banner.style.background = "#EFF6FF";
-  banner.style.color = "#1E3A8A";
-  banner.textContent = "⏳ Cargando datos en vivo desde Google Sheets… (puede tardar unos segundos)";
-
-  await loadLiveDataIntoDashboard();
-  const flags = [
-    ["Ingresos/Servicios", window.DATA._liveOk, window.DATA._liveError],
-    ["Atenciones/Pacientes/Consultas", window.DATA._liveOkOperativos, window.DATA._liveErrorOperativos],
-    ["HubSpot", window.DATA._liveOkHubspot, window.DATA._liveErrorHubspot],
-    ["Conceptos/Subrogación", window.DATA._liveOkConceptos, window.DATA._liveErrorConceptos],
-    ["Por médico", window.DATA._liveOkDoctores, window.DATA._liveErrorDoctores],
-  ];
-  const okCount = flags.filter(f => f[1]).length;
-  if (okCount === flags.length) {
-    banner.style.display = "block";
-    banner.style.background = "#ECFDF5";
-    banner.style.color = "#065F46";
-    banner.textContent = "✓ Ingresos, Servicios, Atenciones, Pacientes, Consultas, HubSpot, Conceptos, Subrogación y Por médico cargados en vivo desde Google Sheets.";
-    setTimeout(() => { banner.style.display = "none"; }, 4000);
-  } else if (okCount > 0) {
-    banner.style.display = "block";
-    banner.style.background = "#FFFBEB";
-    banner.style.color = "#92400E";
-    const faltantes = flags.filter(f => !f[1]).map(f => f[0]).join(", ");
-    const err = flags.find(f => !f[1] && f[2])?.[2] || "error desconocido";
-    banner.textContent = "⚠ Parte de los datos se cargó en vivo, pero " + faltantes + " no (" + err + "). Esa parte muestra el último corte guardado (" + window.DATA.corte + ").";
-  } else {
-    banner.style.display = "block";
-    banner.textContent = "⚠ No se pudo cargar en vivo desde Google Sheets (" + (window.DATA._liveError || "sin conexión") + "). Mostrando el último corte guardado (" + window.DATA.corte + ").";
-  }
-  setupConceptModalHandlers();
-  renderAll();
-})();
+window.__FI_DATA__ = null;
+window.__FI_COMMENTS__ = null;
 </script>
-</body>
-</html>
+<script id="fi-app-src">
+(function () {
+  'use strict';
+
+  // Los datos ya NO viven embebidos en esta página: se piden en vivo al Apps
+  // Script Web App conectado a tu Google Sheet (motor de cruce + comentarios
+  // compartidos). Cambia esta URL si vuelves a desplegar el script y te da una
+  // nueva.
+  var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbw8-TQXycv5JJTe-EF945bCwtmW3DcUW7U2mC8enpvDB4AxzYgoghZqzP7zcBx4hjoKKg/exec';
+
+  var DATA = [];
+  var COMMENTS = {};
+  var CORTE_LABEL = 'Cargando…';
+
+  // Filas de CARGOS con % Dto. > 0 -- viene directo del motor (buildDescuentoRecords),
+  // independiente de DATA (esa es agenda cruzada contra cargos; esto es CARGOS puro).
+  // r.fecha aquí es la fecha del cargo (F. Cargo), no de una cita, pero es compatible
+  // con byMes() para que la sección respete el mismo filtro de mes que el resto.
+  var DESCUENTOS = [];
+
+  // Cruce de PGTs - Proveedor y cargos (buildCrucePGT): por cada factura de
+  // proveedor de PGT ("Base proveedores PGT"), si el paciente tiene o no un cargo
+  // en CARGOS con un concepto de "Regla proveedores PGT" columna G dentro del mes
+  // de recepción de la muestra y/o de entrega del reporte. Viene ya calculado del
+  // motor -- aquí solo se filtra por mes (fecha de recepción) y se busca por texto.
+  var CRUCE_PGT = [];
+
+  var SEDES = [
+    { key: 'ALL', label: 'Todas las sedes' },
+    { key: 'CDMX', label: 'Ciudad de México' },
+    { key: 'GDL', label: 'Guadalajara' },
+    { key: 'Metepec', label: 'Metepec' }
+  ];
+
+  var GRUPO_ORDER = ['Consultorio', 'Primera Vez', 'Quirófano', 'Seguimiento', 'Wellness', 'Laboratorio FIVANDRO'];
+
+  // Orden preferido de ejecutivas (las de la hoja "Experiencia"); cualquier otra
+  // que aparezca en los datos se agrega al final, y "Sin asignar" siempre al final.
+  // 2026-09-25: Reyna salió del catálogo (Giovanni López Salamanca pasó a Ana);
+  // Eva es nueva (tomó a Jairo Hernando Pedraza Pinto y Monica Olavarria, antes
+  // de Lucía). Si alguna de estas vuelve a tener citas asignadas, reaparece sola
+  // en el filtro vía getEjecutivas() aunque no esté aquí -- esta lista es solo
+  // el orden preferido, no una lista cerrada.
+  var EJECUTIVA_ORDER = ['Ana', 'Sharon', 'Eva', 'Lucía', 'Jacqueline', 'Jimena', 'Wendy', 'Alondra', 'Viviana', 'Externos'];
+
+  function getEjecutivas() {
+    var present = {};
+    DATA.forEach(function (r) { if (r.ejecutiva) present[r.ejecutiva] = true; });
+    var known = EJECUTIVA_ORDER.filter(function (e) { return present[e]; });
+    var extra = Object.keys(present).filter(function (e) {
+      return known.indexOf(e) === -1 && e !== 'Sin asignar';
+    }).sort();
+    var list = known.concat(extra);
+    if (present['Sin asignar']) list.push('Sin asignar');
+    return list;
+  }
+
+  var STATUS_META = {
+    'Match Encontrado': { short: 'Match', varName: '--good', bgVar: '--good-bg' },
+    'Fuera de Rango de Fecha': { short: 'Fuera de Rango', varName: '--warn', bgVar: '--warn-bg' },
+    // Incluye tanto "no aplica por regla" como los duplicados GDL (2+ citas idénticas
+    // -- mismo paciente+fecha+concepto -- que generan un solo cargo real: todas menos
+    // la primera de cada grupo se reclasifican aquí en el motor, para que ese cargo
+    // real no se cuente varias veces en Match/Fuera de Rango).
+    'No Aplica Cruce (regla)': { short: 'No Aplica', varName: '--neutral', bgVar: '--neutral-bg' },
+    // Reclasificación automática por texto de comentario (ver justificaSinCargo) --
+    // el equipo explicó por qué NO se espera cargo (excepción clínica/operativa) sin
+    // necesidad de marcar la casilla "Ya tiene cargo" (que es para lo contrario: sí
+    // hay cargo, solo falta vincularlo).
+    'Justificado (Sin Cargo)': { short: 'Justificado', varName: '--neutral', bgVar: '--neutral-bg' },
+    'Sin Match': { short: 'Sin Match', varName: '--bad', bgVar: '--bad-bg' },
+    // El motor marca así una cita cuyo concepto no tiene NINGUNA fila en Reglas (ni
+    // SI ni NO) -- no es que falte el cargo, es que todavía no le hemos dicho al
+    // sistema qué esperar de ese concepto. Antes esto quedaba fuera de todos los
+    // conteos (ni resuelto ni pendiente), lo que hacía que el % no cerrara contra el
+    // total mostrado. Ahora cuenta como pendiente y aparece en "Casos a revisar".
+    'Concepto No Definido en Reglas': { short: 'Sin Regla', varName: '--bad', bgVar: '--bad-bg' }
+  };
+
+  // Frases con las que el equipo documenta, en el comentario, que NO se espera un
+  // cargo para ese caso (excepción clínica u operativa: p.ej. inseminación que no
+  // requiere perfil hormonal, ciclo cancelado, paciente que no llegó a cita). Son
+  // distintas de "Ya tiene cargo": ahí el equipo confirma que SÍ hubo cargo (solo no
+  // se encontró); aquí confirma que no debía haberlo. Cuando un comentario coincide
+  // y la casilla "Ya tiene cargo" no está marcada, el caso cuenta como resuelto en el
+  // % de arriba (ver effectiveStatus) pero se mantiene visible en "Casos a revisar"
+  // con su propio chip, por si hace falta corregirlo. La lista se basa en los
+  // patrones reales vistos en los comentarios del equipo -- amplíala si aparecen
+  // frases nuevas y consistentes.
+  var SIN_CARGO_PATTERNS = [
+    // 2026-10-01: "\b" justo después de una vocal acentuada (ó) no funciona como
+    // límite de palabra en JS cuando lo que sigue es fin de cadena o puntuación
+    // (ninguno de los dos lados es "\w", así que no hay frontera) -- por eso
+    // "no se cargó." o "no se cargó" (sin nada después) NO se detectaban. Se
+    // corrige con (?!\w) en vez de \b en los patrones que terminan justo en
+    // la vocal acentuada.
+    /\bno\s+(se\s+)?(carga|cargó|cobra|cobró)(?!\w)/i,
+    /\bno\s+(existe|hay|tiene|genera|corresponde|amerita)\s+cargo\b/i,
+    /\bsin\s+cargo\b/i,
+    /\bno\s+debe(\s+de)?\s+cargarse\b/i,
+    /\bno\s+requiere\s+(toma\s+de\s+sangre|perfil\s+hormonal|cargo)\b/i,
+    /\bno\s+se\s+(le\s+)?toma(n)?\s+(perfil\s+hormonal|estudios?)\b/i,
+    /\bse\s+cancel[oó]\s+el\s+ciclo\b/i,
+    /\bno\s+(lleg[oó]|llega)\s+a\s+(la\s+)?cita\b/i,
+    // 2026-10-01: la ejecutiva reporta "no se realizó la cita/el procedimiento" --
+    // la cita no se llevó a cabo, así que no debía generar cargo. Se trata igual
+    // que los demás casos de "no se esperaba cargo" (ver nota arriba).
+    /\bno\s+se\s+realiz[oó](?!\w)/i,
+    /\bno\s+se\s+llev[oó]\s+a\s+cabo\b/i
+  ];
+  function justificaSinCargo(texto) {
+    if (!texto) return false;
+    for (var i = 0; i < SIN_CARGO_PATTERNS.length; i++) {
+      if (SIN_CARGO_PATTERNS[i].test(texto)) return true;
+    }
+    return false;
+  }
+
+  // 2026-09-21: distinto a SIN_CARGO_PATTERNS (que dice "no se esperaba cargo").
+  // Estas frases son lo OPUESTO: el comentario afirma que el cargo SÍ se aplicó
+  // ("se cargó...", "ya se cargó...") pero la casilla "Ya tiene cargo" se quedó
+  // sin marcar -- típicamente porque el texto se escribió como nota y se olvidó
+  // marcar la casilla. El comentario sí se guardó -- el caso es que nada mueve
+  // el % sin la casilla. Esto NO resuelve el caso automáticamente (solo un
+  // humano debe confirmar marcando la casilla); solo lo resalta en la tabla
+  // para que salte a la vista.
+  var CARGO_YA_APLICADO_PATTERNS = [
+    /\bse\s+carg(o|ó)\b/i,
+    /\bya\s+(se\s+)?carg(o|ó)\b/i,
+    /\bya\s+(esta|está)\s+cargad[oa]\b/i,
+    /\bcargo\s+ya\s+(hecho|realizado|aplicado)\b/i
+  ];
+  function pareceCargoYaAplicadoSinCheck(row, note) {
+    if (!note || note.cargado || !note.text) return false;
+    if (row.estatus !== 'Sin Match' && row.estatus !== 'Fuera de Rango de Fecha') return false;
+    for (var i = 0; i < CARGO_YA_APLICADO_PATTERNS.length; i++) {
+      if (CARGO_YA_APLICADO_PATTERNS[i].test(note.text)) return true;
+    }
+    return false;
+  }
+
+  var state = { sede: 'ALL', statusFilter: 'ALL', search: '', grupo: 'ALL', ejecutiva: 'ALL', mes: 'ALL', searchPgt: '' };
+
+  var MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+  function mesLabel(mesKey) {
+    // mesKey = 'YYYY-MM'
+    var p = mesKey.split('-');
+    var nombre = MESES_ES[parseInt(p[1], 10) - 1];
+    return nombre.charAt(0).toUpperCase() + nombre.slice(1) + ' ' + p[0];
+  }
+
+  // El dashboard solo opera con el año en curso -- cualquier fecha de otro año
+  // (dato viejo, error de captura, etc.) no debe aparecer como opción de mes.
+  var ANIO_FILTRO_MESES = '2026';
+
+  // Meses presentes en los datos (según fecha de la CITA), de más antiguo a más
+  // reciente -- así cuando empiece septiembre, agosto queda disponible como mes
+  // cerrado para consultar su % final, sin perder los meses anteriores.
+  function getMeses() {
+    var present = {};
+    DATA.forEach(function (r) { if (r.fecha) present[r.fecha.slice(0, 7)] = true; });
+    // Incluye también los meses de DESCUENTOS (fecha de cargo, no de cita) --
+    // así el filtro nunca esconde un mes con descuentos aunque no tenga citas
+    // en la agenda dentro del alcance actual.
+    DESCUENTOS.forEach(function (r) { if (r.fecha) present[r.fecha.slice(0, 7)] = true; });
+    // Igual con el Cruce de PGTs (fecha de recepción de la muestra).
+    CRUCE_PGT.forEach(function (r) { if (r.fechaRecepcion) present[r.fechaRecepcion.slice(0, 7)] = true; });
+    return Object.keys(present).filter(function (m) { return m.slice(0, 4) === ANIO_FILTRO_MESES; }).sort();
+  }
+  var apiReady = false;
+  var saveTimers = {};
+
+  function getAutor() {
+    try {
+      var a = localStorage.getItem('fi_autor');
+      if (!a) {
+        a = (window.prompt('¿Cuál es tu nombre? (para identificar tus comentarios ante el equipo)') || '').trim();
+        if (a) localStorage.setItem('fi_autor', a);
+      }
+      return a || 'Anónimo';
+    } catch (e) { return 'Anónimo'; }
+  }
+
+  function fmtDateTime(iso) {
+    if (!iso) return '';
+    try {
+      var d = new Date(iso);
+      return d.toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return iso; }
+  }
+
+  // ---------- helpers ----------
+  function fmtInt(n) { return (n || 0).toLocaleString('es-MX'); }
+  function pct1(n) { return (isFinite(n) ? n : 0).toFixed(1) + '%'; }
+  function fmtMoney(n) {
+    return (isFinite(n) ? n : 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+  }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    var p = iso.split('-');
+    return p[2] + '/' + p[1] + '/' + p[0];
+  }
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function tierVar(pct) {
+    if (pct >= 80) return 'var(--good)';
+    if (pct >= 60) return 'var(--warn)';
+    return 'var(--bad)';
+  }
+  function cargoCount(s) {
+    return (s['Match Encontrado'] || 0) + (s['Fuera de Rango de Fecha'] || 0) + (s['No Aplica Cruce (regla)'] || 0) + (s['Justificado (Sin Cargo)'] || 0);
+  }
+
+  // Un comentario puede marcar una cita 'Sin Match' o 'Fuera de Rango' como confirmada
+  // con cargo por el equipo -- en ese caso, para estadísticas (KPI, barras por grupo)
+  // pasa a contar directamente como 'Match Encontrado'. El estatus original de la
+  // auditoría no se pierde: sigue visible en la tabla de detalle junto con el chip
+  // "✓ Confirmado", y el registro sigue en "Casos a revisar" para que el equipo pueda
+  // editar o quitar la confirmación.
+  //
+  // Aparte, si el comentario explica -- con alguno de los patrones de
+  // justificaSinCargo -- que NO se esperaba cargo (y la casilla "Ya tiene cargo" no
+  // está marcada, porque de hecho no hay cargo que confirmar), el caso también cuenta
+  // como resuelto, bajo el estatus 'Justificado (Sin Cargo)'. Solo aplica a 'Sin
+  // Match': 'Fuera de Rango de Fecha' ya cuenta como resuelto de por sí (sí hay un
+  // cargo candidato, solo cayó fuera de la ventana de fecha).
+  function effectiveStatus(row) {
+    var note = COMMENTS[row.id];
+    if (!note) return row.estatus;
+    if (note.cargado && (row.estatus === 'Sin Match' || row.estatus === 'Fuera de Rango de Fecha')) {
+      return 'Match Encontrado';
+    }
+    if (!note.cargado && row.estatus === 'Sin Match' && justificaSinCargo(note.text)) {
+      return 'Justificado (Sin Cargo)';
+    }
+    return row.estatus;
+  }
+
+  function computeStats(records) {
+    var s = { total: records.length, 'Match Encontrado': 0, 'Fuera de Rango de Fecha': 0, 'No Aplica Cruce (regla)': 0, 'Justificado (Sin Cargo)': 0, 'Sin Match': 0, 'Concepto No Definido en Reglas': 0 };
+    for (var i = 0; i < records.length; i++) {
+      var e = effectiveStatus(records[i]);
+      if (s[e] === undefined) s[e] = 0;
+      s[e]++;
+    }
+    return s;
+  }
+
+  function bySede(records, sedeKey) {
+    if (sedeKey === 'ALL') return records;
+    return records.filter(function (r) { return r.sede === sedeKey; });
+  }
+
+  function byEjecutiva(records, ejecutivaKey) {
+    if (ejecutivaKey === 'ALL') return records;
+    return records.filter(function (r) { return r.ejecutiva === ejecutivaKey; });
+  }
+
+  function byMes(records, mesKey) {
+    if (mesKey === 'ALL') return records;
+    return records.filter(function (r) { return r.fecha && r.fecha.slice(0, 7) === mesKey; });
+  }
+
+  // Registros dentro del alcance actual (sede + ejecutiva + mes). Sirve de base
+  // tanto para el KPI y las barras por grupo como para la tabla de detalle.
+  //
+  // Se excluyen las citas "Fuera de Alcance (posterior a corte)" -- son citas
+  // agendadas después de la fecha de corte del cruce, todavía no ocurren, así que no
+  // tiene sentido contarlas como pendientes ni como resueltas. Antes se colaban en el
+  // total sin aparecer en ningún bucket visible, lo que hacía que el % no cerrara
+  // (ej. "0 Sin Match + 0 Fuera de Rango" pero aun así <100%).
+  function scopedRecords() {
+    return byMes(byEjecutiva(bySede(DATA, state.sede), state.ejecutiva), state.mes).filter(function (r) {
+      return r.estatus !== 'Fuera de Alcance (posterior a corte)';
+    });
+  }
+
+  // DESCUENTOS no tiene sede confiable (ver nota en Code.gs), así que solo respeta
+  // el filtro de mes -- no sede ni ejecutiva (esa es justo la dimensión que se rankea).
+  function scopedDescuentos() {
+    return byMes(DESCUENTOS, state.mes);
+  }
+
+  // Agrupa filas de descuento por una llave (ejecutiva o producto/concepto) y
+  // rankea por monto total descontado (de mayor a menor). keyFn regresa null para
+  // excluir una fila del ranking (p.ej. conceptos vacíos).
+  function aggregateDescuentos(records, keyFn, maxRows) {
+    var map = {};
+    var order = [];
+    records.forEach(function (r) {
+      var k = keyFn(r);
+      if (!k) return;
+      if (!map[k]) { map[k] = { key: k, montoTotal: 0, count: 0, sumPct: 0 }; order.push(k); }
+      map[k].montoTotal += (r.montoDto || 0);
+      map[k].count += 1;
+      map[k].sumPct += r.pctDto;
+    });
+    var arr = order.map(function (k) { return map[k]; });
+    arr.forEach(function (x) { x.pctProm = x.count ? x.sumPct / x.count : 0; });
+    arr.sort(function (a, b) { return b.montoTotal - a.montoTotal; });
+    return typeof maxRows === 'number' ? arr.slice(0, maxRows) : arr;
+  }
+
+  function groupStats(records) {
+    var byGrupo = {};
+    for (var i = 0; i < records.length; i++) {
+      var r = records[i];
+      if (!byGrupo[r.grupo]) byGrupo[r.grupo] = { grupo: r.grupo, total: 0, 'Match Encontrado': 0, 'Fuera de Rango de Fecha': 0, 'No Aplica Cruce (regla)': 0, 'Justificado (Sin Cargo)': 0, 'Sin Match': 0, 'Concepto No Definido en Reglas': 0 };
+      byGrupo[r.grupo].total++;
+      var e = effectiveStatus(r);
+      byGrupo[r.grupo][e] = (byGrupo[r.grupo][e] || 0) + 1;
+    }
+    var arr = GRUPO_ORDER.filter(function (g) { return byGrupo[g]; }).map(function (g) { return byGrupo[g]; });
+    arr.forEach(function (g) { g.pct = g.total ? (cargoCount(g) / g.total) * 100 : 0; });
+    arr.sort(function (a, b) { return b.pct - a.pct; });
+    return arr;
+  }
+
+  function detailRows() {
+    var rows = scopedRecords().filter(function (r) {
+      return r.estatus === 'Sin Match' || r.estatus === 'Fuera de Rango de Fecha' || r.estatus === 'Concepto No Definido en Reglas';
+    });
+    if (state.statusFilter !== 'ALL') {
+      rows = rows.filter(function (r) {
+        if (state.statusFilter === 'SIN') return r.estatus === 'Sin Match';
+        if (state.statusFilter === 'FUERA') return r.estatus === 'Fuera de Rango de Fecha';
+        return r.estatus === 'Concepto No Definido en Reglas';
+      });
+    }
+    if (state.grupo !== 'ALL') rows = rows.filter(function (r) { return r.grupo === state.grupo; });
+    if (state.search.trim()) {
+      var q = state.search.trim().toLowerCase();
+      rows = rows.filter(function (r) {
+        return (r.paciente || '').toLowerCase().indexOf(q) !== -1 ||
+          (r.concepto || '').toLowerCase().indexOf(q) !== -1 ||
+          (r.profesional || '').toLowerCase().indexOf(q) !== -1 ||
+          (r.ejecutiva || '').toLowerCase().indexOf(q) !== -1 ||
+          (String(r.nhc || '')).indexOf(q) !== -1;
+      });
+    }
+    rows.sort(function (a, b) {
+      if (a.fecha === b.fecha) return (a.paciente || '').localeCompare(b.paciente || '');
+      return (b.fecha || '').localeCompare(a.fecha || '');
+    });
+    return rows;
+  }
+
+  // ---------- render: top KPI ----------
+  function renderKPI(root) {
+    var scoped = scopedRecords();
+    var stats = computeStats(scoped);
+    var pct = stats.total ? (cargoCount(stats) / stats.total) * 100 : 0;
+    var sedeLabel = SEDES.filter(function (s) { return s.key === state.sede; })[0].label;
+    var mesLbl = state.mes === 'ALL' ? 'Todo el año' : mesLabel(state.mes);
+    var scopeLabel = mesLbl + ' · ' + sedeLabel + (state.ejecutiva !== 'ALL' ? ' · Ejecutiva: ' + state.ejecutiva : '');
+
+    // Pendientes = casos que TODAVÍA no cuentan como resueltos y necesitan revisión
+    // humana (excluye los que el equipo ya confirmó con cargo o justificó por
+    // comentario -- esos se reclasifican en effectiveStatus()). Incluye "Sin Regla"
+    // porque, aunque es un problema distinto (falta definir la regla, no falta el
+    // cargo), tampoco cuenta como resuelto y de lo contrario desaparecía del conteo.
+    var pendientes = (stats['Sin Match'] || 0) + (stats['Fuera de Rango de Fecha'] || 0) + (stats['Concepto No Definido en Reglas'] || 0);
+
+    var html = '';
+    html += '<div class="kpi-grid">';
+    html += '<div class="card hero-card">';
+    html += '<div class="hero-label">% de cargo ya resuelto &middot; ' + escapeHtml(scopeLabel) + '</div>';
+    html += '<div class="hero-num" style="color:' + tierVar(pct) + '">' + pct1(pct) + '</div>';
+    html += '<div class="hero-sub">' + fmtInt(cargoCount(stats)) + ' de ' + fmtInt(stats.total) + ' citas ya con cargo, fuera de rango, no aplica (incluye duplicadas GDL), confirmadas o justificadas por comentario del equipo &mdash; quedan <strong>' + fmtInt(pendientes) + ' pendientes</strong> por revisar (incluye ' + fmtInt(stats['Concepto No Definido en Reglas'] || 0) + ' sin regla definida)</div>';
+    html += '</div>';
+
+    html += '<div class="stat-grid">';
+    // "Concepto No Definido en Reglas" (Sin Regla) no se muestra como tarjeta aquí --
+    // suele quedar en 0 o casi 0 y duplicaba info ya visible en "Casos a revisar" (el
+    // filtro "Solo Sin Regla"). Sigue contando en el % y en "pendientes" (ver abajo).
+    var order = ['Match Encontrado', 'Sin Match', 'Fuera de Rango de Fecha', 'No Aplica Cruce (regla)', 'Justificado (Sin Cargo)'];
+    order.forEach(function (key) {
+      var meta = STATUS_META[key];
+      var n = stats[key] || 0;
+      var p = stats.total ? (n / stats.total) * 100 : 0;
+      html += '<div class="card stat">';
+      html += '<div class="lbl"><span class="dot" style="background:var(' + meta.varName + ')"></span>' + escapeHtml(meta.short) + '</div>';
+      html += '<div class="n" style="color:var(' + meta.varName + ')">' + fmtInt(n) + '</div>';
+      html += '<div class="pct">' + pct1(p) + ' del total</div>';
+      html += '</div>';
+    });
+    html += '</div>'; // stat-grid
+    html += '</div>'; // kpi-grid
+    root.innerHTML = html;
+  }
+
+  // ---------- render: grupo bars ----------
+  function renderGrupoBars(root) {
+    var scoped = scopedRecords();
+    var groups = groupStats(scoped);
+    var html = '<div class="card bars">';
+    groups.forEach(function (g) {
+      html += '<div class="bar-row">';
+      html += '<div class="name">' + escapeHtml(g.grupo) + '</div>';
+      html += '<div class="bar-track"><div class="bar-fill" style="width:' + Math.max(g.pct, 1.5) + '%;background:' + tierVar(g.pct) + '"></div></div>';
+      html += '<div class="bar-val">' + pct1(g.pct) + ' &middot; ' + fmtInt(g.total) + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    root.innerHTML = html;
+  }
+
+  // ---------- render: descuentos ----------
+  function descuentoTableHtml(title, rows, labelHeader) {
+    var html = '<div class="card">';
+    html += '<div class="descuento-card-title">' + escapeHtml(title) + '</div>';
+    if (!rows.length) {
+      html += '<div class="empty">Sin descuentos registrados en este alcance.</div>';
+    } else {
+      html += '<table class="descuento-table"><thead><tr>' +
+        '<th>' + escapeHtml(labelHeader) + '</th><th>Monto descontado</th><th>Cargos c/ dto.</th><th>% Dto. prom.</th>' +
+        '</tr></thead><tbody>';
+      rows.forEach(function (r) {
+        html += '<tr>';
+        html += '<td>' + escapeHtml(r.key) + '</td>';
+        html += '<td class="money">' + fmtMoney(r.montoTotal) + '</td>';
+        html += '<td>' + fmtInt(r.count) + '</td>';
+        html += '<td>' + pct1(r.pctProm) + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderDescuentos(root) {
+    var scoped = scopedDescuentos();
+    var porEjecutiva = aggregateDescuentos(scoped, function (r) { return r.ejecutiva || 'Sin asignar'; }, 15);
+    var porProducto = aggregateDescuentos(scoped, function (r) { return r.concepto || null; }, 15);
+    var montoTotal = scoped.reduce(function (acc, r) { return acc + (r.montoDto || 0); }, 0);
+
+    var html = '<div class="note" style="margin-bottom:14px">' +
+      fmtInt(scoped.length) + ' cargos con descuento &middot; ' + fmtMoney(montoTotal) + ' descontado en total ' +
+      '(según fecha de cargo, mismo filtro de mes que arriba). "Cargos c/ dto." cuenta solo filas con % Dto. &gt; 0.</div>';
+    html += '<div class="descuento-grid">';
+    html += descuentoTableHtml('Ejecutivas con más descuento', porEjecutiva, 'Ejecutiva');
+    html += descuentoTableHtml('Productos con más descuento', porProducto, 'Producto / concepto');
+    html += '</div>';
+    root.innerHTML = html;
+  }
+
+  // ---------- render: cruce de PGTs - Proveedor y cargos ----------
+  // Respeta el filtro de mes (según fecha de recepción de la muestra) para que se
+  // pueda revisar un mes cerrado a la vez, igual que el resto del dashboard -- no
+  // se filtra por sede/ejecutiva porque "Base proveedores PGT" no trae esos datos.
+  function byMesPgt(records, mesKey) {
+    if (mesKey === 'ALL') return records;
+    return records.filter(function (r) { return r.fechaRecepcion && r.fechaRecepcion.slice(0, 7) === mesKey; });
+  }
+
+  function crucePgtScoped() {
+    return byMesPgt(CRUCE_PGT, state.mes);
+  }
+
+  // Un checkbox "Ya tiene cargo (confirmado)" en la última columna reclasifica la
+  // factura como resuelta, igual que en el cruce principal (ver effectiveStatus) --
+  // usa el mismo COMMENTS global, por id, así que reutiliza el mismo componente de
+  // guardado (commentCellHtml / wireCommentInputs / saveRow) sin cambios.
+  function effectivePgtStatus(row) {
+    var note = COMMENTS[row.id];
+    if (note && note.cargado) return 'Match Encontrado';
+    return row.estatus;
+  }
+
+  function crucePgtCounts(records) {
+    var counts = { 'Match Encontrado': 0, 'Sin Match': 0, 'Fuera de Rango': 0 };
+    records.forEach(function (r) {
+      var e = effectivePgtStatus(r);
+      counts[e] = (counts[e] || 0) + 1;
+    });
+    return counts;
+  }
+
+  // Solo las facturas todavía sin resolver (por su estatus original del motor, no
+  // el efectivo) entran a la tabla de detalle -- así, cuando el equipo marca una
+  // como confirmada, la fila se queda visible con su estilo "confirmada" en vez de
+  // desaparecer de golpe (mismo criterio que "Casos a revisar" en el cruce principal).
+  function crucePgtDetailRows() {
+    var rows = crucePgtScoped().filter(function (r) {
+      return r.estatus === 'Sin Match' || r.estatus === 'Fuera de Rango';
+    });
+    if (state.searchPgt.trim()) {
+      var q = state.searchPgt.trim().toLowerCase();
+      rows = rows.filter(function (r) {
+        return (r.paciente || '').toLowerCase().indexOf(q) !== -1 ||
+          (r.cargoConcepto || '').toLowerCase().indexOf(q) !== -1 ||
+          (String(r.idOrdenLims || '')).toLowerCase().indexOf(q) !== -1;
+      });
+    }
+    return rows;
+  }
+
+  // ---------- render: cruce de PGTs -- cuadro resumen (arriba de la tabla) ----------
+  function renderCrucePgtSummary(root) {
+    var scoped = crucePgtScoped();
+    var counts = crucePgtCounts(scoped);
+    var total = scoped.length;
+    var pct = total ? (counts['Match Encontrado'] / total) * 100 : 0;
+
+    var html = '<div class="kpi-grid">';
+    html += '<div class="card hero-card">';
+    html += '<div class="hero-label">% de facturas PGT con cargo encontrado</div>';
+    html += '<div class="hero-num" style="color:' + tierVar(pct) + '">' + pct1(pct) + '</div>';
+    html += '<div class="hero-sub">' + fmtInt(counts['Match Encontrado']) + ' de ' + fmtInt(total) + ' facturas de proveedor ya con su cargo correspondiente al paciente en el mes esperado.</div>';
+    html += '</div>';
+    html += '<div class="stat-grid">';
+    var order = [
+      { key: 'Match Encontrado', label: 'Match', varName: '--good' },
+      { key: 'Sin Match', label: 'Sin Match', varName: '--bad' },
+      { key: 'Fuera de Rango', label: 'Fuera de Rango', varName: '--warn' }
+    ];
+    order.forEach(function (o) {
+      var n = counts[o.key] || 0;
+      var p = total ? (n / total) * 100 : 0;
+      html += '<div class="card stat">';
+      html += '<div class="lbl"><span class="dot" style="background:var(' + o.varName + ')"></span>' + escapeHtml(o.label) + '</div>';
+      html += '<div class="n" style="color:var(' + o.varName + ')">' + fmtInt(n) + '</div>';
+      html += '<div class="pct">' + pct1(p) + ' del total</div>';
+      html += '</div>';
+    });
+    html += '</div>'; // stat-grid
+    html += '</div>'; // kpi-grid
+    root.innerHTML = html;
+  }
+
+  // ---------- render: cruce de PGTs -- tabla de facturas sin cargo ----------
+  function renderCrucePGT(root) {
+    var rows = crucePgtDetailRows();
+    var totalPendientes = crucePgtScoped().filter(function (r) {
+      return r.estatus === 'Sin Match' || r.estatus === 'Fuera de Rango';
+    }).length;
+
+    var html = '<div class="toolbar">';
+    html += '<input class="search" id="fi-pgt-search" type="text" placeholder="Buscar por paciente, concepto o ID Orden LIMS…" value="' + escapeHtml(state.searchPgt) + '">';
+    html += '<span class="count-badge">' + fmtInt(rows.length) + ' registros</span>';
+    html += '</div>';
+
+    if (!rows.length) {
+      var emptyMsg = totalPendientes ? 'Sin resultados para esta búsqueda.' : 'No quedan facturas de proveedor PGT sin cargo en este alcance.';
+      html += '<div class="table-wrap"><div class="empty">' + emptyMsg + '</div></div>';
+      root.innerHTML = html;
+      return;
+    }
+
+    html += '<div class="table-wrap"><table><thead><tr>' +
+      '<th>Paciente</th><th>Fecha recepción</th><th>Fecha entrega reporte</th><th>ID Orden LIMS</th><th>Costo proveedor</th>' +
+      '<th>Estatus</th><th>Cargo relacionado</th><th>Comentario</th>' +
+      '</tr></thead><tbody>';
+    rows.forEach(function (r) {
+      var note = COMMENTS[r.id];
+      var confirmado = note && note.cargado;
+      var chipClass = r.estatus === 'Fuera de Rango' ? 'fuera' : 'sin';
+      var chipLabel = r.estatus === 'Fuera de Rango' ? 'Fuera de Rango' : 'Sin Match';
+      html += '<tr' + (confirmado ? ' class="row-confirmed"' : '') + '>';
+      html += '<td>' + escapeHtml(r.paciente) + '</td>';
+      html += '<td>' + fmtDate(r.fechaRecepcion) + '</td>';
+      html += '<td>' + fmtDate(r.fechaEntregaReporte) + '</td>';
+      html += '<td>' + escapeHtml(r.idOrdenLims) + '</td>';
+      html += '<td class="diff">' + (r.costo !== null && r.costo !== undefined ? fmtMoney(r.costo) : '—') + '</td>';
+      html += '<td><span class="chip ' + chipClass + '">' + chipLabel + '</span>' +
+        (confirmado ? ' <span class="chip confirm">✓ Confirmado</span>' : '') + '</td>';
+      html += '<td class="cargo-cell">' + (r.estatus === 'Fuera de Rango'
+        ? '<span class="cc">' + escapeHtml(r.cargoConcepto) + '</span>' + fmtDate(r.cargoFecha) + ' (mes distinto)'
+        : '—') + '</td>';
+      html += '<td>' + commentCellHtml(r) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    root.innerHTML = html;
+    wireCommentInputs(root);
+  }
+
+  // ---------- render: detail table ----------
+  function commentCellHtml(row) {
+    var note = COMMENTS[row.id] || { text: '', cargado: false };
+    var disabledAttr = apiReady ? '' : 'disabled';
+    var html = '<label class="confirm-check">' +
+      '<input type="checkbox" class="confirm-checkbox" data-id="' + escapeHtml(row.id) + '" ' + (note.cargado ? 'checked' : '') + ' ' + disabledAttr + '>' +
+      ' Ya tiene cargo (confirmado)</label>';
+    html += '<textarea class="comment-input" data-id="' + escapeHtml(row.id) + '" placeholder="Agregar comentario…" ' + disabledAttr + '>' + escapeHtml(note.text || '') + '</textarea>';
+    html += '<div class="save-state" data-savestate="' + escapeHtml(row.id) + '"></div>';
+    return html;
+  }
+
+  function renderTable(root) {
+    var rows = detailRows();
+    var html = '';
+    html += '<div class="toolbar">';
+    html += '<input class="search" id="fi-search" type="text" placeholder="Buscar por paciente, concepto, profesional o NHC…" value="' + escapeHtml(state.search) + '">';
+    html += '<select class="pill" id="fi-grupo-filter" style="cursor:pointer">';
+    html += '<option value="ALL"' + (state.grupo === 'ALL' ? ' selected' : '') + '>Todos los grupos</option>';
+    GRUPO_ORDER.forEach(function (g) {
+      html += '<option value="' + escapeHtml(g) + '"' + (state.grupo === g ? ' selected' : '') + '>' + escapeHtml(g) + '</option>';
+    });
+    html += '</select>';
+    html += '<span class="count-badge">' + fmtInt(rows.length) + ' registros</span>';
+    html += '</div>';
+
+    if (!rows.length) {
+      html += '<div class="table-wrap"><div class="empty">No hay registros con estos filtros.</div></div>';
+      root.innerHTML = html;
+      return;
+    }
+
+    html += '<div class="table-wrap"><table><thead><tr>' +
+      '<th>Grupo</th><th>Sede</th><th>Paciente</th><th>Fecha cita</th><th>Concepto agenda</th>' +
+      '<th>Estatus</th><th>Cargo candidato</th><th>Dif. días</th><th>Profesional</th><th>Ejecutiva</th><th>Comentario</th>' +
+      '</tr></thead><tbody>';
+
+    rows.forEach(function (r) {
+      var meta = STATUS_META[r.estatus];
+      var chipClass = r.estatus === 'Fuera de Rango de Fecha' ? 'fuera' : 'sin';
+      var note = COMMENTS[r.id];
+      var confirmado = note && note.cargado;
+      var justificado = !confirmado && r.estatus === 'Sin Match' && note && justificaSinCargo(note.text);
+      var faltaCheck = !confirmado && !justificado && pareceCargoYaAplicadoSinCheck(r, note);
+      html += '<tr' + (confirmado ? ' class="row-confirmed"' : (justificado ? ' class="row-justified"' : (faltaCheck ? ' class="row-falta-check"' : ''))) + '>';
+      html += '<td>' + escapeHtml(r.grupo) + '</td>';
+      html += '<td><span class="chip sede">' + escapeHtml(r.sede) + '</span></td>';
+      html += '<td>' + escapeHtml(r.paciente) + (r.nhc ? '<br><span style="color:var(--muted);font-size:11px">' + escapeHtml(r.nhc) + '</span>' : '') + '</td>';
+      html += '<td>' + fmtDate(r.fecha) + '</td>';
+      html += '<td>' + escapeHtml(r.concepto) + '</td>';
+      html += '<td><span class="chip ' + chipClass + '">' + escapeHtml(meta.short) + '</span>' +
+        (confirmado ? ' <span class="chip confirm">✓ Confirmado</span>' : '') +
+        (justificado ? ' <span class="chip justified">◆ Justificado</span>' : '') +
+        (faltaCheck ? ' <span class="chip falta-check" title="El comentario dice que ya se cargó, pero falta marcar la casilla &quot;Ya tiene cargo&quot;">⚠ Falta marcar casilla</span>' : '') + '</td>';
+      if (r.estatus === 'Fuera de Rango de Fecha') {
+        html += '<td class="cargo-cell"><span class="cc">' + escapeHtml(r.conceptoCargo) + '</span>' + fmtDate(r.fechaCargo) + '</td>';
+        html += '<td class="diff">' + (r.diffDias > 0 ? '+' : '') + r.diffDias + 'd</td>';
+      } else {
+        html += '<td class="cargo-cell">—</td><td class="diff">—</td>';
+      }
+      html += '<td>' + escapeHtml(r.profesional) + '</td>';
+      html += '<td>' + (r.ejecutiva === 'Sin asignar' ? '<span class="chip" style="background:var(--warn-bg);color:var(--warn)">Sin asignar</span>' : escapeHtml(r.ejecutiva)) + '</td>';
+      html += '<td>' + commentCellHtml(r) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    root.innerHTML = html;
+    wireCommentInputs(root);
+  }
+
+  // ---------- render: pills ----------
+  function renderSedePills(root) {
+    var html = '';
+    SEDES.forEach(function (s) {
+      html += '<button class="pill' + (state.sede === s.key ? ' active' : '') + '" data-sede="' + s.key + '">' + escapeHtml(s.label) + '</button>';
+    });
+    root.innerHTML = html;
+  }
+
+  function renderEjecutivaFilter(root) {
+    var html = '<select class="pill" id="fi-ejecutiva-filter" style="cursor:pointer">';
+    html += '<option value="ALL"' + (state.ejecutiva === 'ALL' ? ' selected' : '') + '>Todas las ejecutivas</option>';
+    getEjecutivas().forEach(function (e) {
+      html += '<option value="' + escapeHtml(e) + '"' + (state.ejecutiva === e ? ' selected' : '') + '>' + escapeHtml(e) + '</option>';
+    });
+    html += '</select>';
+    root.innerHTML = html;
+  }
+
+  function renderMesFilter(root) {
+    var meses = getMeses();
+    var html = '<select class="pill" id="fi-mes-filter" style="cursor:pointer">';
+    html += '<option value="ALL"' + (state.mes === 'ALL' ? ' selected' : '') + '>Todo el año</option>';
+    meses.forEach(function (m) {
+      html += '<option value="' + m + '"' + (state.mes === m ? ' selected' : '') + '>' + escapeHtml(mesLabel(m)) + '</option>';
+    });
+    html += '</select>';
+    root.innerHTML = html;
+  }
+
+  function renderStatusPills(root) {
+    var opts = [
+      { key: 'ALL', label: 'Todos' },
+      { key: 'SIN', label: 'Solo Sin Match' },
+      { key: 'FUERA', label: 'Solo Fuera de Rango' },
+      { key: 'SINREGLA', label: 'Solo Sin Regla' }
+    ];
+    var html = '';
+    opts.forEach(function (o) {
+      html += '<button class="pill' + (state.statusFilter === o.key ? ' active' : '') + '" data-status="' + o.key + '">' + escapeHtml(o.label) + '</button>';
+    });
+    root.innerHTML = html;
+  }
+
+  // ---------- full render ----------
+  function render() {
+    renderSedePills(document.getElementById('fi-sede-pills'));
+    renderEjecutivaFilter(document.getElementById('fi-ejecutiva-filter-wrap'));
+    renderMesFilter(document.getElementById('fi-mes-filter-wrap'));
+    renderKPI(document.getElementById('fi-kpi'));
+    renderGrupoBars(document.getElementById('fi-bars'));
+    renderStatusPills(document.getElementById('fi-status-pills'));
+    renderTable(document.getElementById('fi-table'));
+    renderCrucePgtSummary(document.getElementById('fi-pgt-summary'));
+    renderCrucePGT(document.getElementById('fi-pgt'));
+    renderDescuentos(document.getElementById('fi-descuentos'));
+    wireTopEvents();
+  }
+
+  // renderTable() y renderCrucePGT() reemplazan su propio toolbar (con el
+  // input de búsqueda y el select de grupo) cada vez que se re-renderizan -- eso
+  // destruye el elemento DOM anterior y, con él, cualquier listener pegado
+  // directamente. Por eso estos dos "wire*" son funciones aparte que se pueden
+  // volver a invocar después de cada re-render parcial, no solo una vez al
+  // inicio: si no, la búsqueda deja de reaccionar después de la primera tecla.
+  function wireDetailToolbar() {
+    var searchEl = document.getElementById('fi-search');
+    if (searchEl) {
+      searchEl.addEventListener('input', function () {
+        state.search = searchEl.value;
+        renderTable(document.getElementById('fi-table'));
+        wireDetailToolbar();
+        // restore focus + caret since el toolbar se re-renderizó
+        var el = document.getElementById('fi-search');
+        if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+      });
+    }
+    var grupoSel = document.getElementById('fi-grupo-filter');
+    if (grupoSel) {
+      grupoSel.addEventListener('change', function () {
+        state.grupo = grupoSel.value;
+        renderTable(document.getElementById('fi-table'));
+        wireDetailToolbar();
+      });
+    }
+  }
+
+  function wireCrucePgtSearch() {
+    var pgtSearchEl = document.getElementById('fi-pgt-search');
+    if (pgtSearchEl) {
+      pgtSearchEl.addEventListener('input', function () {
+        state.searchPgt = pgtSearchEl.value;
+        renderCrucePGT(document.getElementById('fi-pgt'));
+        wireCrucePgtSearch();
+        var el = document.getElementById('fi-pgt-search');
+        if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+      });
+    }
+  }
+
+  function wireTopEvents() {
+    var sedePills = document.querySelectorAll('#fi-sede-pills .pill');
+    sedePills.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        state.sede = btn.getAttribute('data-sede');
+        render();
+      });
+    });
+    var statusPills = document.querySelectorAll('#fi-status-pills .pill');
+    statusPills.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        state.statusFilter = btn.getAttribute('data-status');
+        renderTable(document.getElementById('fi-table'));
+        wireDetailToolbar();
+        renderStatusPillsOnly();
+      });
+    });
+    wireDetailToolbar();
+    var ejecutivaSel = document.getElementById('fi-ejecutiva-filter');
+    if (ejecutivaSel) {
+      ejecutivaSel.addEventListener('change', function () {
+        state.ejecutiva = ejecutivaSel.value;
+        render();
+      });
+    }
+    var mesSel = document.getElementById('fi-mes-filter');
+    if (mesSel) {
+      mesSel.addEventListener('change', function () {
+        state.mes = mesSel.value;
+        render();
+      });
+    }
+    wireCrucePgtSearch();
+  }
+
+  function renderStatusPillsOnly() {
+    renderStatusPills(document.getElementById('fi-status-pills'));
+    var statusPills = document.querySelectorAll('#fi-status-pills .pill');
+    statusPills.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        state.statusFilter = btn.getAttribute('data-status');
+        renderTable(document.getElementById('fi-table'));
+        renderStatusPillsOnly();
+      });
+    });
+  }
+
+  // ---------- comments ----------
+  function wireCommentInputs(root) {
+    var inputs = root.querySelectorAll('.comment-input');
+    inputs.forEach(function (el) {
+      el.addEventListener('input', function () {
+        var id = el.getAttribute('data-id');
+        var stateEl = root.querySelector('[data-savestate="' + cssEscape(id) + '"]');
+        if (stateEl) stateEl.textContent = 'Escribiendo…';
+        if (saveTimers[id]) clearTimeout(saveTimers[id]);
+        saveTimers[id] = setTimeout(function () { saveRow(id, { text: el.value }, stateEl, false); }, 900);
+      });
+    });
+    var checks = root.querySelectorAll('.confirm-checkbox');
+    checks.forEach(function (el) {
+      el.addEventListener('change', function () {
+        var id = el.getAttribute('data-id');
+        var stateEl = root.querySelector('[data-savestate="' + cssEscape(id) + '"]');
+        updateRowConfirmedVisual(el, el.checked);
+        // El checkbox cambia el % de cargo (KPIs y barras), así que sí se re-renderiza esa parte.
+        saveRow(id, { cargado: el.checked }, stateEl, true);
+      });
+    });
+  }
+
+  function updateRowConfirmedVisual(checkboxEl, checked) {
+    var tr = checkboxEl.closest('tr');
+    if (!tr) return;
+    tr.classList.toggle('row-confirmed', checked);
+    var estatusCell = tr.querySelector('td:nth-child(6)');
+    if (!estatusCell) return;
+    var existingChip = estatusCell.querySelector('.chip.confirm');
+    if (checked && !existingChip) {
+      var span = document.createElement('span');
+      span.className = 'chip confirm';
+      span.style.marginLeft = '6px';
+      span.textContent = '✓ Confirmado';
+      estatusCell.appendChild(span);
+    } else if (!checked && existingChip) {
+      existingChip.remove();
+    }
+  }
+
+  function cssEscape(s) { return String(s).replace(/["\\]/g, '\\$&'); }
+
+  function saveRow(id, patch, stateEl, rerenderStats) {
+    var current = COMMENTS[id] || { text: '', cargado: false };
+    var next = { text: patch.text !== undefined ? patch.text.trim() : (current.text || ''), cargado: patch.cargado !== undefined ? patch.cargado : !!current.cargado };
+    if (next.text || next.cargado) COMMENTS[id] = next; else delete COMMENTS[id];
+
+    if (rerenderStats) {
+      renderKPI(document.getElementById('fi-kpi'));
+      renderGrupoBars(document.getElementById('fi-bars'));
+      // Comparte COMMENTS con el cruce de PGTs -- un checkbox de cualquiera de las
+      // dos tablas puede mover sus conteos, así que se refresca también ese resumen
+      // (la propia fila ya se actualiza sin re-render vía updateRowConfirmedVisual).
+      var pgtSummaryEl = document.getElementById('fi-pgt-summary');
+      if (pgtSummaryEl) renderCrucePgtSummary(pgtSummaryEl);
+    }
+
+    if (!apiReady) {
+      if (stateEl) stateEl.textContent = 'Sin conexión de guardado — no se compartirá con el equipo';
+      return;
+    }
+    if (stateEl) stateEl.textContent = 'Guardando…';
+    var autor = getAutor();
+    fetch(WEBAPP_URL, {
+      method: 'POST',
+      body: JSON.stringify({ id: id, cargado: next.cargado, texto: next.text, autor: autor })
+    }).then(function (r) { return r.json(); }).then(function (resp) {
+      if (resp && resp.ok) {
+        if (stateEl) stateEl.textContent = 'Guardado ✓ — visible para todo el equipo (' + autor + ')';
+      } else {
+        if (stateEl) stateEl.textContent = 'No se pudo guardar: ' + ((resp && resp.error) || 'error desconocido');
+      }
+    }).catch(function () {
+      if (stateEl) stateEl.textContent = 'No se pudo guardar (revisa tu conexión a internet) — vuelve a intentar';
+    });
+  }
+
+  // ---------- boot: carga de datos en vivo ----------
+  function showReadOnlyBanner(msg) {
+    var b = document.getElementById('fi-readonly-banner');
+    if (b) { b.style.display = 'block'; if (msg) b.textContent = msg; }
+  }
+  function hideReadOnlyBanner() {
+    var b = document.getElementById('fi-readonly-banner');
+    if (b) b.style.display = 'none';
+  }
+
+  function loadData() {
+    var loadEl = document.getElementById('fi-load-status');
+    if (loadEl) loadEl.textContent = 'Cargando datos en vivo desde tu Google Sheet… (puede tardar 20-40 segundos, lee y cruza miles de filas cada vez — no recargues la página)';
+    fetch(WEBAPP_URL)
+      .then(function (r) { return r.json(); })
+      .then(function (resp) {
+        if (!resp || !resp.ok) throw new Error((resp && resp.error) || 'Respuesta inválida del servidor');
+        DATA = resp.registros || [];
+        DESCUENTOS = resp.descuentoRegistros || [];
+        CRUCE_PGT = resp.crucePGT || [];
+        COMMENTS = {};
+        Object.keys(resp.comentarios || {}).forEach(function (id) {
+          var c = resp.comentarios[id];
+          COMMENTS[id] = { text: c.texto || '', cargado: !!c.cargado };
+        });
+        var corteEl = document.getElementById('fi-corte-label');
+        if (corteEl) corteEl.textContent = 'corte al ' + fmtDate(resp.corte) + ' · actualizado ' + fmtDateTime(resp.generadoEn);
+        apiReady = true;
+        hideReadOnlyBanner();
+        if (loadEl) loadEl.textContent = '';
+        render();
+      })
+      .catch(function (err) {
+        apiReady = false;
+        showReadOnlyBanner('No se pudieron cargar los datos en vivo (' + err.message + '). ' +
+          'Revisa que el Apps Script siga desplegado con acceso "Cualquier usuario", o vuelve a intentar.');
+        if (loadEl) {
+          loadEl.innerHTML = 'No se pudo conectar con la Google Sheet. <button id="fi-retry" class="pill" style="cursor:pointer">Reintentar</button>';
+          var retryBtn = document.getElementById('fi-retry');
+          if (retryBtn) retryBtn.addEventListener('click', loadData);
+        }
+        render();
+      });
+  }
+
+  function buildShell() {
+    var root = document.getElementById('root');
+    var html = '';
+    html += '<div class="topbar"><div class="topbar-inner">' +
+      '<div class="brand"><h1>Cruce de Cargos</h1><p>Fertilidad Integral &middot; Revenue Management &middot; <span id="fi-corte-label">' + CORTE_LABEL + '</span></p></div>' +
+      '<div class="pillrow" id="fi-sede-pills"></div>' +
+      '<div class="pillrow" id="fi-ejecutiva-filter-wrap"></div>' +
+      '<div class="pillrow" id="fi-mes-filter-wrap"></div>' +
+      '</div></div>';
+    html += '<div id="root-body">' +
+      '<div id="fi-load-status" class="note" style="padding:10px 24px"></div>' +
+      '<div class="readonly-banner" id="fi-readonly-banner" style="display:none">Esta vista no tiene conexión de guardado activa: los comentarios se pueden escribir pero no se compartirán con el equipo hasta que se abra desde una sesión con guardado habilitado.</div>' +
+      '<section><div class="section-head"><h2>% de conversión</h2><div class="note">Qué tanto de la agenda ya quedó resuelto: tiene cargo, está fuera de rango (para revisar), no requiere cargo por regla, el equipo ya confirmó que sí se cobró, o el comentario explica por qué no se esperaba cargo (justificado). No incluye citas todavía futuras (posteriores a la fecha de corte) ni cuenta como resuelto un concepto sin regla definida (Sin Regla, sigue pendiente). <strong>No es lo que falta</strong> — entre más alto, mejor.</div></div>' +
+      '<div id="fi-kpi"></div></section>' +
+      '<section><div class="section-head"><h2>Distribución por grupo</h2><div class="note">% ya resuelto de cada tipo de cita (mismo criterio de arriba), de mayor a menor. Un grupo con % bajo es el que más casos pendientes tiene por revisar.</div></div>' +
+      '<div id="fi-bars"></div></section>' +
+      '<section><div class="section-head"><h2>Casos a revisar</h2><div class="note">Comenta si detectas que falta una regla, un concepto de cargo o una excepción — sirve como conocimiento para el equipo. Si confirmas "Ya tiene cargo", ese caso se suma al % de cargo de arriba. Si el comentario explica que NO se espera cargo (p.ej. "no requiere toma de sangre porque es inseminación", "se canceló el ciclo"), el caso se marca automáticamente como <span class="chip justified" style="vertical-align:1px">◆ Justificado</span> y también cuenta como resuelto, sin marcar la casilla. Los de chip "Sin Regla" son distintos: el concepto de esa cita no tiene ninguna fila en tu hoja Reglas (ni SI ni NO) — agrégala ahí para que deje de aparecer aquí.</div></div>' +
+      '<div class="pillrow" id="fi-status-pills" style="margin-bottom:14px"></div>' +
+      '<div id="fi-table"></div></section>' +
+      '<section><div class="section-head"><h2>Cruce de PGTs - Proveedor y cargos</h2><div class="note">Por cada factura que un proveedor de PGT ya envió ("Base proveedores PGT"), verifica que el paciente tenga un cargo correspondiente en CARGOS (concepto de "Regla proveedores PGT" columna G) dentro del mes de recepción de la muestra y/o de entrega del reporte. La tabla de abajo solo muestra las que todavía no tienen cargo — marca "Ya tiene cargo" si lo confirmas a mano (cuenta como match) o deja un comentario.</div></div>' +
+      '<div id="fi-pgt-summary" style="margin-bottom:18px"></div>' +
+      '<div id="fi-pgt"></div></section>' +
+      '<section><div class="section-head"><h2>Descuentos</h2><div class="note">Qué ejecutiva y qué producto concentran más descuento, según la columna "% Dto." de CARGOS. La ejecutiva se determina por el médico (Profesional / Profesional Historia del cargo) — CARGOS no trae sede confiable, así que este ranking solo se filtra por mes, no por sede.</div></div>' +
+      '<div id="fi-descuentos"></div></section>' +
+      '<footer>Fertilidad Integral — Auditoría de cruce Agenda vs. Cargos</footer>' +
+      '</div>';
+    root.innerHTML = html;
+  }
+
+  buildShell();
+  render();
+  loadData();
+})();
+
+</script>
