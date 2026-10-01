@@ -31,6 +31,16 @@ window.DATA = {
   // mecanismo ya existe en el código (mesVigenteCerrado() en data-live.js,
   // basado en la fecha real del calendario) y revierte solo el próximo mes
   // conforme avance el calendario — no requiere ningún flag manual.
+  // CORRECCIÓN 1-oct-2026 (mismo día, con Cargos_y_Facturas_39.xlsx): Marite
+  // subió un re-extracto más fino del mismo septiembre ya cerrado. Cambia
+  // sólo CDMX: -$314,655.03 en Ingresos, -53 Atenciones, -51 Pacientes
+  // únicos, por 53 líneas de cargo canceladas (52 Congelación/Almacenamiento
+  // de gametos 1 año + 1 Cita primera vez IPS). GDL y MTP, Subrogación y
+  // Consultas/Agenda quedan exactamente iguales (reverificado contra el
+  // archivo nuevo). Además se reasignó el médico ("Profesional Historia") en
+  // varias líneas de GDL/MTP — no cambia ingresos, sólo el Evolutivo por
+  // médico (ese dato se carga en vivo desde la hoja "PorMedico", ya
+  // actualizado ahí).
   corte: "30-sep-2026",
   meses_hist: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago"],
   mes_actual: "Sep",
@@ -47,9 +57,9 @@ window.DATA = {
   // se muestra mientras carga el Sheet en vivo o si el fetch falla.
   total: {
     nombre: "Todas las sedes",
-    ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.7, 12.1, 12.0, 16.2], actual: 15.53, proy: 15.53, vsLM: -4, vsU3M: 16, nota: "CIERRE DE SEPTIEMBRE (1-oct-2026, Cargos_y_Facturas_38.xlsx, mes completo): Real = Proyectado = $15,531,257.41. Agosto fue un mes atípicamente alto (impulsado por un pico puntual de Congelación en Metepec), por eso el vsLM de -4% no debe leerse como una caída del negocio — vs. el promedio de los últimos 3 meses cerrados (vsU3M) el total sigue +16%." },
-    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3109], actual: 3596, proy: 3596, vsLM: 16, vsU3M: 35, nota: "suma CDMX+GDL+MTP, conteo de líneas de cargo (F. Cargo), mes de septiembre completo (1-30). Mes cerrado: Proyectado = Real." },
-    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1003], actual: 1374, proy: 1374, vsLM: 37, vsU3M: 66, nota: "suma CDMX+GDL+MTP, pacientes ÚNICOS del mes (dedup por Historia), septiembre completo. Mes cerrado: Proyectado = Real." },
+    ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.7, 12.1, 12.0, 16.2], actual: 15.22, proy: 15.22, vsLM: -6, vsU3M: 13, nota: "CORREGIDO 1-oct-2026 con Cargos_y_Facturas_39.xlsx (re-extracto más fino de septiembre, el mes sigue cerrado): Real = Proyectado = $15,216,602.38 (baja ~$314,655 vs la cifra publicada con el archivo 38, por 53 líneas de cargo canceladas, todas en CDMX — ver nota de Congelación en Mezcla de servicios). Agosto fue un mes atípicamente alto (pico puntual de Congelación en Metepec), por eso el vsLM negativo no debe leerse como caída del negocio — vs. el promedio de los últimos 3 meses cerrados (vsU3M) el total sigue positivo." },
+    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3109], actual: 3543, proy: 3543, vsLM: 14, vsU3M: 33, nota: "CORREGIDO con Cargos_39 (-53 líneas canceladas, todas CDMX). suma CDMX+GDL+MTP, conteo de líneas de cargo (F. Cargo), mes de septiembre completo (1-30). Mes cerrado: Proyectado = Real." },
+    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1003], actual: 1323, proy: 1323, vsLM: 32, vsU3M: 60, nota: "CORREGIDO con Cargos_39 (-51 pacientes únicos, todos CDMX, por las líneas canceladas). suma CDMX+GDL+MTP, pacientes ÚNICOS del mes (dedup por Historia), septiembre completo. Mes cerrado: Proyectado = Real." },
     consultas: { hist: [168, 167, 235, 220, 225, 271, 255, 316], real: 320, agendado: 0, proy: 320, vsLM: 1, vsU3M: 14, nota: "CIERRE DE SEPTIEMBRE con Consultas_19.xlsx — real 320 (1-30 sep, Terminada+Primera Vez), agendado 0 (la hoja 'Citas agendadas' quedó vacía: no hay nada pendiente por agendar en un mes ya cerrado). proy = real + agendado = real." },
     // ACTUALIZADO 1-oct-2026 con la hoja "No show" de Consultas_19.xlsx
     // (mes completo 1-30 sep, mismo filtro Grupo de conceptos = "Primera
@@ -68,9 +78,9 @@ window.DATA = {
   sedes: {
     CDMX: {
       nombre: "Ciudad de México",
-      ingresos: { hist: [10.2, 9.8, 10.3, 10.5, 10.2, 9.3, 10.0, 12.5], actual: 13.64, proy: 13.64, vsLM: 9, vsU3M: 29, nota: "CIERRE DE SEPTIEMBRE: Real = Proyectado = $13,643,369.22. Sigue siendo el principal motor de crecimiento del mes, con el ingreso acelerando tanto vs agosto como vs el trimestre." },
-      atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2072], actual: 2711, proy: 2711, vsLM: 31, vsU3M: 43, nota: "Mes cerrado: Proyectado = Real. Mejor momentum de volumen de las 3 sedes." },
-      pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 621], actual: 982, proy: 982, vsLM: 58, vsU3M: 81, nota: "pacientes únicos del mes (dedup Historia), septiembre completo. Proyectado = Real." },
+      ingresos: { hist: [10.2, 9.8, 10.3, 10.5, 10.2, 9.3, 10.0, 12.5], actual: 13.33, proy: 13.33, vsLM: 7, vsU3M: 26, nota: "CORREGIDO 1-oct-2026 con Cargos_y_Facturas_39.xlsx: Real = Proyectado = $13,328,714.19 (baja ~$314,655 vs el corte anterior — 53 líneas de cargo canceladas: 52 de Congelación/Almacenamiento de gametos 1 año y 1 de Cita primera vez IPS; ver Evolutivo por médico para el efecto en la atribución por doctor). Sigue siendo el principal motor de crecimiento del mes, con el ingreso acelerando tanto vs agosto como vs el trimestre." },
+      atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2072], actual: 2658, proy: 2658, vsLM: 28, vsU3M: 40, nota: "CORREGIDO con Cargos_39 (-53 líneas canceladas). Mes cerrado: Proyectado = Real. Mejor momentum de volumen de las 3 sedes." },
+      pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 621], actual: 931, proy: 931, vsLM: 50, vsU3M: 72, nota: "CORREGIDO con Cargos_39 (-51 pacientes únicos). pacientes únicos del mes (dedup Historia), septiembre completo. Proyectado = Real." },
       consultas: { hist: [127, 105, 144, 145, 133, 169, 141, 137], real: 145, agendado: 0, proy: 145, vsLM: 6, vsU3M: -3, top_cat: "Consulta primera vez", top_n: 53 },
       noshow: { hist: [7.3, 7.9, 11.1, 14.2, 19.9, 10.1, 13.0, 11.0], actual: 13.7, prom: 11.8, deltaPts: 1.9 },
     },
@@ -102,19 +112,19 @@ window.DATA = {
   // Valoración fuera de CDMX).
   servicios: {
     total: [
-      { nombre: "Congelación de Gametos", valor: 4.4, vsLM: 54, vsU3M: 73 },
+      { nombre: "Congelación de Gametos", valor: 4.1, vsLM: 43, vsU3M: 60 },
       { nombre: "Tratamientos FIV/ICSI", valor: 4.2, vsLM: -14, vsU3M: 3 },
       { nombre: "Farmacia", valor: 2.6, vsLM: -21, vsU3M: -10 },
       { nombre: "Laboratorio", valor: 2.3, vsLM: -11, vsU3M: 8 },
       { nombre: "Subrogación", valor: 0.9, vsLM: -41, vsU3M: 1 },
-      { nombre: "Consultas", valor: 0.5, vsLM: 10, vsU3M: 31 },
+      { nombre: "Consultas", valor: 0.5, vsLM: 10, vsU3M: 30 },
       { nombre: "Procedimientos / Quirúrgicos", valor: 0.4, vsLM: -11, vsU3M: 17 },
       { nombre: "Imágenes", valor: 0.1, vsLM: 133, vsU3M: 87 },
       { nombre: "Wellness", valor: 0.0, vsLM: 193, vsU3M: 309 },
       { nombre: "Otros", valor: 0.0, vsLM: -1, vsU3M: -23 },
     ],
     CDMX: [
-      { nombre: "Congelación de Gametos", valor: 3.8, vsLM: 87, vsU3M: 89 },
+      { nombre: "Congelación de Gametos", valor: 3.5, vsLM: 72, vsU3M: 73 },
       { nombre: "Tratamientos FIV/ICSI", valor: 3.7, vsLM: -6, vsU3M: 15 },
       { nombre: "Farmacia", valor: 2.3, vsLM: -10, vsU3M: -1 },
       { nombre: "Laboratorio", valor: 2.1, vsLM: 21, vsU3M: 38 },
@@ -151,6 +161,7 @@ window.DATA = {
   // ningún cálculo expuesto.
   highlights: {
     total: [
+      "Corrección de corte (1-oct-2026): un re-extracto más fino de septiembre (Cargos_y_Facturas_39) bajó Ingresos/Atenciones/Pacientes únicos de CDMX por 53 líneas de cargo canceladas (52 de Congelación/Almacenamiento de gametos, 1 de Cita primera vez) — no es una caída real del mes, es una corrección de datos sobre el mismo septiembre ya cerrado; las demás sedes no cambiaron.",
       "Septiembre cierra con Congelación de Gametos y Tratamientos FIV/ICSI como los dos motores de ingreso de la compañía, muy por encima del resto de servicios — la prioridad de pricing y paquetes combinados sigue siendo la misma.",
       "Los números de HubSpot de este corte son más bajos que los que se habían comunicado antes, pero es una corrección de metodología de medición, no una caída real de captación — conviene tomar esta cifra como la nueva línea base de comparación hacia adelante.",
       "Subrogación abre su primera paciente de Valoración fuera de Ciudad de México, en Guadalajara — una señal temprana de que la propuesta puede replicarse en otras sedes y vale la pena dar seguimiento comercial cercano.",
