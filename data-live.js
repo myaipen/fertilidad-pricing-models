@@ -107,7 +107,20 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // ACTUALIZADO 30-sep-2026: corte sube de 28 a 29 (Cargos_y_Facturas_37.xlsx +
 // Consultas_18.xlsx, ambos hasta 29-sep-2026). Mismo comentario que arriba:
 // solo se mueve el puntero de día, sin cambio de metodología.
-let CORTE_REAL_DIA = 29;
+// ACTUALIZADO 1-oct-2026 (cierre de septiembre): corte sube de 29 a 30 —
+// septiembre ya es mes CERRADO (Cargos_y_Facturas_38.xlsx + Consultas_19.xlsx,
+// ambos a día 30, último día del mes). A partir de aquí este valor deja de
+// tener efecto práctico en la proyección de Atenciones/Pacientes de
+// septiembre: mesVigenteCerrado(9) ya da true solo con la fecha de calendario
+// real (hoy >= 1-oct), así que proyectarPorTendencia() devuelve directo el
+// Real (ver "if (cerrado || ...) return actual;" más abajo) sin tocar
+// shareEnDia(). Ingresos (Base!F) también quedó con Proyectado = Real para
+// los 30 (+1 nueva fila MTP/Wellness) renglones de septiembre en la hoja
+// Base, y el ajuste de pipeline comercial (Base!H) se limpió a 0 en todos
+// ellos — ya no aplica "pipeline por cerrar" en un mes que ya cerró. Se deja
+// el puntero en 30 solo por prolijidad/consistencia histórica del comentario,
+// no porque algo dependa de él este corte.
+let CORTE_REAL_DIA = 30;
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 
