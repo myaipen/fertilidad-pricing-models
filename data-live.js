@@ -120,7 +120,15 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // ellos — ya no aplica "pipeline por cerrar" en un mes que ya cerró. Se deja
 // el puntero en 30 solo por prolijidad/consistencia histórica del comentario,
 // no porque algo dependa de él este corte.
-let CORTE_REAL_DIA = 30;
+// ACTUALIZADO 5-oct-2026 (corte de OCTUBRE): corte baja de 30 a 4 — arranca
+// octubre con Cargos_y_Facturas_40.xlsx + Consultas_20.xlsx (ambos al
+// 4-oct-2026, Real MTD de 4 días). Octubre pasa a ser el mes vigente y
+// septiembre queda como mes CERRADO: sin proyección (Base!F = Base!E,
+// Base!H = 0, Consultas Agendado = 0) y proyectarPorTendencia() devuelve el
+// Real. Ver el bloque "RECALIBRACIÓN 5-oct-2026" junto a SHARE_CURVE_* más
+// abajo: la ventana de 8 meses cerrados se corre a Feb-Sep (sale enero, entra
+// septiembre) y se regeneraron curvas y ratios conservadores.
+let CORTE_REAL_DIA = 4;
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 
@@ -129,7 +137,7 @@ window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 // loadLiveDataIntoDashboard() lo autodetecta al último mes con datos reales
 // apenas carga (ver detectarMesVigente), y cambiar el selector dispara un
 // re-render completo con el nuevo mes como "vigente" y el anterior como LM.
-let MES_VIGENTE = 9;
+let MES_VIGENTE = 10;
 
 // Año vigente — GLOBAL, selector único en la barra de filtros de arriba
 // (junto a Sede/Periodo/Mes Vigente en index.html). Afecta TODO el tablero:
@@ -674,14 +682,34 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
     const idx = Math.min(Math.max(Math.round(dia), 1), 31) - 1;
     return arr[idx];
   }
+  // RECALIBRACIÓN 5-oct-2026 (corte de octubre, Cargos_y_Facturas_40.xlsx,
+  // 24,330 renglones ene-4oct): misma metodología conservadora (máximo
+  // puntual por día entre los 8 meses cerrados más recientes), ahora con la
+  // ventana FEB-SEP 2026 (antes ene-ago: sale enero, entra septiembre).
+  // Arrays regenerados de los renglones de Cargos (Atenciones = # renglones,
+  // Pacientes = primera aparición de cada Historia en el mes, días más allá
+  // del largo del mes = 1.0). Ratios en el mismo extremo conservador:
+  //   RATIO_PACIENTES_POR_ATENCION = MÍNIMO mensual (feb-sep):
+  //     CDMX 0.2168->0.2617 (feb; el mínimo anterior era enero, que sale de la
+  //     ventana), GDL 0.3151 (feb, sin cambio), MTP 0.1953 (may, sin cambio),
+  //     total 0.2358->0.267 (feb).
+  //   RATIO_TICKET_PROMEDIO_ATENCION = MÁXIMO mensual (feb-sep):
+  //     CDMX 6007 (ago, sin cambio), GDL 5163->5006 (mar; el máximo anterior
+  //     era enero, que sale de la ventana), MTP 3861 (feb, sin cambio),
+  //     total 5232 (feb, sin cambio).
+  // Con solo 4 días de Real, la confianza de la proyección de octubre es BAJA
+  // (share de ingresos al día 4: CDMX 0.18, GDL 0.20, MTP 0.47 [MTP es una
+  // sede chica, con pocos cargos por día y curvas muy escalonadas], total 0.18);
+  // se espera que se estabilice conforme avance el mes — vuelve a correrse
+  // en cada corte semanal.
   const SHARE_CURVE_ATENCIONES = {
-    CDMX: [0.0788,0.1165,0.1485,0.1969,0.2417,0.2761,0.2778,0.3296,0.3751,0.4188,0.4205,0.4636,0.4933,0.5173,0.5405,0.5766,0.6125,0.6498,0.6798,0.7094,0.7517,0.7633,0.8008,0.8324,0.858,0.9103,0.9627,1.0,1.0,1.0,1.0],
-    GDL:  [0.0613,0.0907,0.1381,0.1714,0.2032,0.2381,0.2663,0.2969,0.3531,0.3984,0.4181,0.4694,0.501,0.503,0.57,0.6075,0.6331,0.6509,0.7041,0.7396,0.7436,0.7909,0.8166,0.8422,0.8746,0.9293,0.9646,1.0,1.0,1.0,1.0],
+    CDMX: [0.0788,0.1165,0.1485,0.1969,0.2417,0.2761,0.2778,0.3296,0.3751,0.4188,0.4205,0.4636,0.4933,0.5173,0.5405,0.5766,0.6125,0.6498,0.6798,0.7094,0.7517,0.7641,0.8134,0.8324,0.8634,0.9103,0.9627,1.0,1.0,1.0,1.0],
+    GDL:  [0.0613,0.0907,0.1381,0.1714,0.2032,0.2381,0.2663,0.2969,0.3531,0.3984,0.4181,0.4694,0.501,0.5773,0.6,0.6075,0.6364,0.6509,0.7041,0.7396,0.7436,0.7909,0.8166,0.8422,0.8746,0.9293,0.9646,1.0,1.0,1.0,1.0],
     MTP:  [0.1308,0.1682,0.243,0.3458,0.4019,0.4019,0.4019,0.4299,0.5047,0.5421,0.6168,0.6449,0.6449,0.6449,0.6449,0.6449,0.6916,0.729,0.7664,0.7778,0.7778,0.8411,0.8413,0.8995,0.9252,0.9259,1.0,1.0,1.0,1.0,1.0],
   };
   const SHARE_CURVE_PACIENTES = {
-    CDMX: [0.2027,0.2641,0.2947,0.3203,0.38,0.416,0.4566,0.4889,0.518,0.558,0.5707,0.592,0.6286,0.6457,0.6746,0.707,0.7342,0.7547,0.7564,0.7939,0.816,0.8296,0.845,0.8671,0.8927,0.914,0.9745,1.0,1.0,1.0,1.0],
-    GDL:  [0.0809,0.1487,0.1949,0.2205,0.2718,0.2923,0.3101,0.3449,0.3795,0.4286,0.4513,0.5128,0.5385,0.5436,0.6154,0.641,0.6718,0.6821,0.7179,0.7436,0.8061,0.8061,0.8256,0.8462,0.898,0.9388,0.9694,1.0,1.0,1.0,1.0],
+    CDMX: [0.2027,0.2641,0.2947,0.3203,0.38,0.416,0.4566,0.4889,0.518,0.558,0.5707,0.592,0.6286,0.6457,0.6746,0.707,0.7342,0.7547,0.7564,0.7939,0.816,0.8296,0.8518,0.8722,0.9023,0.942,0.9745,1.0,1.0,1.0,1.0],
+    GDL:  [0.0809,0.1487,0.1949,0.2205,0.2718,0.2923,0.3278,0.3478,0.3795,0.4286,0.5084,0.5318,0.5385,0.6154,0.6288,0.641,0.6722,0.689,0.7179,0.7436,0.8061,0.8061,0.8462,0.8662,0.903,0.9388,0.9694,1.0,1.0,1.0,1.0],
     MTP:  [0.1622,0.2703,0.3784,0.4324,0.4595,0.4595,0.4595,0.5135,0.5676,0.6486,0.7297,0.7568,0.7568,0.7568,0.7568,0.7778,0.8222,0.8444,0.8649,0.8649,0.8723,0.8723,0.9149,0.9574,0.9574,0.9787,1.0,1.0,1.0,1.0,1.0],
   };
   // RATIO_PACIENTES_POR_ATENCION conservador: en vez del promedio ponderado
@@ -689,7 +717,7 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // menos pacientes únicos por cada renglón de Cargos) — un ratio más bajo
   // implica menos Pacientes proyectados para la misma cifra de Atenciones:
   //   CDMX min=0.2168 (ene), GDL min=0.3151 (feb), MTP min=0.1953 (may).
-  const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.2168, GDL: 0.3151, MTP: 0.1953, total: 0.2358 };
+  const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.2617, GDL: 0.3151, MTP: 0.1953, total: 0.267 };
   // CAMBIO (14-sep-2026, 3ª pasada): Marite señaló que Atenciones (3,630 proy.,
   // +17% vs. agosto) Y Pacientes (heredado de Atenciones, +5% vs. agosto)
   // proyectaban POR ENCIMA de agosto en el mismo momento en que Ingresos
@@ -765,7 +793,7 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // más posible dentro de lo ya observado, por lo que hacen falta MENOS
   // atenciones para sostener el mismo Ingresos ya proyectado:
   //   CDMX max=6007 (ago), GDL max=5163 (ene), MTP max=3861 (feb).
-  const RATIO_TICKET_PROMEDIO_ATENCION = { CDMX: 6007, GDL: 5163, MTP: 3861, total: 5232 };
+  const RATIO_TICKET_PROMEDIO_ATENCION = { CDMX: 6007, GDL: 5006, MTP: 3861, total: 5232 };
   // SIN CAMBIO (21-sep-2026): con el corte-19 y las shares recalibradas
   // arriba, GDL vuelve a topar por debajo de su actual (Math.max lo deja
   // plano en 439, igual que en el arreglo de corte-14/15-sep) — mismo patrón
