@@ -548,6 +548,21 @@ function anioDeFila(anioRaw) {
   return (anioRaw === undefined || anioRaw === "" || anioRaw == null) ? 2026 : Number(anioRaw);
 }
 
+// Peso de "días hábiles equivalentes" de un mes (o de sus primeros hastaDia
+// días): lun-vie = 1, sábado = 0.55, domingo = 0.07. Se usa para comparar meses
+// con calendarios distintos (octubre 2026 arranca jueves: sus primeros 4 días
+// pesan 2.62 de 25.03). Pesos estimados de los cargos diarios feb-sep 2026.
+function pesoDiasMes(anio, mes, hastaDia) {
+  const dim = new Date(anio, mes, 0).getDate();
+  const fin = hastaDia == null ? dim : Math.min(Math.max(hastaDia, 0), dim);
+  let p = 0;
+  for (let d = 1; d <= fin; d++) {
+    const w = new Date(anio, mes - 1, d).getDay(); // 0 = domingo, 6 = sábado
+    p += w === 0 ? 0.07 : (w === 6 ? 0.55 : 1);
+  }
+  return p;
+}
+
 /**
  * Atenciones / Pacientes comparten forma: filas [Sede, MesNum, MesLabel,
  * Real, Año?]. Regresa { CDMX:{hist,actual,proy,vsLM,vsU3M,vsLY,nomLY},
@@ -744,6 +759,22 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   //     total $5064. El techo por ticket (SEDES_CON_TECHO_TICKET) se mantiene.
   //  Para volver al piso conservador: curvas con máximo puntual, ratio mínimo
   //  de pacientes y ticket máximo (ver bloque "CORRECCIÓN 5-oct-2026 (2ª pasada)").
+  // AJUSTE ATENCIONES / PACIENTES 5-oct-2026 (4ª pasada, Marite: "las atenciones
+  // y pacientes los veo bajos"). Diagnóstico: el techo por ticket (Ingresos proy
+  // ÷ ticket mediano feb-sep) sub-proyectaba porque el ticket ya NO es estable:
+  // GDL bajó de ~$4.7K (feb-jun) a $3.5K/$3.7K/$2.2K en jul/ago/sep y MTP de
+  // ~$3.7K a $1.9K en sep (más renglones de bajo valor por paciente), así que
+  // dividir entre el ticket mediano ($4,630 GDL) daba 374 atenciones en GDL
+  // cuando ago y sep llevaron 751 y 660. Backtest por sede (CDMX/GDL/MTP, meses
+  // may-sep, corte día 4, solo con meses previos): el método anterior (min de
+  // pacing y techo por ticket mediano) tuvo sesgo -15% (-31% en ago-sep) y MAE
+  // 31%; la mezcla 50/50 de pacing mediano y ritmo por día hábil equivalente de
+  // los últimos 3 meses tuvo sesgo +2% (-2% en ago-sep) y MAE 20%.
+  // Cambios: (1) SEDES_CON_TECHO_TICKET = false en las 3 sedes (el techo queda
+  // implementado: ponerlo en true lo reactiva); (2) Atenciones = max(Real,
+  // promedio(Real / share mediano al corte, Real + peso restante x ritmo U3M));
+  // (3) RATIO_PACIENTES_POR_ATENCION = promedio mensual de jul-sep (el ratio
+  // sube: sep CDMX 0.350, GDL 0.453, MTP 0.413 vs medianas 0.289/0.388/0.275).
   const SHARE_CURVE_ATENCIONES = {
     CDMX: [0.0448,0.0934,0.1189,0.1225,0.1596,0.1952,0.2334,0.284,0.3254,0.3454,0.3486,0.3897,0.4243,0.4648,0.5061,0.5471,0.5702,0.5728,0.6147,0.6471,0.6888,0.7274,0.7626,0.7801,0.7823,0.8219,0.8595,0.903,0.9315,0.9711,1],
     GDL:  [0.038,0.0736,0.0875,0.0893,0.1284,0.1677,0.2113,0.2335,0.2894,0.3104,0.3131,0.3549,0.3881,0.4155,0.4603,0.5013,0.5292,0.5317,0.5614,0.5854,0.6153,0.6564,0.7224,0.7429,0.7449,0.7921,0.8367,0.8856,0.9313,0.9734,1],
@@ -759,7 +790,7 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // menos pacientes únicos por cada renglón de Cargos) — un ratio más bajo
   // implica menos Pacientes proyectados para la misma cifra de Atenciones:
   //   CDMX min=0.2168 (ene), GDL min=0.3151 (feb), MTP min=0.1953 (may).
-  const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.2886, GDL: 0.3882, MTP: 0.2750, total: 0.3014 };
+  const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.3046, GDL: 0.4147, MTP: 0.3382, total: 0.3267 };
   // CAMBIO (14-sep-2026, 3ª pasada): Marite señaló que Atenciones (3,630 proy.,
   // +17% vs. agosto) Y Pacientes (heredado de Atenciones, +5% vs. agosto)
   // proyectaban POR ENCIMA de agosto en el mismo momento en que Ingresos
@@ -842,7 +873,8 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // de siempre, no amerita revisar el interruptor. MTP sigue sin techo
   // (Marite no lo ha confirmado); pendiente su revisión si el pipeline de
   // MTP se estabiliza.
-  const SEDES_CON_TECHO_TICKET = { CDMX: true, GDL: true, MTP: false };
+  const SEDES_CON_TECHO_TICKET = { CDMX: false, GDL: false, MTP: false };
+  const ATENCIONES_MEZCLA_RITMO_U3M = true;
   // proyectarPorTendencia(actual, hist, sede): si el mes está cerrado, no
   // hay días transcurridos, o actual=0, se deja el real tal cual en vez de
   // inventar una proyección. Para Pacientes, si se recibió la proyección ya
@@ -862,12 +894,25 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
     }
     const CURVA = esAtenciones ? SHARE_CURVE_ATENCIONES : SHARE_CURVE_PACIENTES;
     const share = shareEnDia(CURVA, sede, CORTE_REAL_DIA);
-    const proyBase = share > 0 ? actual / share : actual * (diasTot / diasTr);
+    let proyBase = share > 0 ? actual / share : actual * (diasTot / diasTr);
+    // MEZCLA PACING + RITMO RECIENTE (5-oct-2026, ver bloque "AJUSTE ATENCIONES"
+    // arriba): promedio simple entre (a) Real / share mediano al día de corte y
+    // (b) Real + días hábiles equivalentes restantes x ritmo por día hábil
+    // equivalente de los últimos 3 meses cerrados (hist). Solo Atenciones.
+    if (esAtenciones && ATENCIONES_MEZCLA_RITMO_U3M && hist && hist.length >= 3) {
+      const ult = meses.slice(-3);
+      const tasas = ult.map((mes, i) => hist[hist.length - 3 + i] / pesoDiasMes(anio, mes));
+      const tasa = tasas.reduce((a, b) => a + b, 0) / tasas.length;
+      const restante = pesoDiasMes(anio, MES_VIGENTE) - pesoDiasMes(anio, MES_VIGENTE, CORTE_REAL_DIA);
+      if (tasa > 0 && restante > 0) {
+        proyBase = (proyBase + (actual + restante * tasa)) / 2;
+      }
+    }
     if (esAtenciones && SEDES_CON_TECHO_TICKET[sede] && ingresosProyPesos && ingresosProyPesos[sede] > 0 && RATIO_TICKET_PROMEDIO_ATENCION[sede] > 0) {
       const techoPorTicket = ingresosProyPesos[sede] / RATIO_TICKET_PROMEDIO_ATENCION[sede];
       return Math.max(actual, Math.min(proyBase, techoPorTicket));
     }
-    return proyBase;
+    return esAtenciones ? Math.max(actual, proyBase) : proyBase;
   }
   // CONGELAMIENTO (21-sep-2026, corte 19->21) — DESACTIVADO desde el corte
   // 27-sep-2026 (28-sep-2026, instrucción explícita de Marite: la
