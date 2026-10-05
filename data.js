@@ -37,8 +37,8 @@ window.DATA = {
   total: {
     nombre: "Todas las sedes",
     ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.8, 12.1, 12.0, 16.1, 15.2], actual: 1.38, proy: 13.33, vsLM: -12, vsU3M: -8, nota: "OCTUBRE (corte 4-oct, 4 días de Real, Cargos_y_Facturas_40.xlsx): Real $1,376,128; Proyectado central $13,327,555 = Real MTD + días hábiles restantes (ponderados: lun-vie 1, sáb 0.55, dom 0.07) × ritmo mediano feb-sep ($533K por día hábil equivalente), repartido a sedes y servicios con la mezcla jul-sep. Backtest ene-sep al día 4: error medio ~0%, típico ±9% (rango -18% a +15%). El piso conservador por pacing máximo era $10.79M; octubre 2025 cerró en $10.37M. Confianza media-baja: solo 4 días de Real. Septiembre quedó CERRADO (Proyectado = Real = $15,216,602); agosto quedó en $16,106,074 tras re-clasificar por ConceptosHier." },
-    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3106, 3543], actual: 330, proy: 2675, vsLM: -24, vsU3M: -13, nota: "OCTUBRE MTD al 4-oct: 330 líneas de cargo (suma CDMX+GDL+MTP). Proyección central 2,675 (CDMX 2,089 + GDL 374 + MTP 212): min(Real ÷ share mediano de atenciones del día 4, Ingresos proy ÷ ticket mediano feb-sep) en CDMX y GDL, donde el techo por ticket es el que manda; MTP sin techo de ticket." },
-    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1000, 1323], actual: 221, proy: 806, vsLM: -39, vsU3M: -21, nota: "OCTUBRE MTD al 4-oct: 221 pacientes únicos (suma de sedes, dedup por Historia dentro de cada sede). Proyección = max(Real, Atenciones proy × ratio mediano pacientes/atención de feb-sep): total 806 (CDMX 603 + GDL 145 + MTP 58)." },
+    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3106, 3543], actual: 330, proy: 2985, vsLM: -16, vsU3M: -3, nota: "OCTUBRE MTD al 4-oct: 330 líneas de cargo (suma CDMX+GDL+MTP). Proyección 2,985 (CDMX 2,202 + GDL 554 + MTP 229) = promedio de (Real ÷ share mediano de atenciones al día 4) y (Real + días hábiles equivalentes restantes × ritmo por día hábil de jul-sep). Sin techo por ticket (el ticket ya no es estable: GDL cayó de ~$4.7K a $2.2K en septiembre)." },
+    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1000, 1323], actual: 221, proy: 978, vsLM: -26, vsU3M: -4, nota: "OCTUBRE MTD al 4-oct: 221 pacientes únicos (suma de sedes, dedup por Historia dentro de cada sede). Proyección = max(Real, Atenciones proy × ratio pacientes/atención promedio jul-sep): total 978 (CDMX 671 + GDL 230 + MTP 77)." },
     consultas: { hist: [168, 167, 235, 220, 225, 271, 255, 316, 320], real: 16, agendado: 135, proy: 151, vsLM: -53, vsU3M: -49, nota: "OCTUBRE con Consultas_20.xlsx (corte 4-oct): real 16 (Terminada + Primera Vez, 1-4 oct) + agendado 135 (hoja Citas agendadas, citas futuras de octubre) = proy 151. Poca historia del mes: la cifra se llenará conforme avancen las citas." },
     noshow: { hist: [8.8, 6.2, 14.0, 15.7, 19.1, 14.8, 14.7, 15.3, 16.4], actual: 20.0, prom: 13.9, deltaPts: 6.1 },
   },
@@ -47,24 +47,24 @@ window.DATA = {
     CDMX: {
       nombre: "Ciudad de México",
       ingresos: { hist: [10.2, 9.8, 10.3, 10.5, 10.2, 9.3, 10.0, 12.4, 13.3], actual: 1.14, proy: 11.01, vsLM: -17, vsU3M: -8, nota: "OCTUBRE MTD al 4-oct: Real $1,135,372; Proyectado central $11,005,420. Septiembre cerrado en $13,328,714 (Proy = Real)." },
-      atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2069, 2658], actual: 261, proy: 2089, vsLM: -21, vsU3M: -6, nota: "261 líneas al 4-oct; proy 2,089 topada por el techo de ticket (Ingresos proy ÷ $5,269, ticket mediano feb-sep)." },
-      pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 618, 931], actual: 178, proy: 603, vsLM: -35, vsU3M: -12, nota: "178 pacientes únicos al 4-oct; proy = Atenciones proy × 0.2886 (ratio mediano feb-sep)." },
+      atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2069, 2658], actual: 261, proy: 2202, vsLM: -17, vsU3M: 0, nota: "261 líneas al 4-oct; proy 2,202 = promedio de pacing (2,131) y ritmo jul-sep por día hábil (2,273); sin techo por ticket." },
+      pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 618, 931], actual: 178, proy: 671, vsLM: -28, vsU3M: -2, nota: "178 pacientes únicos al 4-oct; proy = Atenciones proy × 0.3046 (ratio promedio jul-sep)." },
       consultas: { hist: [127, 105, 144, 145, 133, 169, 141, 137, 145], real: 5, agendado: 67, proy: 72, vsLM: -50, vsU3M: -49, top_cat: "Fertility Check up Parejas", top_n: 1 },
       noshow: { hist: [7.4, 7.9, 11.2, 14.2, 19.9, 10.2, 13.0, 11.0, 13.7], actual: 0.0, prom: 12.1, deltaPts: -12.1 },
     },
     GDL: {
       nombre: "Guadalajara",
       ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5, 2.8, 1.5], actual: 0.15, proy: 1.73, vsLM: 19, vsU3M: -9, nota: "OCTUBRE MTD al 4-oct: Real $151,348; Proyectado central $1,729,719. Septiembre cerrado en $1,456,406 (Proy = Real)." },
-      atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751, 660], actual: 45, proy: 374, vsLM: -43, vsU3M: -39, nota: "45 líneas al 4-oct; proy 374 topada por el techo de ticket (Ingresos proy ÷ $4,630, ticket mediano feb-sep)." },
-      pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287, 299], actual: 30, proy: 145, vsLM: -52, vsU3M: -43, nota: "30 pacientes únicos al 4-oct; proy = Atenciones proy × 0.3882 (ratio mediano feb-sep)." },
+      atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751, 660], actual: 45, proy: 554, vsLM: -16, vsU3M: -10, nota: "45 líneas al 4-oct; proy 554 = promedio de pacing (504) y ritmo jul-sep por día hábil (605); sin techo por ticket (agosto 751, septiembre 660)." },
+      pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287, 299], actual: 30, proy: 230, vsLM: -23, vsU3M: -9, nota: "30 pacientes únicos al 4-oct; proy = Atenciones proy × 0.4147 (ratio promedio jul-sep)." },
       consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133, 123], real: 8, agendado: 40, proy: 48, vsLM: -61, vsU3M: -58, top_cat: "Check up Ginecológico", top_n: 4 },
       noshow: { hist: [13.2, 2.4, 15.7, 17.9, 16.8, 19.1, 17.1, 14.2, 15.8], actual: 20.0, prom: 14.7, deltaPts: 5.3 },
     },
     MTP: {
       nombre: "Metepec",
       ingresos: { hist: [0.5, 0.7, 0.8, 0.5, 0.6, 0.4, 0.5, 0.9, 0.4], actual: 0.09, proy: 0.59, vsLM: 37, vsU3M: -3, nota: "OCTUBRE MTD al 4-oct: Real $89,409; Proyectado central $592,416. Septiembre cerrado en $431,482 (Proy = Real). Sede chica: pocas líneas por día, su curva es la más volátil de las 3 sedes." },
-      atenciones: { hist: [138, 189, 213, 178, 169, 107, 223, 286, 225], actual: 24, proy: 212, vsLM: -6, vsU3M: -13, nota: "24 líneas al 4-oct; proy 212 = 24 ÷ share mediano de atenciones del día 4 (0.113); MTP sin techo por ticket." },
-      pacientes: { hist: [31, 45, 47, 50, 33, 37, 60, 95, 93], actual: 13, proy: 58, vsLM: -38, vsU3M: -30, nota: "13 pacientes únicos al 4-oct; proy = max(Real, Atenciones proy × 0.275, ratio mediano feb-sep)." },
+      atenciones: { hist: [138, 189, 213, 178, 169, 107, 223, 286, 225], actual: 24, proy: 229, vsLM: 2, vsU3M: -6, nota: "24 líneas al 4-oct; proy 229 = promedio de pacing (212) y ritmo jul-sep por día hábil (247)." },
+      pacientes: { hist: [31, 45, 47, 50, 33, 37, 60, 95, 93], actual: 13, proy: 77, vsLM: -17, vsU3M: -7, nota: "13 pacientes únicos al 4-oct; proy = max(Real, Atenciones proy × 0.3382, ratio promedio jul-sep)." },
       consultas: { hist: [8, 21, 16, 20, 13, 9, 27, 46, 52], real: 3, agendado: 28, proy: 31, vsLM: -40, vsU3M: -26, top_cat: "Consulta primera vez", top_n: 3 },
       noshow: { hist: [11.1, 4.5, 27.3, 20.0, 23.5, 40.0, 15.6, 28.1, 24.6], actual: 40.0, prom: 21.6, deltaPts: 18.4 },
     },
@@ -122,9 +122,9 @@ window.DATA = {
 
   highlights: {
     total: [
-      "Octubre arranca con solo 4 días de Real (corte 4-oct), así que la proyección ($13.33M) tiene confianza media-baja. Es una proyección CENTRAL: MTD + días hábiles restantes × ritmo mediano feb-sep por día hábil equivalente (backtest ene-sep: error medio ~0%, típico ±9%). Queda 12% debajo de septiembre ($15.22M) y 29% arriba de octubre 2025 ($10.37M); el piso conservador por pacing máximo era $10.79M, y con el ritmo de ago-sep sería ~$15-16M.",
+      "Octubre arranca con solo 4 días de Real (corte 4-oct), así que la proyección ($13.33M) tiene confianza media-baja. Es una proyección CENTRAL: MTD + días hábiles restantes × ritmo mediano feb-sep por día hábil equivalente (backtest ene-sep: error medio ~0%, típico ±9%). Queda 12% debajo de septiembre ($15.22M) y 28% arriba de octubre 2025 ($10.37M); el piso conservador por pacing máximo era $10.79M, y con el ritmo de ago-sep sería ~$15-16M.",
       "Septiembre quedó CERRADO sin proyección (Proyectado = Real = $15.22M) y agosto se re-clasificó con ConceptosHier ($16.11M) — las comparaciones vs LM de octubre usan estas cifras ya cerradas.",
-      "Las Atenciones proyectadas de CDMX y GDL están topadas por el techo de ticket (Ingresos proy ÷ ticket mediano feb-sep), y Pacientes se deriva con el ratio mediano pacientes/atención; por eso Atenciones (2,675) y Pacientes (806) proyectan más abajo que Ingresos vs septiembre (-24% y -39% vs -12%).",
+      "Atenciones (2,985) y Pacientes (978) proyectan -16% y -26% vs septiembre (3,543 y 1,323) frente a -12% de Ingresos: septiembre tuvo más líneas de bajo valor por paciente (ticket promedio total ~$4.3K vs ~$5.1K mediano) y un salto de pacientes únicos que el ritmo de jul-sep solo recoge en parte. Sin techo por ticket: el ticket de GDL y MTP ya no es estable.",
       "Consultas: 16 reales (1-4 oct) más 135 agendadas para el resto del mes — la proyección (151) crece a medida que se agenden nuevas citas, no es un techo.",
       "El % de No Show de octubre (20%) sale de solo 4 inasistencias sobre 20 citas de primera vez: muestra demasiado chica para sacar conclusiones todavía.",
     ],
@@ -134,7 +134,7 @@ window.DATA = {
     ],
     GDL: [
       "GDL arranca octubre con un Real muy bajo en los primeros 4 días ($151K) pero proyecta $1.73M (+19% vs septiembre) por la mezcla jul-sep de sedes; conviene vigilar si el ritmo real lo confirma en la segunda semana.",
-      "Atenciones proy (374) vs 45 reales, topada por el techo de ticket (Ingresos proy ÷ $4,630) — si el ritmo de ingresos de la sede no acompaña, el techo es lo que limita.",
+      "Atenciones proy (554) vs 45 reales: promedio entre el pacing del día 4 (504) y el ritmo jul-sep por día hábil (605); agosto cerró en 751 y septiembre en 660, así que sigue siendo una cifra prudente.",
     ],
     MTP: [
       "Metepec: pocos cargos por día y curva muy escalonada — la proyección de octubre (~$0.59M, repartida con la mezcla jul-sep de sedes) es la cifra menos confiable de las 3 sedes en este corte.",
