@@ -697,27 +697,69 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   //     CDMX 6007 (ago, sin cambio), GDL 5163->5006 (mar; el máximo anterior
   //     era enero, que sale de la ventana), MTP 3861 (feb, sin cambio),
   //     total 5232 (feb, sin cambio).
-  // Con solo 4 días de Real, la confianza de la proyección de octubre es BAJA
-  // (share de ingresos al día 4: CDMX 0.18, GDL 0.20, MTP 0.47 [MTP es una
-  // sede chica, con pocos cargos por día y curvas muy escalonadas], total 0.18);
-  // se espera que se estabilice conforme avance el mes — vuelve a correrse
-  // en cada corte semanal.
+  // CORRECCIÓN 5-oct-2026 (2ª pasada, a petición de Marite: "la proyección no
+  // debería ser menor a $10M, analiza tendencias ene-sep"): con la curva por
+  // DÍA-CALENDARIO el piso de octubre salía en $7.2M, y el problema no era el
+  // método sino el calendario. Octubre 2026 arranca jueves: sus primeros 4 días
+  // traen solo 2 días hábiles + 1 sábado + 1 domingo (peso 2.62 de 25.0), pero
+  // la curva por día-calendario tomaba como "máximo histórico" a jun/jul, cuyos
+  // primeros 4 días traían 3-4 días hábiles (share al día 4: 17.6-17.7%) vs. el
+  // 11-12% de los meses que arrancaron igual que octubre (may, ago). Backtest
+  // leave-one-out ene-sep (corte día 4): la curva por día-calendario
+  // sub-proyectaba el cierre en 7 de 8 meses (error medio -17%, hasta -37%);
+  // con el calendario ponderado el error medio baja a -12% (rango -26% a +12%).
+  // Solución: cada curva se re-mapea al calendario del mes vigente. Eje =
+  // fracción acumulada de "días hábiles ponderados" (lun-vie=1, sáb=0.55,
+  // dom=0.07); para cada día d de octubre se interpola el share acumulado de
+  // cada mes histórico (feb-sep) en la MISMA fracción ponderada y se toma el
+  // máximo puntual (misma lógica conservadora). Las curvas de abajo son
+  // específicas de OCTUBRE 2026: hay que regenerarlas cada mes (el calendario
+  // cambia) — igual que en cada corte.
+  // Efecto en octubre (share al día 4, antes -> ahora): Ingresos total 0.18 ->
+  // 0.1275 (piso de Ingresos $7.2M -> $10.79M; el cierre central de referencia
+  // queda en $12-13.6M), Atenciones CDMX 0.197 -> 0.133, GDL 0.171 -> 0.155,
+  // MTP 0.346 -> 0.210; Pacientes CDMX 0.320 -> 0.281, GDL 0.221 -> 0.181,
+  // MTP 0.432 -> 0.331. El Ingresos proyectado de octubre se calcula con la
+  // curva TOTAL (10.79M) y se reparte por sede con la mezcla U3M (CDMX 82.6%,
+  // GDL 13.2%, MTP 4.2%) en la columna Proyectado de "Base" — la suma de curvas
+  // por sede (9.40M) acumulaba el máximo de meses distintos en cada sede (en MTP
+  // el share al día 4 sale ~0.33: sede chica, pocos cargos y muy escalonados).
+  // Con solo 4 días de Real, la confianza de la proyección de octubre sigue
+  // siendo BAJA: vuelve a correrse en cada corte semanal.
+  // VERSIÓN CENTRAL 5-oct-2026 (3ª pasada, instrucción de Marite: "¿no se puede
+  // subir más la proyección?" -> proyección CENTRAL en vez de piso). Cambios:
+  //  1) INGRESOS (Base, columna Proyectado): Real MTD + días hábiles
+  //     ponderados restantes (22.4 de 25.0; lun-vie=1, sáb=0.55, dom=0.07) x
+  //     ritmo MEDIANO feb-sep ($533K por día hábil equivalente) = $13.33M, repartido
+  //     a sedes con la mezcla jul-sep (CDMX 82.6%, GDL 13.2%, MTP 4.2%) y a servicios
+  //     con la mezcla jul-sep de cada sede. Backtest ene-sep al día 4 (leave-one-out):
+  //     error medio ~0%, MAE 9%, rango -18% a +15%. El piso
+  //     conservador por pacing máximo era $10.79M; octubre 2025 cerró en $10.37M.
+  //  2) Curvas SHARE_CURVE_* abajo: MEDIANA puntual (en vez de máximo) de los 8
+  //     meses feb-sep re-mapeados al calendario de octubre. Share al día 4:
+  //     Atenciones {'CDMX': 0.123, 'GDL': 0.089, 'MTP': 0.113}, Pacientes {'CDMX': 0.197, 'GDL': 0.117, 'MTP': 0.213}.
+  //  3) RATIO_PACIENTES_POR_ATENCION y RATIO_TICKET_PROMEDIO_ATENCION: MEDIANA
+  //     mensual feb-sep (antes mínimo / máximo). Pacientes/atención: CDMX 0.2886,
+  //     GDL 0.3882, MTP 0.2750, total 0.3014; ticket: CDMX $5268, GDL $4629, MTP $3416,
+  //     total $5064. El techo por ticket (SEDES_CON_TECHO_TICKET) se mantiene.
+  //  Para volver al piso conservador: curvas con máximo puntual, ratio mínimo
+  //  de pacientes y ticket máximo (ver bloque "CORRECCIÓN 5-oct-2026 (2ª pasada)").
   const SHARE_CURVE_ATENCIONES = {
-    CDMX: [0.0788,0.1165,0.1485,0.1969,0.2417,0.2761,0.2778,0.3296,0.3751,0.4188,0.4205,0.4636,0.4933,0.5173,0.5405,0.5766,0.6125,0.6498,0.6798,0.7094,0.7517,0.7641,0.8134,0.8324,0.8634,0.9103,0.9627,1.0,1.0,1.0,1.0],
-    GDL:  [0.0613,0.0907,0.1381,0.1714,0.2032,0.2381,0.2663,0.2969,0.3531,0.3984,0.4181,0.4694,0.501,0.5773,0.6,0.6075,0.6364,0.6509,0.7041,0.7396,0.7436,0.7909,0.8166,0.8422,0.8746,0.9293,0.9646,1.0,1.0,1.0,1.0],
-    MTP:  [0.1308,0.1682,0.243,0.3458,0.4019,0.4019,0.4019,0.4299,0.5047,0.5421,0.6168,0.6449,0.6449,0.6449,0.6449,0.6449,0.6916,0.729,0.7664,0.7778,0.7778,0.8411,0.8413,0.8995,0.9252,0.9259,1.0,1.0,1.0,1.0,1.0],
+    CDMX: [0.0448,0.0934,0.1189,0.1225,0.1596,0.1952,0.2334,0.284,0.3254,0.3454,0.3486,0.3897,0.4243,0.4648,0.5061,0.5471,0.5702,0.5728,0.6147,0.6471,0.6888,0.7274,0.7626,0.7801,0.7823,0.8219,0.8595,0.903,0.9315,0.9711,1],
+    GDL:  [0.038,0.0736,0.0875,0.0893,0.1284,0.1677,0.2113,0.2335,0.2894,0.3104,0.3131,0.3549,0.3881,0.4155,0.4603,0.5013,0.5292,0.5317,0.5614,0.5854,0.6153,0.6564,0.7224,0.7429,0.7449,0.7921,0.8367,0.8856,0.9313,0.9734,1],
+    MTP:  [0.0306,0.088,0.1105,0.1133,0.1362,0.1827,0.235,0.2912,0.3424,0.3692,0.3719,0.4041,0.4517,0.5084,0.5389,0.5752,0.5963,0.5984,0.619,0.6586,0.701,0.7322,0.7788,0.8021,0.8044,0.8387,0.869,0.903,0.9265,0.9727,1],
   };
   const SHARE_CURVE_PACIENTES = {
-    CDMX: [0.2027,0.2641,0.2947,0.3203,0.38,0.416,0.4566,0.4889,0.518,0.558,0.5707,0.592,0.6286,0.6457,0.6746,0.707,0.7342,0.7547,0.7564,0.7939,0.816,0.8296,0.8518,0.8722,0.9023,0.942,0.9745,1.0,1.0,1.0,1.0],
-    GDL:  [0.0809,0.1487,0.1949,0.2205,0.2718,0.2923,0.3278,0.3478,0.3795,0.4286,0.5084,0.5318,0.5385,0.6154,0.6288,0.641,0.6722,0.689,0.7179,0.7436,0.8061,0.8061,0.8462,0.8662,0.903,0.9388,0.9694,1.0,1.0,1.0,1.0],
-    MTP:  [0.1622,0.2703,0.3784,0.4324,0.4595,0.4595,0.4595,0.5135,0.5676,0.6486,0.7297,0.7568,0.7568,0.7568,0.7568,0.7778,0.8222,0.8444,0.8649,0.8649,0.8723,0.8723,0.9149,0.9574,0.9574,0.9787,1.0,1.0,1.0,1.0,1.0],
+    CDMX: [0.0692,0.1482,0.1908,0.1967,0.2596,0.3071,0.3392,0.3781,0.4165,0.4357,0.4382,0.4756,0.5031,0.5377,0.5687,0.6003,0.6311,0.6377,0.7015,0.724,0.7575,0.7831,0.8173,0.8381,0.8403,0.869,0.8892,0.9188,0.9471,0.978,1],
+    GDL:  [0.0587,0.0989,0.1148,0.1168,0.1614,0.2132,0.2525,0.2884,0.3221,0.3381,0.3407,0.3797,0.4204,0.4642,0.4802,0.5067,0.5331,0.5376,0.5803,0.6125,0.6505,0.7007,0.7702,0.7907,0.7919,0.8286,0.852,0.9086,0.9454,0.9744,1],
+    MTP:  [0.0782,0.1725,0.208,0.2126,0.2443,0.2732,0.3438,0.3839,0.4099,0.4237,0.4268,0.4605,0.5164,0.5771,0.598,0.6289,0.6435,0.6455,0.6688,0.7175,0.7459,0.7938,0.8419,0.8658,0.8672,0.8793,0.9317,0.9396,0.9703,0.9889,1],
   };
   // RATIO_PACIENTES_POR_ATENCION conservador: en vez del promedio ponderado
   // de los 8 meses cerrados, se usa el MÍNIMO mensual observado (el mes con
   // menos pacientes únicos por cada renglón de Cargos) — un ratio más bajo
   // implica menos Pacientes proyectados para la misma cifra de Atenciones:
   //   CDMX min=0.2168 (ene), GDL min=0.3151 (feb), MTP min=0.1953 (may).
-  const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.2617, GDL: 0.3151, MTP: 0.1953, total: 0.267 };
+  const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.2886, GDL: 0.3882, MTP: 0.2750, total: 0.3014 };
   // CAMBIO (14-sep-2026, 3ª pasada): Marite señaló que Atenciones (3,630 proy.,
   // +17% vs. agosto) Y Pacientes (heredado de Atenciones, +5% vs. agosto)
   // proyectaban POR ENCIMA de agosto en el mismo momento en que Ingresos
@@ -793,7 +835,7 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // más posible dentro de lo ya observado, por lo que hacen falta MENOS
   // atenciones para sostener el mismo Ingresos ya proyectado:
   //   CDMX max=6007 (ago), GDL max=5163 (ene), MTP max=3861 (feb).
-  const RATIO_TICKET_PROMEDIO_ATENCION = { CDMX: 6007, GDL: 5006, MTP: 3861, total: 5232 };
+  const RATIO_TICKET_PROMEDIO_ATENCION = { CDMX: 5269, GDL: 4630, MTP: 3416, total: 5064 };
   // SIN CAMBIO (21-sep-2026): con el corte-19 y las shares recalibradas
   // arriba, GDL vuelve a topar por debajo de su actual (Math.max lo deja
   // plano en 439, igual que en el arreglo de corte-14/15-sep) — mismo patrón
