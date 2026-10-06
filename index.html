@@ -1517,7 +1517,14 @@ function renderAll(){
     ["Por médico", window.DATA._liveOkDoctores, window.DATA._liveErrorDoctores],
   ];
   const okCount = flags.filter(f => f[1]).length;
-  if (okCount === flags.length) {
+  if (window.DATA._desdeCache && okCount > 0) {
+    // Primer dibujo con la copia guardada en este navegador (caché local); data-live.js
+    // refresca en segundo plano y actualiza este aviso al terminar.
+    banner.style.display = "block";
+    banner.style.background = "#EFF6FF";
+    banner.style.color = "#1E3A8A";
+    banner.textContent = "⚡ Mostrando los últimos datos guardados en este navegador (" + (window.DATA._cacheFecha || "") + "). Actualizando desde Google Sheets en segundo plano…";
+  } else if (okCount === flags.length) {
     banner.style.display = "block";
     banner.style.background = "#ECFDF5";
     banner.style.color = "#065F46";
