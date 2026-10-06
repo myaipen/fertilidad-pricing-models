@@ -1,1879 +1,257 @@
 /*
   ============================================================================
-  CARGA EN VIVO — Ingresos, Servicios, Atenciones, Pacientes, Consultas y
-  HubSpot, todo desde el mismo Google Sheet
+  DATOS DEL DASHBOARD — Fertilidad Integral
   ============================================================================
-  Este archivo reemplaza la necesidad de editar a mano casi todo data.js cada
-  mes: lee los números directo del Google Sheet "Proyeccion_Venta_Sede_
-  Servicio VF" a través de un Google Apps Script publicado como App web
-  (endpoint tipo API).
+  ESTE ES EL ÚNICO ARCHIVO QUE DEBES EDITAR CADA MES.
+  No toques index.html ni chart.min.js.
 
-  HubSpot (pipeline "Interesa2") se sube al Sheet una vez al mes vía consulta
-  directa a la API de HubSpot (no hay forma segura de llamar a HubSpot desde
-  el navegador del visitante sin exponer credenciales) — ver hoja "Hubspot"/
-  "HubspotSede"/"HubspotCohortes" del Sheet. Solo Highlights sigue siendo
-  100% manual en data.js.
+  Cómo actualizar (cada corte de mes, ej. cierre de mes):
+    1. Añade el nuevo mes real al final de cada arreglo "hist" (histórico).
+    2. Actualiza "ago" -> renómbralo mentalmente como "mes actual" y cambia
+       su valor por el real acumulado a la fecha de corte.
+    3. Actualiza "proy" con la nueva proyección a cierre de mes.
+    4. Actualiza vsLM (vs. mes anterior) y vsU3M (vs. promedio de los
+       últimos 3 meses cerrados) — ambos en % (ej. 22 significa +22%).
+    5. Actualiza servicios[], highlights[], hubspot y consultas_ranking
+       con los nuevos hallazgos del mes.
+    6. Guarda el archivo y vuelve a subirlo a GitHub (ver README.md).
 
-  Todo lo demás (Highlights, y las series de Semana/Día en data_periods.js)
-  sigue viniendo de data.js / data_periods.js tal como hasta ahora.
-
-  CÓMO FUNCIONA (ya configurado, no requiere nada de tu parte):
-    - El Google Sheet se queda 100% PRIVADO ("Restringido"). No hace falta
-      compartirlo ni crear una API key en Google Cloud Console.
-    - Un pequeño script (Google Apps Script, proyecto "Fertilidad Dashboard
-      API", vinculado al Sheet) se publicó como App web con "Ejecutar como:
-      Yo" y "Quién tiene acceso: Cualquiera". Esto expone SOLO la función
-      doGet(), que lee el rango Base!A2:H y devuelve el JSON — el resto del
-      Sheet nunca queda expuesto.
-    - El dashboard llama a esa URL (WEB_APP_URL abajo) igual que antes
-      llamaba a la API de Sheets, sin necesidad de login ni de key.
-
-  Si quieres actualizar el propio script de Apps Script en el futuro:
-    Google Sheet > Extensiones > Apps Script > editar Código.gs > Guardar >
-    Implementar > Administrar las implementaciones > (lápiz) editar >
-    Nueva versión > Implementar. La URL (WEB_APP_URL) no cambia al hacerlo.
-
-  Si el fetch falla (sin internet, el script fue eliminado/despublicado,
-  etc.), el dashboard usa automáticamente los últimos valores conocidos
-  (guardados en data.js) y muestra un aviso discreto arriba.
+  Formato de números: usa punto decimal (12.7, no 12,7). Sin comas de miles.
   ============================================================================
 */
 
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbylq_y6NHrbV1Vuk2RFCENPHJ1KKcNwR3E48zY_-A41Rz_QvjR9Wq7jFtn_31GAiX5Yjg/exec";
+window.DATA = {
+  // "corte" se muestra en el encabezado del dashboard. Ingresos, Servicios,
+  // Atenciones, Pacientes, Consultas y HubSpot ya vienen en vivo desde el Sheet
+  // (ver sección 0 del README); Highlights siguen siendo manuales aquí. Este
+  // archivo es solo el RESPALDO ESTÁTICO si el fetch en vivo falla.
+  // ACTUALIZADO 6-oct-2026: CORTE DE OCTUBRE (5-oct, 5 días de Real) con
+  // Cargos_y_Facturas_41.xlsx, Consultas_21.xlsx y Cargos_y_consultas_2025_1.xlsx.
+  // Proyección CENTRAL de octubre (MTD + días hábiles restantes × ritmo mediano
+  // feb-sep); septiembre CERRADO (Proyectado = Real) y agosto re-clasificado por
+  // ConceptosHier (total agosto $16,106,074). HubSpot (Interesa2) al 1-5 oct.
+  corte: "5-oct-2026",
+  meses_hist: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep"],
+  mes_actual: "Oct",
 
-const SEDE_CODE = {
-  "Ciudad de México": "CDMX",
-  "Guadalajara": "GDL",
-  "Metepec": "MTP",
-};
-const SERVICIO_LABEL = {
-  "Tratamientos de Fertilidad (FIV/ICSI)": "Tratamientos FIV/ICSI",
-  "Congelación y Almacenamiento de Gametos": "Congelación de Gametos",
-  "Farmacia": "Farmacia",
-  "Laboratorio": "Laboratorio",
-  "Subrogación": "Subrogación",
-  "Consultas": "Consultas",
-  "Procedimientos / Quirúrgicos": "Procedimientos / Quirúrgicos",
-  "Imágenes": "Imágenes",
-  "Wellness": "Wellness",
-  "Otros": "Otros",
-  "Sin clasificar": "Sin clasificar",
-};
-const MESES_12 = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  total: {
+    nombre: "Todas las sedes",
+    ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.8, 12.1, 12.0, 16.1, 15.2], actual: 2.07, proy: 13.49, vsLM: -11, vsU3M: -7, nota: "OCTUBRE (corte 5-oct, 5 días de Real, Cargos_y_Facturas_41.xlsx): Real $2,069,512; Proyectado central $13,487,632 = Real MTD + días hábiles restantes (ponderados: lun-vie 1, sáb 0.55, dom 0.07) × ritmo mediano feb-sep ($533K por día hábil equivalente), repartido a sedes y servicios con la mezcla jul-sep. Backtest ene-sep: error medio ~0%, típico ±9% (rango -18% a +15%). Octubre 2025 cerró en $10.37M. Confianza media-baja: solo 5 días de Real, con dispersión alta entre días (lun 5-oct $694K vs vie 2-oct $175K). Septiembre quedó CERRADO (Proyectado = Real = $15,216,602); agosto quedó en $16,106,074 tras re-clasificar por ConceptosHier." },
+    atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3106, 3543], actual: 487, proy: 3186, vsLM: -10, vsU3M: 4, nota: "OCTUBRE MTD al 5-oct: 487 líneas de cargo (suma CDMX+GDL+MTP). Proyección 3,186 (CDMX 2,295 + GDL 597 + MTP 294) = promedio de (Real ÷ share mediano de atenciones al día 5) y (Real + días hábiles equivalentes restantes × ritmo por día hábil de jul-sep). Sin techo por ticket (el ticket ya no es estable: GDL cayó de ~$4.7K a $2.2K en septiembre)." },
+    pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1000, 1323], actual: 290, proy: 1046, vsLM: -21, vsU3M: 2, nota: "OCTUBRE MTD al 5-oct: 290 pacientes únicos (suma de sedes, dedup por Historia dentro de cada sede). Proyección = max(Real, Atenciones proy × ratio pacientes/atención promedio jul-sep): total 1,046 (CDMX 699 + GDL 248 + MTP 99)." },
+    consultas: { hist: [168, 167, 235, 220, 225, 271, 255, 316, 320], real: 30, agendado: 135, proy: 165, vsLM: -48, vsU3M: -44, nota: "OCTUBRE con Consultas_21.xlsx (corte 5-oct): real 30 (Terminada + Primera Vez, 1-5 oct) + agendado 135 (hoja Citas agendadas, citas futuras de octubre) = proy 165. Poca historia del mes: la cifra se llenará conforme avancen las citas." },
+    noshow: { hist: [8.8, 6.2, 14.0, 15.7, 19.1, 14.8, 14.7, 15.3, 16.4], actual: 14.3, prom: 13.9, deltaPts: 0.4 },
+  },
 
-// Snapshot del mes al que corresponden los Highlights (y demás campos 100%
-// manuales) redactados a mano en data.js — se debe leer AQUÍ, en cuanto carga
-// este script y ANTES de que syncMesesHistYActual() empiece a pisar
-// window.DATA.mes_actual cada vez que cambia el selector de Mes Vigente. (Fix
-// sep-2026: antes buildServicios() en index.html comparaba el mes vigente
-// contra window.MES_CORTE_ORIGINAL —el mes con el que el tablero autodetectó
-// arrancar según Base—, pero ese valor avanza solo en cuanto Base ya trae
-// ALGO de Real del mes siguiente, sin que nadie haya actualizado a mano los
-// Highlights de data.js todavía. Resultado: en cuanto Base empezó a traer
-// unos días de Real de septiembre, el tablero mostraba los Highlights viejos
-// de Agosto como si fueran los del mes vigente — bug reportado por Marite:
-// "pongo filtro de septiembre y me sale en mezcla de servicios y highlights
-// agosto". window.MES_HIGHLIGHTS_CURADOS es el ancla correcta: solo cambia
-// cuando de verdad se edita data.js a mano en el próximo corte de mes.)
-window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
+  sedes: {
+    CDMX: {
+      nombre: "Ciudad de México",
+      ingresos: { hist: [10.2, 9.8, 10.3, 10.5, 10.2, 9.3, 10.0, 12.4, 13.3], actual: 1.68, proy: 11.11, vsLM: -17, vsU3M: -7, nota: "OCTUBRE MTD al 5-oct: Real $1,678,853; Proyectado central $11,108,471. Septiembre cerrado en $13,328,714 (Proy = Real)." },
+      atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2069, 2658], actual: 367, proy: 2295, vsLM: -14, vsU3M: 4, nota: "367 líneas al 5-oct; proy 2,295 = promedio de pacing (2,300) y ritmo jul-sep por día hábil (2,290); sin techo por ticket." },
+      pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 618, 931], actual: 219, proy: 699, vsLM: -25, vsU3M: 2, nota: "219 pacientes únicos al 5-oct; proy = Atenciones proy × 0.3046 (ratio promedio jul-sep)." },
+      consultas: { hist: [127, 105, 144, 145, 133, 169, 141, 137, 145], real: 10, agendado: 68, proy: 78, vsLM: -46, vsU3M: -45, top_cat: "Consulta primera vez", top_n: 3 },
+      noshow: { hist: [7.4, 7.9, 11.2, 14.2, 19.9, 10.2, 13.0, 11.0, 13.7], actual: 0.0, prom: 12.1, deltaPts: -12.1 },
+    },
+    GDL: {
+      nombre: "Guadalajara",
+      ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5, 2.8, 1.5], actual: 0.27, proy: 1.78, vsLM: 22, vsU3M: -7, nota: "OCTUBRE MTD al 5-oct: Real $272,561; Proyectado central $1,780,501. Septiembre cerrado en $1,456,406 (Proy = Real)." },
+      atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751, 660], actual: 75, proy: 597, vsLM: -10, vsU3M: -3, nota: "75 líneas al 5-oct; proy 597 = promedio de pacing (584) y ritmo jul-sep por día hábil (610); sin techo por ticket (agosto 751, septiembre 660)." },
+      pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287, 299], actual: 50, proy: 248, vsLM: -17, vsU3M: -2, nota: "50 pacientes únicos al 5-oct; proy = Atenciones proy × 0.4147 (ratio promedio jul-sep)." },
+      consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133, 123], real: 13, agendado: 47, proy: 60, vsLM: -51, vsU3M: -48, top_cat: "Check-up SOMP", top_n: 5 },
+      noshow: { hist: [13.2, 2.4, 15.7, 17.9, 16.8, 19.1, 17.1, 14.2, 15.8], actual: 13.3, prom: 14.7, deltaPts: -1.4 },
+    },
+    MTP: {
+      nombre: "Metepec",
+      ingresos: { hist: [0.5, 0.7, 0.8, 0.5, 0.6, 0.4, 0.5, 0.9, 0.4], actual: 0.12, proy: 0.6, vsLM: 39, vsU3M: -1, nota: "OCTUBRE MTD al 5-oct: Real $118,098; Proyectado central $598,660. Septiembre cerrado en $431,482 (Proy = Real). Sede chica: pocas líneas por día, su curva es la más volátil de las 3 sedes." },
+      atenciones: { hist: [138, 189, 213, 178, 169, 107, 223, 286, 225], actual: 45, proy: 294, vsLM: 31, vsU3M: 20, nota: "45 líneas al 5-oct; proy 294 = promedio de pacing (331) y ritmo jul-sep por día hábil (258)." },
+      pacientes: { hist: [31, 45, 47, 50, 33, 37, 60, 95, 93], actual: 21, proy: 99, vsLM: 6, vsU3M: 20, nota: "21 pacientes únicos al 5-oct; proy = max(Real, Atenciones proy × 0.3382, ratio promedio jul-sep)." },
+      consultas: { hist: [8, 21, 16, 20, 13, 9, 27, 46, 52], real: 7, agendado: 20, proy: 27, vsLM: -48, vsU3M: -35, top_cat: "Consulta primera vez", top_n: 6 },
+      noshow: { hist: [11.1, 4.5, 27.3, 20.0, 23.5, 40.0, 15.6, 28.1, 24.6], actual: 30.0, prom: 21.6, deltaPts: 8.4 },
+    },
+  },
 
-// Día del mes vigente hasta el que Base!E ("Real") está acumulado (sep-2026:
-// Marite pidió una nota bajo "Subrogación — pacientes" aclarando que el mes en
-// curso es un acumulado parcial, no un cierre — ver también buildHighlightsAuto
-// en index.html, que usa el mismo dato para el highlight de Ingresos). ACTUALIZAR
-// A MANO cada vez que se refresca Base!E con un nuevo corte de Cargos y
-// Facturas (ej. si el próximo corte de octubre llega hasta el día 12, cambiar
-// este valor a 12). Solo aplica al mes vigente EN CURSO (no cerrado) — para
-// meses ya cerrados (Real = mes completo) no se muestra ninguna nota de corte,
-// ver mesVigenteCerrado().
-// ACTUALIZADO 28-sep-2026: corte sube de 21 a 27 (Cargos_y_Facturas_35.xlsx +
-// Consultas_16.xlsx, ambos hasta 27-sep-2026). Marite pidió explícitamente
-// DEJAR DE CONGELAR Atenciones/Pacientes: a partir de este corte se
-// recalculan cada vez con la metodología conservadora normal (curva de
-// pacing por máximo histórico, ver SHARE_CURVE_* y proyectarPorTendencia más
-// abajo) — el bloque PROY_CONGELADA_SEP2026 que las congelaba queda
-// DESACTIVADO (código conservado más abajo, comentado, por si hace falta
-// consultar el criterio que se usó del 21 al 27-sep). Pacientes se sigue
-// contando como pacientes ÚNICOS del mes (dedup por Historia), igual que
-// antes — eso no cambió, solo se quitó el freeze.
-// ACTUALIZADO 29-sep-2026: corte sube de 27 a 28 (Cargos_y_Facturas_36.xlsx +
-// Consultas_17.xlsx, ambos hasta 28-sep-2026). Solo se mueve el puntero de
-// día — la curva de pacing (SHARE_CURVE_*) y los ratios/techos no cambian,
-// así que esto NO es un cambio de metodología de proyección, solo el ajuste
-// obligatorio para que shareEnDia() lea el punto correcto de la curva con
-// el nuevo Real ya acumulado un día más. Ingresos (Base!F, ya floor-fixed en
-// el Sheet) no depende de este valor, por lo que su proyección tampoco se
-// mueve por este cambio.
-// ACTUALIZADO 30-sep-2026: corte sube de 28 a 29 (Cargos_y_Facturas_37.xlsx +
-// Consultas_18.xlsx, ambos hasta 29-sep-2026). Mismo comentario que arriba:
-// solo se mueve el puntero de día, sin cambio de metodología.
-// ACTUALIZADO 1-oct-2026 (cierre de septiembre): corte sube de 29 a 30 —
-// septiembre ya es mes CERRADO (Cargos_y_Facturas_38.xlsx + Consultas_19.xlsx,
-// ambos a día 30, último día del mes). A partir de aquí este valor deja de
-// tener efecto práctico en la proyección de Atenciones/Pacientes de
-// septiembre: mesVigenteCerrado(9) ya da true solo con la fecha de calendario
-// real (hoy >= 1-oct), así que proyectarPorTendencia() devuelve directo el
-// Real (ver "if (cerrado || ...) return actual;" más abajo) sin tocar
-// shareEnDia(). Ingresos (Base!F) también quedó con Proyectado = Real para
-// los 30 (+1 nueva fila MTP/Wellness) renglones de septiembre en la hoja
-// Base, y el ajuste de pipeline comercial (Base!H) se limpió a 0 en todos
-// ellos — ya no aplica "pipeline por cerrar" en un mes que ya cerró. Se deja
-// el puntero en 30 solo por prolijidad/consistencia histórica del comentario,
-// no porque algo dependa de él este corte.
-// ACTUALIZADO 5-oct-2026 (corte de OCTUBRE): corte baja de 30 a 4 — arranca
-// octubre con Cargos_y_Facturas_40.xlsx + Consultas_20.xlsx (ambos al
-// 4-oct-2026, Real MTD de 4 días). Octubre pasa a ser el mes vigente y
-// septiembre queda como mes CERRADO: sin proyección (Base!F = Base!E,
-// Base!H = 0, Consultas Agendado = 0) y proyectarPorTendencia() devuelve el
-// Real. Ver el bloque "RECALIBRACIÓN 5-oct-2026" junto a SHARE_CURVE_* más
-// abajo: la ventana de 8 meses cerrados se corre a Feb-Sep (sale enero, entra
-// septiembre) y se regeneraron curvas y ratios conservadores.
-// ACTUALIZADO 6-oct-2026 (corte del 5-oct): corte sube de 4 a 5 con
-// Cargos_y_Facturas_41.xlsx + Consultas_21.xlsx + Cargos_y_consultas_2025_1.xlsx
-// (Real MTD de 5 días; el lunes 5-oct fue un día fuerte, $694K). Se actualizaron
-// en el Sheet Base (Real/Proy central), Atenciones, Pacientes, Consultas,
-// PorMedico, ConceptosMensual/PorMedico/Hier, SubrogacionPacientes y las 3 hojas
-// de HubSpot (Interesa2, 1-5 oct). Las curvas SHARE_CURVE_* y los ratios no
-// cambian: solo se mueve el día de corte.
-let CORTE_REAL_DIA = 5;
-window.getCorteRealDia = () => CORTE_REAL_DIA;
-window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
+  servicios: {
+    total: [
+      { nombre: "Tratamientos FIV/ICSI", valor: 3.76, vsLM: -10, vsU3M: -11 },
+      { nombre: "Congelación de Gametos", valor: 3.18, vsLM: -22, vsU3M: 6 },
+      { nombre: "Farmacia", valor: 2.71, vsLM: 3, vsU3M: -9 },
+      { nombre: "Laboratorio", valor: 2.16, vsLM: -7, vsU3M: -5 },
+      { nombre: "Subrogación", valor: 0.77, vsLM: -12, vsU3M: -21 },
+      { nombre: "Consultas", valor: 0.41, vsLM: -21, vsU3M: -6 },
+      { nombre: "Procedimientos / Quirúrgicos", valor: 0.38, vsLM: -2, vsU3M: -7 },
+      { nombre: "Imágenes", valor: 0.08, vsLM: -41, vsU3M: -14 },
+      { nombre: "Wellness", valor: 0.03, vsLM: -46, vsU3M: 1 },
+      { nombre: "Otros", valor: 0.02, vsLM: -22, vsU3M: 1 },
+    ],
+    CDMX: [
+      { nombre: "Tratamientos FIV/ICSI", valor: 3.19, vsLM: -14, vsU3M: -12 },
+      { nombre: "Congelación de Gametos", valor: 2.67, vsLM: -24, vsU3M: 8 },
+      { nombre: "Farmacia", valor: 2.24, vsLM: -4, vsU3M: -9 },
+      { nombre: "Laboratorio", valor: 1.66, vsLM: -21, vsU3M: -4 },
+      { nombre: "Subrogación", valor: 0.76, vsLM: -11, vsU3M: -21 },
+      { nombre: "Procedimientos / Quirúrgicos", valor: 0.27, vsLM: -22, vsU3M: -20 },
+      { nombre: "Consultas", valor: 0.22, vsLM: -18, vsU3M: -8 },
+      { nombre: "Imágenes", valor: 0.06, vsLM: -46, vsU3M: -16 },
+      { nombre: "Wellness", valor: 0.02, vsLM: -43, vsU3M: 4 },
+      { nombre: "Otros", valor: 0.02, vsLM: -43, vsU3M: 12 },
+    ],
+    GDL: [
+      { nombre: "Congelación de Gametos", valor: 0.44, vsLM: -3, vsU3M: -2 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 0.39, vsLM: -5, vsU3M: -18 },
+      { nombre: "Laboratorio", valor: 0.39, vsLM: 143, vsU3M: -7 },
+      { nombre: "Farmacia", valor: 0.26, vsLM: 92, vsU3M: -10 },
+      { nombre: "Consultas", valor: 0.17, vsLM: -20, vsU3M: -4 },
+      { nombre: "Procedimientos / Quirúrgicos", valor: 0.1, vsLM: 144, vsU3M: 66 },
+      { nombre: "Imágenes", valor: 0.01, vsLM: -12, vsU3M: 1 },
+      { nombre: "Otros", valor: 0.01, vsLM: null, vsU3M: -21, nuevo: true },
+      { nombre: "Subrogación", valor: 0.01, vsLM: -74, vsU3M: -21 },
+      { nombre: "Wellness", valor: 0.0, vsLM: -54, vsU3M: -6 },
+    ],
+    MTP: [
+      { nombre: "Farmacia", valor: 0.2, vsLM: 29, vsU3M: -9 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 0.19, vsLM: 170, vsU3M: 26 },
+      { nombre: "Laboratorio", valor: 0.11, vsLM: 91, vsU3M: -8 },
+      { nombre: "Congelación de Gametos", valor: 0.07, vsLM: -36, vsU3M: -13 },
+      { nombre: "Consultas", valor: 0.02, vsLM: -46, vsU3M: -12 },
+      { nombre: "Procedimientos / Quirúrgicos", valor: 0.01, vsLM: null, vsU3M: -21, nuevo: true },
+      { nombre: "Imágenes", valor: 0.01, vsLM: -13, vsU3M: -21 },
+      { nombre: "Wellness", valor: 0.0, vsLM: -74, vsU3M: -21 },
+      { nombre: "Otros", valor: 0.0, vsLM: null, vsU3M: null, nuevo: true },
+    ],
+  },
 
-// Mes vigente: seleccionable desde la UI (selector Ene-Dic junto a Sede y
-// Periodo en index.html). Arranca en 8 (Ago) como valor por default, pero
-// loadLiveDataIntoDashboard() lo autodetecta al último mes con datos reales
-// apenas carga (ver detectarMesVigente), y cambiar el selector dispara un
-// re-render completo con el nuevo mes como "vigente" y el anterior como LM.
-let MES_VIGENTE = 10;
+  highlights: {
+    total: [
+      "Octubre lleva 5 días de Real (corte 5-oct), así que la proyección ($13.49M) tiene confianza media-baja. Es una proyección CENTRAL: MTD + días hábiles restantes × ritmo mediano feb-sep por día hábil equivalente (backtest ene-sep: error medio ~0%, típico ±9%). Queda 11% debajo de septiembre ($15.22M) y 30% arriba de octubre 2025 ($10.37M). Frente al corte del 4-oct sube +$160K porque el lunes 5-oct fue un día fuerte ($694K) mientras el vie 2-oct ($175K) y el dom 4-oct ($55K) fueron bajos: la dispersión diaria es alta con tan pocos días.",
+      "Septiembre quedó CERRADO sin proyección (Proyectado = Real = $15.22M) y agosto se re-clasificó con ConceptosHier ($16.11M) — las comparaciones vs LM de octubre usan estas cifras ya cerradas.",
+      "Atenciones (3,186) y Pacientes (1,046) proyectan -10% y -21% vs septiembre (3,543 y 1,323) frente a -11% de Ingresos: septiembre tuvo un pico de pacientes únicos que el ratio promedio jul-sep (pacientes/atención) solo recoge en parte. Sin techo por ticket: el ticket de GDL y MTP ya no es estable.",
+      "Consultas: 30 reales (1-5 oct) más 135 agendadas para el resto del mes — la proyección (165) crece a medida que se agenden nuevas citas, no es un techo.",
+      "El % de No Show de octubre (14.3%) sale de 5 inasistencias sobre 35 citas de primera vez (30 terminadas + 5 no show): muestra todavía chica; el promedio ene-sep es 13.9%.",
+    ],
+    CDMX: [
+      "Con 5 días de Real, CDMX concentra ~81% del ingreso MTD de octubre ($1.68M de $2.07M) — todavía sin lectura de mezcla confiable; proyecta $11.1M.",
+      "Atenciones proy (2,295) = promedio de pacing (2,300) y ritmo jul-sep por día hábil (2,290); Pacientes proy (699) = Atenciones × 0.3046. Ambos sin techo por ticket.",
+    ],
+    GDL: [
+      "GDL arranca octubre con un Real bajo en los primeros 5 días ($273K) pero proyecta $1.78M (+22% vs septiembre) por la mezcla jul-sep de sedes; conviene vigilar si el ritmo real lo confirma en la segunda semana.",
+      "Atenciones proy (597) vs 75 reales: promedio entre el pacing del día 5 (584) y el ritmo jul-sep por día hábil (610); agosto cerró en 751 y septiembre en 660, así que sigue siendo una cifra prudente.",
+    ],
+    MTP: [
+      "Metepec: pocos cargos por día y curva muy escalonada — la proyección de octubre (~$0.60M, repartida con la mezcla jul-sep de sedes) es la cifra menos confiable de las 3 sedes en este corte.",
+      "Septiembre cerró en $431K; el comparativo vs LM de octubre (+39%) se vuelve informativo hasta que haya más días de Real.",
+    ],
+  },
 
-// Año vigente — GLOBAL, selector único en la barra de filtros de arriba
-// (junto a Sede/Periodo/Mes Vigente en index.html). Afecta TODO el tablero:
-// Ingresos, Atenciones, Pacientes, Consultas y el Ranking por agrupación de
-// consulta. Cuando ANIO_VIGENTE=2026, cada sección usa 2026 como "actual" y
-// 2025 (donde exista) como base de "vs LY"; cuando ANIO_VIGENTE=2025, 2025
-// es el "actual" y no hay "vs LY" (no tenemos 2024). HubSpot es la única
-// excepción: no tiene fuente 2025, así que con ANIO_VIGENTE=2025 simplemente
-// muestra 0 en vez de romperse (ver rebuildAllFromCache/loadLiveDataIntoDashboard).
-//
-// ARREGLO (sep-2026): antes esta variable solo alimentaba el selector interno
-// del panel de Ranking; Ingresos/Atenciones/Pacientes/Consultas ni siquiera
-// filtraban por año (ver el fix de buildIngresosMetric más abajo — causó que
-// Agosto mostrara datos mezclados 2025/2026). Ahora es el único selector de
-// año de todo el tablero.
-let ANIO_VIGENTE = 2026;
+  consultas_ranking: {
+    total: [
+      { nombre: "Consulta primera vez", valor: 11, vsLM: -93 },
+      { nombre: "Check-up SOMP", valor: 6, vsLM: -73 },
+      { nombre: "Check up Ginecologico", valor: 5, vsLM: -88 },
+      { nombre: "Fertility Check up Mujeres", valor: 4, vsLM: -93 },
+      { nombre: "Fertility Check up Hombres", valor: 2, vsLM: -67 },
+      { nombre: "Fertility Check up Parejas", valor: 1, vsLM: -94 },
+      { nombre: "Check up Integral", valor: 1, vsLM: -93 },
+    ],
+    CDMX: [
+      { nombre: "Consulta primera vez", valor: 3, vsLM: -97 },
+      { nombre: "Fertility Check up Mujeres", valor: 3, vsLM: -91 },
+      { nombre: "Fertility Check up Hombres", valor: 1, vsLM: -75 },
+      { nombre: "Fertility Check up Parejas", valor: 1, vsLM: -88 },
+      { nombre: "Check up Integral", valor: 1, vsLM: null, nuevo: true },
+      { nombre: "Check-up SOMP", valor: 1, vsLM: 0 },
+    ],
+    GDL: [
+      { nombre: "Check-up SOMP", valor: 5, vsLM: -76 },
+      { nombre: "Check up Ginecologico", valor: 5, vsLM: -81 },
+      { nombre: "Consulta primera vez", valor: 2, vsLM: -93 },
+      { nombre: "Fertility Check up Hombres", valor: 1, vsLM: -50 },
+    ],
+    MTP: [
+      { nombre: "Consulta primera vez", valor: 6, vsLM: -82 },
+      { nombre: "Fertility Check up Mujeres", valor: 1, vsLM: -80 },
+    ],
+  },
 
-// Un mes se considera "cerrado" (ya no quedan días por transcurrir que
-// proyectar para Atenciones/Pacientes Únicos) si es estrictamente anterior
-// al mes calendario real de hoy. Si el usuario selecciona el mes en curso
-// (el mismo mes calendario que hoy), se proyecta por tendencia (ver
-// diasTranscurridosEnMes/diasEnMes abajo).
-function mesVigenteCerrado(mesVigente) {
-  const hoy = new Date();
-  return mesVigente < (hoy.getMonth() + 1);
-}
+  hubspot: {
+    leads: { hist: [834, 1062, 1021, 1000, 1754, 1436, 1533, 1924, 2108], actual: 305 },
+    citas: { hist: [188, 230, 318, 329, 367, 315, 416, 504, 458], actual: 85 },
+    conversion_pct: { hist: [23, 22, 31, 33, 21, 22, 27, 26, 22], actual: 28 },
+    // Octubre parcial (1-5 oct, rango semiabierto). Pipeline "Interesa2".
+    conversion_por_sede: {
+      CDMX: { mensual: [26,27,38,41,21,25,32,24,21,28,null,null], total2026: 27 },
+      GDL: { mensual: [20,17,26,22,20,18,20,24,19,28,null,null], total2026: 21 },
+      MTP: { mensual: [24,28,38,46,19,14,32,36,34,36,null,null], total2026: 32 },
+    },
+    cohortes: [
+      { mes: "Ene-26", leads: 834, m0: 21, m1: 1, m2: 0, sin: 78 },
+      { mes: "Feb-26", leads: 1062, m0: 20, m1: 2, m2: 0, sin: 78 },
+      { mes: "Mar-26", leads: 1021, m0: 28, m1: 1, m2: 0, sin: 71 },
+      { mes: "Abr-26", leads: 1000, m0: 31, m1: 3, m2: 0, sin: 66 },
+      { mes: "May-26", leads: 1754, m0: 19, m1: 1, m2: 1, sin: 79 },
+      { mes: "Jun-26", leads: 1436, m0: 20, m1: 2, m2: 0, sin: 78 },
+      { mes: "Jul-26", leads: 1533, m0: 24, m1: 2, m2: 0, sin: 74 },
+      { mes: "Ago-26", leads: 1924, m0: 24, m1: 1, m2: 0, sin: 75 },
+      { mes: "Sep-26", leads: 2108, m0: 20, m1: 0, m2: 0, sin: 80 },
+      { mes: "Oct-26", leads: 305, m0: 16, m1: 0, m2: 0, sin: 84 }, // OCTUBRE parcial (1-5 oct): m0 = 48 de 305 leads con cita en el mismo mes; m1/m2 todavía no pueden existir
+    ],
+  },
 
-// Días calendario que tiene un mes dado (1-12) en el año en curso.
-function diasEnMes(mesVigente) {
-  const hoy = new Date();
-  return new Date(hoy.getFullYear(), mesVigente, 0).getDate();
-}
-
-// Días ya transcurridos (con datos reales) del mes vigente, cuando éste es
-// el mes calendario actual. Se asume que el corte de datos del Sheet es de
-// "ayer" (hoy - 1 día): si hoy es 7-sep, el Real reportado corresponde a
-// 1-6 sep, es decir 6 días transcurridos.
-//
-// ARREGLO (sep-2026): antes se usaba una fórmula fija "Real + Real/30" que
-// asumía implícitamente ~29-30 días ya transcurridos (pensada para cuando
-// el mes vigente está casi cerrado). Aplicada a un mes recién iniciado
-// (ej. día 6 de 30) subestimaba brutalmente la proyección (solo sumaba
-// Real/30, un día de más, en vez de extrapolar los ~24 días restantes).
-// Ahora se proyecta por tendencia: Proyectado = Real x (díasDelMes /
-// díasTranscurridos), igual que se corrigió Ingresos en el Sheet.
-function diasTranscurridosEnMes(mesVigente) {
-  const hoy = new Date();
-  if (mesVigente === hoy.getMonth() + 1) {
-    return Math.max(hoy.getDate() - 1, 0);
-  }
-  // Mes vigente distinto al calendario actual (ej. seleccionado a mano) y
-  // no cerrado (futuro): no hay corte de datos conocido, se asume 0 y el
-  // llamador cae de vuelta a "actual" sin proyectar.
-  return 0;
-}
-
-// [1, 2, ..., mesVigente-1] — el histórico de meses previos al vigente.
-function rangoHist(mesVigente) {
-  const arr = [];
-  for (let m = 1; m < mesVigente; m++) arr.push(m);
-  return arr;
-}
-
-// Promedio de los últimos 3 meses disponibles en hist (U3M). Si hay menos
-// de 3 (ej. estamos viendo Febrero como vigente y solo hay 1 mes de
-// histórico), promedia los que haya en vez de tronar.
-function avgUlt3(hist) {
-  const n = hist.length;
-  if (!n) return 0;
-  const k = Math.min(3, n);
-  return hist.slice(n - k).reduce((a, b) => a + b, 0) / k;
-}
-
-// Último mes (1-12) con datos reales (Ingresos "total" > 0) dentro de
-// conceptosMensual. Se usa como default de MES_VIGENTE apenas carga la
-// data en vivo, para no quedar pegado en Agosto para siempre.
-function detectarMesVigente(conceptosMensual) {
-  const porConcepto = (conceptosMensual && conceptosMensual.total) || {};
-  let ultimo = 0;
-  for (const concepto of Object.keys(porConcepto)) {
-    const ing = porConcepto[concepto].ingresos || [];
-    for (let i = 0; i < ing.length; i++) {
-      if (ing[i] > 0 && (i + 1) > ultimo) ultimo = i + 1;
-    }
-  }
-  return ultimo || 8;
-}
-
-// Último mes (1-12) con datos reales (columna "Real" > 0 en alguna fila)
-// dentro de la hoja "Base" (Evolutivo 2026) — la fuente de los KPIs
-// principales (Ingresos/Servicios). rows[i] = [Sede, Servicio, MesNum, ...].
-// Se usa para no dejar que MES_VIGENTE se adelante a Conceptos cuando esa
-// hoja ya trae un mes nuevo pero Base todavía no (ver loadLiveDataIntoDashboard).
-function detectarMesVigenteBase(rows, anio) {
-  let ultimo = 0;
-  for (const r of (rows || [])) {
-    const filaAnio = Number(r[8]);
-    // Filas sin Año (hojas viejas, antes de que existiera 2025 en Base) se
-    // tratan como del año pedido para no romper compatibilidad; si la fila
-    // sí trae Año, debe coincidir con el año que se está autodetectando.
-    if (r[8] !== "" && r[8] != null && filaAnio !== anio) continue;
-    const mesNum = Number(r[2]);
-    const real = num(r[4]);
-    if (real > 0 && mesNum > ultimo) ultimo = mesNum;
-  }
-  return ultimo;
-}
-
-function num(v) {
-  return Number(String(v ?? "").replace(/[^0-9.-]/g, "")) || 0;
-}
-
-// Como num(), pero celda vacía -> null (en vez de 0). Se usa para Metas: una
-// celda vacía significa "todavía no se captura la meta de ese mes", no "meta
-// = $0" — así la línea de meta no cae a cero en la gráfica cuando falta dato.
-function numOrNull(v) {
-  const s = String(v ?? "").trim();
-  return s === "" ? null : num(v);
-}
-
-function pctOrNull(proy, base) {
-  if (!base) return null;
-  return Math.round((proy / base - 1) * 100);
-}
-
-/**
- * Descarga la hoja "Base" y arma el mismo shape que data.js espera para
- * DATA.total.ingresos, DATA.sedes.{CDMX,GDL,MTP}.ingresos y DATA.servicios.
- */
-async function fetchLiveIngresos() {
-  if (!WEB_APP_URL) {
-    throw new Error("WEB_APP_URL no configurada");
-  }
-  // "Base" ya se descargó arriba en loadLiveDataIntoDashboard() (para
-  // autodetectar MES_VIGENTE) y quedó en _rawCache — se reusa esa copia en
-  // vez de volver a pedirle la misma hoja a Apps Script (ahorra ~2-3s).
-  let rows = _rawCache["Base"];
-  if (!rows) {
-    const res = await fetch(WEB_APP_URL);
-    if (!res.ok) throw new Error(`Apps Script HTTP ${res.status}`);
-    const json = await res.json();
-    rows = json.values || [];
-    _rawCache["Base"] = rows;
-  }
-  return buildIngresosMetric(rows, ANIO_VIGENTE);
-}
-
-// Extraída de fetchLiveIngresos para poder recalcular desde _rawCache["Base"]
-// cuando cambia el selector de mes o de año, sin volver a pedirle nada al Sheet.
-//
-// ARREGLO (sep-2026): "Base" ahora trae 2025 Y 2026 en la misma hoja (columna
-// Año, col. I) — antes esta función ignoraba esa columna y agrupaba solo por
-// (Sede,Servicio,MesNum), así que para cualquier mes que existiera en ambos
-// años (Ene-Sep) la fila de un año pisaba silenciosamente a la del otro
-// (gana la que venga después en el orden de filas de la hoja). Esto causó
-// que Agosto mostrara $11.4M (mezcla, en realidad casi todo 2025) en vez de
-// los $16.1M reales de Agosto 2026. Ahora se filtra explícitamente por el
-// año pedido (anio, default ANIO_VIGENTE) antes de agregar nada.
-function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
-  const meses = rangoHist(MES_VIGENTE); // [1..MES_VIGENTE-1]
-
-  // rows[i] = [Sede, Servicio, MesNum, MesLabel, Real, Proyectado, TasaDiariaU3M, AjustePipelineComercial, Año]
-  // por (sede, servicio) -> { [mesNum]: real }, y proyVigente por (sede, servicio)
-  const bySedeServicio = {};
-  const proyVigente = {};
-  // vs LY (sep-2026): Real del MES_VIGENTE pero del año anterior (anio-1),
-  // por (sede,servicio) — mismo criterio que buildMonthlyRealMetric: se
-  // compara el Proyectado del año pedido contra el Real (ya cerrado) del
-  // mismo mes en anio-1; si no hay fila de ese año anterior, queda sin dato
-  // (vsLY/nomLY en null más abajo, nunca se inventa).
-  const realLYBySedeServicio = {};
-  for (const r of rows) {
-    const [sede, serv, mesNumRaw, , realRaw, proyRaw, , ajusteRaw, anioRaw] = r;
-    if (!sede || !serv) continue;
-    const mesNum = Number(mesNumRaw);
-    const real = num(realRaw);
-    const filaAnio = (anioRaw !== "" && anioRaw != null) ? Number(anioRaw) : anio; // compat filas viejas sin Año
-    const key = sede + "||" + serv;
-    if (filaAnio === anio) {
-      bySedeServicio[key] = bySedeServicio[key] || {};
-      bySedeServicio[key][mesNum] = real;
-      // Proyectado + AjustePipelineComercial (columna H de "Base"): el mismo
-      // mecanismo vivo que ya aplica Evolutivo 2026 (Marite ajusta H a mano y
-      // el total se mueve automáticamente aquí también).
-      if (mesNum === MES_VIGENTE) proyVigente[key] = num(proyRaw) + num(ajusteRaw);
-    } else if (filaAnio === anio - 1 && mesNum === MES_VIGENTE) {
-      realLYBySedeServicio[key] = real;
-    }
-  }
-
-  function seriesFor(sedeNombre, servicio) {
-    const key = sedeNombre + "||" + servicio;
-    const m = bySedeServicio[key] || {};
-    return {
-      hist: meses.map(n => m[n] || 0),
-      actual: m[MES_VIGENTE] || 0,
-      proy: proyVigente[key] || 0,
-    };
-  }
-
-  const sedeNombres = Object.keys(SEDE_CODE);
-  const servicios = Object.keys(SERVICIO_LABEL).filter(s => s !== "Sin clasificar");
-
-  // ---- por sede: ingresos totales + servicios ----
-  const sedesOut = {};
-  const serviciosOut = { total: [] };
-  const companyByServ = {};
-  const lyVigRawByCode = {}; // pesos crudos (no millones) de Real LY por sede, para sumar en el total sin arrastrar redondeos
-
-  for (const sedeNombre of sedeNombres) {
-    const code = SEDE_CODE[sedeNombre];
-    let hist = meses.map(() => 0), realVigente = 0, proyVig = 0, lyVig = 0, tieneLY = false;
-    const servRows = [];
-    for (const serv of servicios) {
-      const s = seriesFor(sedeNombre, serv);
-      s.hist.forEach((v, i) => hist[i] += v);
-      realVigente += s.actual; proyVig += s.proy;
-      const lyServ = realLYBySedeServicio[sedeNombre + "||" + serv];
-      const tieneLYServ = lyServ != null && lyServ > 0;
-      if (tieneLYServ) { lyVig += lyServ; tieneLY = true; }
-      const lm = s.hist[s.hist.length - 1] || 0;
-      const servU3M = avgUlt3(s.hist);
-      companyByServ[serv] = companyByServ[serv] || {lm:0,u3m:0,proy:0,ly:0,tieneLY:false};
-      companyByServ[serv].lm += lm;
-      companyByServ[serv].u3m += servU3M;
-      companyByServ[serv].proy += s.proy;
-      if (tieneLYServ) { companyByServ[serv].ly += lyServ; companyByServ[serv].tieneLY = true; }
-      if (s.proy > 0 || s.actual > 0) {
-        servRows.push({
-          nombre: SERVICIO_LABEL[serv],
-          servKey: serv,
-          valor: Math.round((s.proy/1e6)*10)/10,
-          vsLM: pctOrNull(s.proy, lm),
-          vsU3M: pctOrNull(s.proy, servU3M),
-          nomLM: Math.round(((s.proy - lm)/1e6)*100)/100,
-          nomU3M: Math.round(((s.proy - servU3M)/1e6)*100)/100,
-          vsLY: tieneLYServ ? pctOrNull(s.proy, lyServ) : null,
-          nomLY: tieneLYServ ? Math.round(((s.proy - lyServ)/1e6)*100)/100 : null,
-          nuevo: lm === 0,
-        });
-      }
-    }
-    serviciosOut[code] = servRows.sort((a, b) => b.valor - a.valor).slice(0, 7);
-
-    const lm = hist[hist.length - 1] || 0;
-    const u3m = avgUlt3(hist);
-    sedesOut[code] = {
-      ingresos: {
-        hist: hist.map(v => Math.round((v/1e6)*10)/10),
-        actual: Math.round((realVigente/1e6)*10)/10,
-        proy: Math.round((proyVig/1e6)*10)/10,
-        vsLM: pctOrNull(proyVig, lm),
-        vsU3M: pctOrNull(proyVig, u3m),
-        nomLM: Math.round(((proyVig - lm)/1e6)*10)/10,
-        nomU3M: Math.round(((proyVig - u3m)/1e6)*10)/10,
-        vsLY: tieneLY ? pctOrNull(proyVig, lyVig) : null,
-        nomLY: tieneLY ? Math.round(((proyVig - lyVig)/1e6)*10)/10 : null,
+  subrogacion: (function(){
+    const labels = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep"];
+    const cdmx = {
+      labels,
+      hist: {
+        "Valoración":      [16, 4, 0, 4, 11, 4, 3, 3, 91],
+        "Programa Activo": [0, 1, 0, 1, 1, 2, 3, 7, 4],
       },
+      actual: {
+        "Valoración":      { pacientes: 1, ingreso: 1422.41, ticket: 1422.41 },
+        "Programa Activo": { pacientes: 1, ingreso: 0.0, ticket: 0.0 },
+      },
+      totalPacientesYTD: { "Valoración": 137, "Programa Activo": 20 },
+      ingresoYTD: 4083405.06,
     };
-    if (tieneLY) lyVigRawByCode[code] = lyVig;
-  }
-
-  // ---- compañía (suma 3 sedes) ----
-  let histTotal = meses.map(() => 0), realVigenteTotal = 0, proyVigTotal = 0, lyVigTotalRaw = 0, tieneLYTotal = false;
-  for (const code of Object.keys(sedesOut)) {
-    sedesOut[code].ingresos.hist.forEach((v,i) => histTotal[i] += v);
-    realVigenteTotal += sedesOut[code].ingresos.actual;
-    proyVigTotal += sedesOut[code].ingresos.proy;
-    if (lyVigRawByCode[code] != null) { lyVigTotalRaw += lyVigRawByCode[code]; tieneLYTotal = true; }
-  }
-  const lmTotal = histTotal[histTotal.length - 1] || 0;
-  const u3mTotal = avgUlt3(histTotal);
-  const totalIngresos = {
-    hist: histTotal.map(v => Math.round(v*10)/10),
-    actual: Math.round(realVigenteTotal*10)/10,
-    proy: Math.round(proyVigTotal*10)/10,
-    vsLM: pctOrNull(proyVigTotal, lmTotal),
-    vsU3M: pctOrNull(proyVigTotal, u3mTotal),
-    nomLM: Math.round((proyVigTotal-lmTotal)*10)/10,
-    nomU3M: Math.round((proyVigTotal-u3mTotal)*10)/10,
-    vsLY: tieneLYTotal ? pctOrNull(proyVigTotal, lyVigTotalRaw/1e6) : null,
-    nomLY: tieneLYTotal ? Math.round((proyVigTotal-lyVigTotalRaw/1e6)*10)/10 : null,
-    nota: `$${(proyVigTotal-lmTotal).toFixed(1)}M vs LM, $${(proyVigTotal-u3mTotal).toFixed(1)}M vs U3M`,
-  };
-
-  for (const serv of Object.keys(companyByServ)) {
-    const c = companyByServ[serv];
-    if (c.proy > 0 || c.lm > 0) {
-      serviciosOut.total.push({
-        nombre: SERVICIO_LABEL[serv],
-        servKey: serv,
-        valor: Math.round((c.proy/1e6)*10)/10,
-        vsLM: pctOrNull(c.proy, c.lm),
-        vsU3M: pctOrNull(c.proy, c.u3m),
-        nomLM: Math.round(((c.proy - c.lm)/1e6)*100)/100,
-        nomU3M: Math.round(((c.proy - c.u3m)/1e6)*100)/100,
-        vsLY: c.tieneLY ? pctOrNull(c.proy, c.ly) : null,
-        nomLY: c.tieneLY ? Math.round(((c.proy - c.ly)/1e6)*100)/100 : null,
-        nuevo: c.lm === 0,
-      });
-    }
-  }
-  serviciosOut.total = serviciosOut.total.sort((a, b) => b.valor - a.valor).slice(0, 10);
-
-  return { totalIngresos, sedesOut, serviciosOut };
-}
-
-/*
-  ============================================================================
-  CARGA EN VIVO DE ATENCIONES, PACIENTES ÚNICOS, CONSULTAS Y SU RANKING
-  ============================================================================
-  Mismo mecanismo que Ingresos (arriba), pero leyendo 4 hojas nuevas del
-  mismo Google Sheet: "Atenciones", "Pacientes", "Consultas" y
-  "ConsultasRanking". Cada hoja trae Sede/MesNum/MesLabel/Real (y Agendado
-  para Consultas), un renglón por sede y mes (MesNum 1-8, Ene-Ago).
-
-  Fórmulas de proyección (mismas que ya usaba Revenue Management a mano):
-    - Atenciones / Pacientes Únicos: Proyectado = Real + Real/30
-      (equivale a sumar un día promedio más — NO se usa agenda para estas
-      dos métricas, son de facturación).
-    - Consultas: Proyectado = Real + Agendado (usa la agenda real de citas
-      para lo que falta del mes).
-  ============================================================================
-*/
-
-// Cache de las filas crudas de cada hoja ya descargada, para poder
-// recalcular todo el tablero cuando cambia el selector de mes (Ene-Dic) sin
-// tener que volver a pedirle nada a Google Sheets — ver changeMesVigente().
-let _rawCache = {};
-
-// TIMEOUT_SHEET_FETCH_MS: cuánto esperar como máximo la respuesta de Apps
-// Script antes de darla por perdida y reintentar. Detectado 9-sep-2026: Apps
-// Script a veces se CUELGA (ni responde ni truena, se queda "pending" para
-// siempre) cuando el dashboard le pide muchas hojas en paralelo al abrir
-// (~15 fetches simultáneos al mismo script — cada uno hace su propio
-// SpreadsheetApp.openById(), y Google limita las ejecuciones concurrentes
-// por script). Sin timeout, un solo fetch atorado bloqueaba TODO el
-// tablero para siempre: la detección de mes vigente (el primer
-// Promise.all de loadLiveDataIntoDashboard) nunca se resolvía NI fallaba,
-// solo se quedaba esperando — pantalla de "Cargando..." sin fin, sin
-// Evolutivo/KPIs/proyección, aunque el resto de los datos ya hubiera
-// llegado bien. Con este timeout + 1 reintento, cada fetch SIEMPRE termina
-// (bien o mal) en un tiempo acotado, así que el resto del tablero puede
-// seguir con sus fallbacks normales (ver Promise.allSettled más abajo) en
-// vez de quedarse congelado.
-//
-// SUBIDO de 12s a 30s (14-sep-2026, reporte de Marite: "Atenciones"/"HubSpot"
-// no cargaban en vivo y se quedaban en el último corte guardado). Diagnóstico:
-// probando directo contra el Apps Script, "Atenciones" tardó ~28-40s y
-// "HubSpot" ~20s en responder con datos correctos (ConceptosMensual ya tiene
-// 13,392 filas y hay más hojas que nunca compitiendo por las ejecuciones
-// concurrentes que permite Apps Script) — 12s ya no alcanza.
-// SUBIDO de nuevo a 45s (28-sep-2026, reporte de Marite: "Evolutivo por
-// médico" mostraba "Datos no disponibles"). Diagnóstico: probando en vivo
-// contra el mismo Apps Script se confirmó que "PorMedico" y "Base" pueden
-// tardar más de 30s o incluso devolver error temporalmente bajo carga (se
-// vio "Atenciones/Pacientes/Consultas/Conceptos/Subrogación" caer al
-// respaldo estático en la misma sesión de diagnóstico) — es una limitación
-// del lado de Apps Script (cuota de ejecuciones concurrentes de Google, no
-// un bug de este corte), que empeora con hojas cada vez más grandes
-// (PorMedico/ConceptosPorMedico). Con más hojas compitiendo, 30s ya no
-// siempre alcanza. Este valor es solo cuánto espera el navegador antes de
-// reintentar/rendirse; no cambia ninguna fórmula de datos ni de proyección
-// — cuando se agota, cada sección cae a su respaldo estático de data.js
-// (que siempre muestra el último corte guardado, nunca datos vacíos).
-const TIMEOUT_SHEET_FETCH_MS = 45000;
-
-async function fetchConTimeout(url, timeoutMs) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function fetchSheetJson(sheetName, intento = 1) {
-  try {
-    const res = await fetchConTimeout(`${WEB_APP_URL}?sheet=${encodeURIComponent(sheetName)}`, TIMEOUT_SHEET_FETCH_MS);
-    if (!res.ok) throw new Error(`Apps Script HTTP ${res.status} (${sheetName})`);
-    const json = await res.json();
-    if (json.error) throw new Error(`Apps Script error (${sheetName}): ${json.error}`);
-    const rows = json.values || [];
-    _rawCache[sheetName] = rows;
-    return rows;
-  } catch (e) {
-    // Un solo reintento tras una pausa corta: Apps Script casi siempre
-    // responde bien al segundo intento cuando el primero se colgó/falló por
-    // la concurrencia de abrir el tablero (ver nota arriba).
-    if (intento < 2) {
-      await new Promise(r => setTimeout(r, 1500));
-      return fetchSheetJson(sheetName, intento + 1);
-    }
-    throw e;
-  }
-}
-
-const SEDES = ["CDMX", "GDL", "MTP"];
-
-// Compat: hasta sep-2026 "Atenciones"/"Pacientes"/"Consultas" no tenían
-// columna de Año (una sola hoja = 2026 implícito). Ahora que pueden traer
-// filas 2025 (columna extra al final, mismo patrón que "Base"), una fila SIN
-// Año explícito se asume 2026 (nunca "coincide con lo que se pida"), para
-// que el histórico 2025 nunca se filtre por error dentro del cálculo de 2026
-// ni viceversa.
-function anioDeFila(anioRaw) {
-  return (anioRaw === undefined || anioRaw === "" || anioRaw == null) ? 2026 : Number(anioRaw);
-}
-
-// Peso de "días hábiles equivalentes" de un mes (o de sus primeros hastaDia
-// días): lun-vie = 1, sábado = 0.55, domingo = 0.07. Se usa para comparar meses
-// con calendarios distintos (octubre 2026 arranca jueves: sus primeros 4 días
-// pesan 2.62 de 25.03). Pesos estimados de los cargos diarios feb-sep 2026.
-function pesoDiasMes(anio, mes, hastaDia) {
-  const dim = new Date(anio, mes, 0).getDate();
-  const fin = hastaDia == null ? dim : Math.min(Math.max(hastaDia, 0), dim);
-  let p = 0;
-  for (let d = 1; d <= fin; d++) {
-    const w = new Date(anio, mes - 1, d).getDay(); // 0 = domingo, 6 = sábado
-    p += w === 0 ? 0.07 : (w === 6 ? 0.55 : 1);
-  }
-  return p;
-}
-
-/**
- * Atenciones / Pacientes comparten forma: filas [Sede, MesNum, MesLabel,
- * Real, Año?]. Regresa { CDMX:{hist,actual,proy,vsLM,vsU3M,vsLY,nomLY},
- * GDL:{...}, MTP:{...}, total:{...} } para el año pedido (anio, default
- * ANIO_VIGENTE) — vsLY compara la proyección del año pedido contra el Real
- * del mismo mes en (anio-1); si no hay datos de ese año anterior, vsLY/nomLY
- * quedan en null (ej. viendo 2025, no hay 2024).
- */
-function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false, atencionesRef = null, ingresosProyPesos = null) {
-  function bySedeParaAnio(targetAnio) {
-    const bySede = {};
-    for (const r of rows) {
-      const [sede, mesNumRaw, , realRaw, anioRaw] = r;
-      if (anioDeFila(anioRaw) !== targetAnio) continue;
-      const mesNum = Number(mesNumRaw);
-      const real = num(realRaw);
-      bySede[sede] = bySede[sede] || {};
-      bySede[sede][mesNum] = real;
-    }
-    return bySede;
-  }
-  const bySede = bySedeParaAnio(anio);
-  const bySedeLY = bySedeParaAnio(anio - 1);
-  const meses = rangoHist(MES_VIGENTE);
-  const cerrado = mesVigenteCerrado(MES_VIGENTE);
-  const diasTot = diasEnMes(MES_VIGENTE);
-  const diasTr = diasTranscurridosEnMes(MES_VIGENTE);
-  // SHARE_HASTA_CORTE[sede]: qué fracción del Real de un mes CERRADO ya se
-  // observa en los primeros CORTE_REAL_DIA días de ese mes, calculado con
-  // datos reales de facturación (fuente "Cargos y Facturas", hoja "Cargos",
-  // columna AF=Delegación) de jun/jul/ago 2026 — los 3 meses cerrados más
-  // recientes al momento de este cálculo (sep-2026). Se suman los primeros
-  // 7 días y el mes completo de los 3 meses antes de dividir (ponderado por
-  // volumen, no promedio simple de razones) para que la baja volumetría de
-  // Metepec no meta ruido:
-  //   CDMX: (477+478+509) / (1717+1910+2069) = 0.2570
-  //   GDL:  (120+ 76+200) / ( 507+ 428+ 751) = 0.2349
-  //   MTP:  ( 43+ 23+ 87) / ( 107+ 223+ 286) = 0.2484
-  //   total:(640+577+796) / (2331+2561+3106) = 0.2517
-  // Esto reemplaza la extrapolación lineal por fracción de días
-  // (proy = actual x díasDelMes/díasTranscurridos), que asume que la
-  // actividad se reparte parejo entre los días del mes y por eso no tiene
-  // techo: con el Real de los primeros 7 días de sep-2026 ya corregido
-  // (847), esa fórmula proyectaba 3,630 atenciones — por encima de
-  // CUALQUIER mes histórico real (máximo ago-2026 = 3,109), inconsistente
-  // con que Ingresos (que ya usa MTD + tendencia, ver hoja "Ratio
-  // Atenciones") proyectara ese mismo mes por DEBAJO de agosto. En vez de
-  // un tope artificial, se usa la distribución real observada del mes:
-  // proy = actual / SHARE_HASTA_CORTE[sede]. IMPORTANTE: recalcular estos
-  // valores cada vez que se mueva CORTE_REAL_DIA, o cuando haya 3+ meses
-  // cerrados nuevos que valga la pena incorporar al cálculo.
-  // ARREGLO (14-sep-2026): Marite subió Cargos_y_Facturas_27 + Consultas_11
-  // con corte real al 12-sep (el 13 fue domingo, sin movimiento) y aclaró
-  // el punto que tenía bloqueada la actualización de Atenciones: "las
-  // atenciones vienen siempre de cargos, igual que los pacientes" — es
-  // decir, Atención = 1 renglón de la hoja "Cargos" (no requiere mapear
-  // el "Concepto" de las hojas de Agendamiento a Servicio, que era la
-  // ambigüedad pendiente). Verificado: contar renglones de Cargos de los
-  // primeros 7 días de sep-2026 da 843, prácticamente igual al "847" ya
-  // documentado más abajo como el Real corregido de ese corte.
-  // Con esto, Atenciones se recalibra a corte-12 igual que Pacientes:
-  //   CDMX: (796+756+837)/(1717+1910+2069) = 0.4194
-  //   GDL:  (238+122+279)/( 507+ 428+ 751) = 0.3790
-  //   MTP:  ( 69+ 44+131)/( 107+ 223+ 286) = 0.3961
-  //   total:(1103+922+1247)/(2331+2561+3106)= 0.4091
-  // (conteo de renglones de Cargos jun/jul/ago-2026, ponderado por volumen)
-  //
-  // ARREGLO (15-sep-2026): Marite reportó Atenciones (3,413 proy.) y Pacientes
-  // (1,042 proy.) otra vez "muy altos" y preguntó si Pacientes estaba contando
-  // el mes correcto. Diagnóstico con Cargos_y_Facturas (línea a línea, corte
-  // real 14-sep): el mes SÍ es el correcto — septiembre, día 1 al 14, tanto
-  // para Atenciones (1,757 renglones = exactamente CDMX 1,292 + GDL 383 + MTP
-  // 82) como para Pacientes (733 = únicos por Historia, sumados por sede:
-  // CDMX 505 + GDL 186 + MTP 42) — no hay bug de mes ni de periodo.
-  // El problema real: CORTE_REAL_DIA se subió de 7 a 14 (highlights del
-  // 14-sep) pero estos dos SHARE_HASTA_CORTE se quedaron calibrados a
-  // corte-12 (arriba). Real ya trae 14 días de actividad pero se estaba
-  // dividiendo entre el share de SOLO 12 días — eso infla la proyección
-  // (los 2 días de más se extrapolaban como si fueran mucho más de lo que
-  // realmente representan). Recalibrado a corte-14 con el mismo método
-  // (renglones de Cargos de jun/jul/ago-2026, ponderado por volumen):
-  //   CDMX: (2743... ver detalle)/(...) -> más abajo el detalle por sede.
-  //   CDMX: dia<=14 2,743 / mes completo 5,696 = 0.4816
-  //   GDL:  dia<=14   721 / mes completo 1,686 = 0.4276
-  //   MTP:  dia<=14   294 / mes completo   616 = 0.4773
-  //   total:dia<=14 3,758 / mes completo 7,998 = 0.4699
-  // Con esto Atenciones total baja de 3,413 a ~3,263 (CDMX no cambia: sigue
-  // topada por el techo de ticket promedio, ver más abajo; GDL y MTP sí
-  // bajan). GDL queda en ~896, por encima de su propio máximo histórico
-  // (751 en ago-2026) — a diferencia de CDMX, GDL viene con una tendencia
-  // de crecimiento mes a mes consistente (261->311->420->326->416->507->
-  // 428->751), así que un valor por encima del máximo no es necesariamente
-  // un error, pero queda documentado para que Marite lo confirme (ver nota
-  // de SEDES_CON_TECHO_TICKET más abajo sobre si extenderle el mismo techo).
-  // ARREGLO (21-sep-2026): corte sube de 14 a 19. Recalibrado con el mismo
-  // método (renglones de Cargos_y_Facturas_31, día<=19 de jun/jul/ago-2026
-  // vs. mes completo, ponderado por volumen):
-  //   CDMX: (1157+1153+1351)/(1717+1910+2069) = 3661/5696 = 0.6427
-  //   GDL:  ( 357+ 209+ 442)/( 507+ 428+ 751) = 1008/1686 = 0.5979
-  //   MTP:  (  82+  88+ 191)/( 107+ 223+ 286) =  361/616  = 0.5860
-  //   total:(1596+1450+1984)/(2331+2561+3106) = 5030/7998 = 0.6289
-  // REEMPLAZADO (21-sep-2026, 3ª pasada — Marite pidió explícitamente que la
-  // proyección sea "la más conservadora usando la metodología"). Hasta la
-  // pasada anterior, share(d) era un PROMEDIO ponderado por volumen+recencia
-  // de los 8 meses cerrados — una estimación central, no conservadora (de
-  // hecho subió un poco los números vs. la calibración de 3 meses: Ingresos
-  // 15.49M->15.94M). Se reemplaza por el MÁXIMO histórico observado día a
-  // día entre los 8 meses cerrados (ene-ago 2026):
-  //   share_conservador(d) = max_m [ cumulativo_m(d) / total_m ]
-  // Lógica: Proyectado = Real_MTD / share(d) — un share MÁS ALTO (más avance
-  // ya visto a esta altura del mes, en el mes histórico más "adelantado")
-  // implica MENOS falta por venir, y por lo tanto un Proyectado MÁS BAJO. Es
-  // el escenario "peor caso dentro de lo ya observado", no una suposición
-  // arbitraria — nunca asume un avance más lento que el más rápido que la
-  // sede ya haya tenido en algún mes cerrado de 2026. Al ser un máximo
-  // puntual por día (no una media), la curva sigue siendo monótona
-  // creciente (máximo de funciones monótonas es monótono) y se satura en
-  // 1.0 en cuanto el mes histórico más corto ya cerró (por eso varias colas
-  // quedan en 1.0 antes del día 31).
-  // Fuente: Cargos_y_Facturas_31.xlsx completo (22,214 renglones, ene-sep
-  // 2026), un renglón de "Cargos" = 1 atención, columna "Historia" para
-  // pacientes únicos. shareEnDia() sigue leyendo el punto de la curva al día
-  // exacto de CORTE_REAL_DIA, así que subir el corte sigue sin requerir
-  // recalibrar nada a mano.
-  //
-  // shareEnDia(curva, sede, dia): dia se acota a [1,31] (curva[30]=1.0,
-  // el mes ya cerrado). Domingos/días sin corte no rompen nada porque la
-  // curva ya es cumulativa observada, no requiere que el día exista.
-  function shareEnDia(curva, sede, dia) {
-    const arr = curva[sede];
-    if (!arr) return 0;
-    const idx = Math.min(Math.max(Math.round(dia), 1), 31) - 1;
-    return arr[idx];
-  }
-  // RECALIBRACIÓN 5-oct-2026 (corte de octubre, Cargos_y_Facturas_40.xlsx,
-  // 24,330 renglones ene-4oct): misma metodología conservadora (máximo
-  // puntual por día entre los 8 meses cerrados más recientes), ahora con la
-  // ventana FEB-SEP 2026 (antes ene-ago: sale enero, entra septiembre).
-  // Arrays regenerados de los renglones de Cargos (Atenciones = # renglones,
-  // Pacientes = primera aparición de cada Historia en el mes, días más allá
-  // del largo del mes = 1.0). Ratios en el mismo extremo conservador:
-  //   RATIO_PACIENTES_POR_ATENCION = MÍNIMO mensual (feb-sep):
-  //     CDMX 0.2168->0.2617 (feb; el mínimo anterior era enero, que sale de la
-  //     ventana), GDL 0.3151 (feb, sin cambio), MTP 0.1953 (may, sin cambio),
-  //     total 0.2358->0.267 (feb).
-  //   RATIO_TICKET_PROMEDIO_ATENCION = MÁXIMO mensual (feb-sep):
-  //     CDMX 6007 (ago, sin cambio), GDL 5163->5006 (mar; el máximo anterior
-  //     era enero, que sale de la ventana), MTP 3861 (feb, sin cambio),
-  //     total 5232 (feb, sin cambio).
-  // CORRECCIÓN 5-oct-2026 (2ª pasada, a petición de Marite: "la proyección no
-  // debería ser menor a $10M, analiza tendencias ene-sep"): con la curva por
-  // DÍA-CALENDARIO el piso de octubre salía en $7.2M, y el problema no era el
-  // método sino el calendario. Octubre 2026 arranca jueves: sus primeros 4 días
-  // traen solo 2 días hábiles + 1 sábado + 1 domingo (peso 2.62 de 25.0), pero
-  // la curva por día-calendario tomaba como "máximo histórico" a jun/jul, cuyos
-  // primeros 4 días traían 3-4 días hábiles (share al día 4: 17.6-17.7%) vs. el
-  // 11-12% de los meses que arrancaron igual que octubre (may, ago). Backtest
-  // leave-one-out ene-sep (corte día 4): la curva por día-calendario
-  // sub-proyectaba el cierre en 7 de 8 meses (error medio -17%, hasta -37%);
-  // con el calendario ponderado el error medio baja a -12% (rango -26% a +12%).
-  // Solución: cada curva se re-mapea al calendario del mes vigente. Eje =
-  // fracción acumulada de "días hábiles ponderados" (lun-vie=1, sáb=0.55,
-  // dom=0.07); para cada día d de octubre se interpola el share acumulado de
-  // cada mes histórico (feb-sep) en la MISMA fracción ponderada y se toma el
-  // máximo puntual (misma lógica conservadora). Las curvas de abajo son
-  // específicas de OCTUBRE 2026: hay que regenerarlas cada mes (el calendario
-  // cambia) — igual que en cada corte.
-  // Efecto en octubre (share al día 4, antes -> ahora): Ingresos total 0.18 ->
-  // 0.1275 (piso de Ingresos $7.2M -> $10.79M; el cierre central de referencia
-  // queda en $12-13.6M), Atenciones CDMX 0.197 -> 0.133, GDL 0.171 -> 0.155,
-  // MTP 0.346 -> 0.210; Pacientes CDMX 0.320 -> 0.281, GDL 0.221 -> 0.181,
-  // MTP 0.432 -> 0.331. El Ingresos proyectado de octubre se calcula con la
-  // curva TOTAL (10.79M) y se reparte por sede con la mezcla U3M (CDMX 82.6%,
-  // GDL 13.2%, MTP 4.2%) en la columna Proyectado de "Base" — la suma de curvas
-  // por sede (9.40M) acumulaba el máximo de meses distintos en cada sede (en MTP
-  // el share al día 4 sale ~0.33: sede chica, pocos cargos y muy escalonados).
-  // Con solo 4 días de Real, la confianza de la proyección de octubre sigue
-  // siendo BAJA: vuelve a correrse en cada corte semanal.
-  // VERSIÓN CENTRAL 5-oct-2026 (3ª pasada, instrucción de Marite: "¿no se puede
-  // subir más la proyección?" -> proyección CENTRAL en vez de piso). Cambios:
-  //  1) INGRESOS (Base, columna Proyectado): Real MTD + días hábiles
-  //     ponderados restantes (22.4 de 25.0; lun-vie=1, sáb=0.55, dom=0.07) x
-  //     ritmo MEDIANO feb-sep ($533K por día hábil equivalente) = $13.33M, repartido
-  //     a sedes con la mezcla jul-sep (CDMX 82.6%, GDL 13.2%, MTP 4.2%) y a servicios
-  //     con la mezcla jul-sep de cada sede. Backtest ene-sep al día 4 (leave-one-out):
-  //     error medio ~0%, MAE 9%, rango -18% a +15%. El piso
-  //     conservador por pacing máximo era $10.79M; octubre 2025 cerró en $10.37M.
-  //  2) Curvas SHARE_CURVE_* abajo: MEDIANA puntual (en vez de máximo) de los 8
-  //     meses feb-sep re-mapeados al calendario de octubre. Share al día 4:
-  //     Atenciones {'CDMX': 0.123, 'GDL': 0.089, 'MTP': 0.113}, Pacientes {'CDMX': 0.197, 'GDL': 0.117, 'MTP': 0.213}.
-  //  3) RATIO_PACIENTES_POR_ATENCION y RATIO_TICKET_PROMEDIO_ATENCION: MEDIANA
-  //     mensual feb-sep (antes mínimo / máximo). Pacientes/atención: CDMX 0.2886,
-  //     GDL 0.3882, MTP 0.2750, total 0.3014; ticket: CDMX $5268, GDL $4629, MTP $3416,
-  //     total $5064. El techo por ticket (SEDES_CON_TECHO_TICKET) se mantiene.
-  //  Para volver al piso conservador: curvas con máximo puntual, ratio mínimo
-  //  de pacientes y ticket máximo (ver bloque "CORRECCIÓN 5-oct-2026 (2ª pasada)").
-  // AJUSTE ATENCIONES / PACIENTES 5-oct-2026 (4ª pasada, Marite: "las atenciones
-  // y pacientes los veo bajos"). Diagnóstico: el techo por ticket (Ingresos proy
-  // ÷ ticket mediano feb-sep) sub-proyectaba porque el ticket ya NO es estable:
-  // GDL bajó de ~$4.7K (feb-jun) a $3.5K/$3.7K/$2.2K en jul/ago/sep y MTP de
-  // ~$3.7K a $1.9K en sep (más renglones de bajo valor por paciente), así que
-  // dividir entre el ticket mediano ($4,630 GDL) daba 374 atenciones en GDL
-  // cuando ago y sep llevaron 751 y 660. Backtest por sede (CDMX/GDL/MTP, meses
-  // may-sep, corte día 4, solo con meses previos): el método anterior (min de
-  // pacing y techo por ticket mediano) tuvo sesgo -15% (-31% en ago-sep) y MAE
-  // 31%; la mezcla 50/50 de pacing mediano y ritmo por día hábil equivalente de
-  // los últimos 3 meses tuvo sesgo +2% (-2% en ago-sep) y MAE 20%.
-  // Cambios: (1) SEDES_CON_TECHO_TICKET = false en las 3 sedes (el techo queda
-  // implementado: ponerlo en true lo reactiva); (2) Atenciones = max(Real,
-  // promedio(Real / share mediano al corte, Real + peso restante x ritmo U3M));
-  // (3) RATIO_PACIENTES_POR_ATENCION = promedio mensual de jul-sep (el ratio
-  // sube: sep CDMX 0.350, GDL 0.453, MTP 0.413 vs medianas 0.289/0.388/0.275).
-  const SHARE_CURVE_ATENCIONES = {
-    CDMX: [0.0448,0.0934,0.1189,0.1225,0.1596,0.1952,0.2334,0.284,0.3254,0.3454,0.3486,0.3897,0.4243,0.4648,0.5061,0.5471,0.5702,0.5728,0.6147,0.6471,0.6888,0.7274,0.7626,0.7801,0.7823,0.8219,0.8595,0.903,0.9315,0.9711,1],
-    GDL:  [0.038,0.0736,0.0875,0.0893,0.1284,0.1677,0.2113,0.2335,0.2894,0.3104,0.3131,0.3549,0.3881,0.4155,0.4603,0.5013,0.5292,0.5317,0.5614,0.5854,0.6153,0.6564,0.7224,0.7429,0.7449,0.7921,0.8367,0.8856,0.9313,0.9734,1],
-    MTP:  [0.0306,0.088,0.1105,0.1133,0.1362,0.1827,0.235,0.2912,0.3424,0.3692,0.3719,0.4041,0.4517,0.5084,0.5389,0.5752,0.5963,0.5984,0.619,0.6586,0.701,0.7322,0.7788,0.8021,0.8044,0.8387,0.869,0.903,0.9265,0.9727,1],
-  };
-  const SHARE_CURVE_PACIENTES = {
-    CDMX: [0.0692,0.1482,0.1908,0.1967,0.2596,0.3071,0.3392,0.3781,0.4165,0.4357,0.4382,0.4756,0.5031,0.5377,0.5687,0.6003,0.6311,0.6377,0.7015,0.724,0.7575,0.7831,0.8173,0.8381,0.8403,0.869,0.8892,0.9188,0.9471,0.978,1],
-    GDL:  [0.0587,0.0989,0.1148,0.1168,0.1614,0.2132,0.2525,0.2884,0.3221,0.3381,0.3407,0.3797,0.4204,0.4642,0.4802,0.5067,0.5331,0.5376,0.5803,0.6125,0.6505,0.7007,0.7702,0.7907,0.7919,0.8286,0.852,0.9086,0.9454,0.9744,1],
-    MTP:  [0.0782,0.1725,0.208,0.2126,0.2443,0.2732,0.3438,0.3839,0.4099,0.4237,0.4268,0.4605,0.5164,0.5771,0.598,0.6289,0.6435,0.6455,0.6688,0.7175,0.7459,0.7938,0.8419,0.8658,0.8672,0.8793,0.9317,0.9396,0.9703,0.9889,1],
-  };
-  // RATIO_PACIENTES_POR_ATENCION conservador: en vez del promedio ponderado
-  // de los 8 meses cerrados, se usa el MÍNIMO mensual observado (el mes con
-  // menos pacientes únicos por cada renglón de Cargos) — un ratio más bajo
-  // implica menos Pacientes proyectados para la misma cifra de Atenciones:
-  //   CDMX min=0.2168 (ene), GDL min=0.3151 (feb), MTP min=0.1953 (may).
-  const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.3046, GDL: 0.4147, MTP: 0.3382, total: 0.3267 };
-  // CAMBIO (14-sep-2026, 3ª pasada): Marite señaló que Atenciones (3,630 proy.,
-  // +17% vs. agosto) Y Pacientes (heredado de Atenciones, +5% vs. agosto)
-  // proyectaban POR ENCIMA de agosto en el mismo momento en que Ingresos
-  // proyecta POR DEBAJO de agosto (-16%) — "no tiene sentido... agosto fue
-  // mayor venta... y ahora proyectando menos [ingresos] superando atenciones
-  // y pacientes de agosto". Diagnóstico con Cargos_y_Facturas_27 (renglón a
-  // renglón, filtrando día<=12 de cada mes):
-  //   - El problema NO es parejo entre sedes: GDL (734 proy.) y MTP (184
-  //     proy.) YA proyectan por debajo de su propio agosto (751 y 286) — no
-  //     presentan la inconsistencia que reportó Marite. El +17% total lo
-  //     genera casi por completo CDMX: 2,704 proy. vs. 2,069 en agosto
-  //     (+31%), con Ingresos CDMX proyectando -6% vs. agosto en ese mismo
-  //     corte — ahí sí hay una contradicción real.
-  //   - Causa raíz en CDMX: septiembre (día 1-12) trae 1,134 renglones de
-  //     Cargos vs. 837 en el mismo corte de agosto (+35%), pero el ticket
-  //     promedio CAYÓ de $6,015 a $5,256 (-12.6%) porque el volumen extra es
-  //     de renglones de bajo o nulo costo (Perfil seguimiento folicular ~$31,
-  //     Ultrasonido incluido $0, Antimulleriana AMH ~$56, más días de
-  //     Almacenamiento de gametos) — más monitoreo de ciclos en curso, no más
-  //     tratamientos de alto valor. Es decir, el conteo de "atenciones"
-  //     (renglones de Cargos) puede subir sin que Ingresos suba igual: miden
-  //     cosas distintas (volumen de interacciones vs. valor).
-  //   - El share por día-12 (arriba) no distingue este cambio de mix: asume
-  //     que la composición de renglones se reparte igual que en jun/jul/ago,
-  //     y extrapola linealmente el ritmo de monitoreo del día 1-12 (que tiende
-  //     a concentrarse al inicio del ciclo de estimulación) a los 30 días.
-  //   - En cambio, el ticket promedio (Ingresos / renglones de Cargos) de mes
-  //     completo, calculado sobre los 8 meses cerrados de 2026, es MUY
-  //     estable: CDMX CV 6.1%, GDL CV 13.5%, MTP CV 18.5%, total CV 3.9%
-  //     (vs. CV 14-38% del share por día-12). Se usa como TECHO de
-  //     sanity-check para Atenciones: si el share por día-12 implica un
-  //     ticket promedio muy por debajo del histórico, se recorta al máximo
-  //     de atenciones que el Ingresos YA proyectado (columna
-  //     AjustePipelineComercial de "Base", que Marite ajusta a mano) sostiene
-  //     a ese ticket — nunca por debajo de lo ya real (Math.max con actual).
-  //   - Ticket promedio (Total Venta / renglón de Cargos, ene-ago 2026):
-  //     CDMX $5,330, GDL $4,520, MTP $3,341, total $5,022.
-  //   - El techo SOLO se activa en CDMX por ahora: con él, CDMX baja de 2,704
-  //     a ~2,195 atenciones (+6% vs. agosto, coherente con el -6% de
-  //     Ingresos CDMX) y Pacientes CDMX (que se deriva de Atenciones, ver
-  //     RATIO_PACIENTES_POR_ATENCION) baja de ~737 a ~598. GDL y MTP se
-  //     dejan con el share por día-12 sin tocar: su Ingresos proyectado cayó
-  //     mucho más que su propio ritmo de atenciones/pacientes real de
-  //     septiembre (GDL: 278 atenciones reales en 12 días vs. Ingresos
-  //     -51% vs. LM), así que aplicarles el mismo techo los dejaría
-  //     proyectando POR DEBAJO de su ritmo ya observado — probable señal de
-  //     que el AjustePipelineComercial de esas 2 sedes no se ha actualizado
-  //     para septiembre, no de que Atenciones esté mal. Queda pendiente que
-  //     Marite confirme si el pipeline de GDL/MTP ya refleja el mes antes de
-  //     activarles el mismo techo (ver SEDES_CON_TECHO_TICKET abajo).
-  //
-  // CAMBIO (15-sep-2026): con las shares ya recalibradas a corte-14 (arriba),
-  // GDL seguía proyectando 896 atenciones — por ENCIMA de su propio máximo
-  // histórico (751 en ago-2026), el único de los 3 impidiendo que el total
-  // bajara de 3,000 (CDMX ya topado en 2,195, MTP en 172 sin problema). Marite
-  // confirmó extender a GDL el mismo techo por ticket promedio que ya usa
-  // CDMX (respuesta explícita al preguntarle si dejarlo así, toparlo a
-  // ticket, o toparlo a su máximo histórico). Con Ingresos GDL proyectado en
-  // $1.5M / ticket promedio $4,520 = techo de 332 — por DEBAJO del actual real
-  // (383) — el Math.max(actual, ...) de proyectarPorTendencia hace que el
-  // resultado sea simplemente el actual (383): el techo dice, en efecto, que
-  // el ritmo de Ingresos de GDL no sostiene NINGUNA atención adicional el
-  // resto del mes. Con esto: Atenciones total baja de 3,263 a ~2,750 y
-  // Pacientes de 989 a ~830 (GDL también se floorea en su actual, 186, vía
-  // RATIO_PACIENTES_POR_ATENCION). Si el pipeline comercial de GDL se
-  // actualiza más adelante y su Ingresos proyectado sube, este techo se
-  // relaja solo (sube con ingresosProyPesos.GDL) sin tocar código.
-  // ACTUALIZADO 21-sep-2026 (3ª pasada, conservador): mismo criterio que
-  // RATIO_PACIENTES_POR_ATENCION arriba — en vez del promedio ponderado, se
-  // usa el MÁXIMO mensual observado (el mes con mayor ticket promedio) de
-  // los 8 meses cerrados. Un ticket promedio más alto implica un techo más
-  // bajo (techo = Ingresos_proy / ticket) — asume que cada atención vale lo
-  // más posible dentro de lo ya observado, por lo que hacen falta MENOS
-  // atenciones para sostener el mismo Ingresos ya proyectado:
-  //   CDMX max=6007 (ago), GDL max=5163 (ene), MTP max=3861 (feb).
-  const RATIO_TICKET_PROMEDIO_ATENCION = { CDMX: 5269, GDL: 4630, MTP: 3416, total: 5064 };
-  // SIN CAMBIO (21-sep-2026): con el corte-19 y las shares recalibradas
-  // arriba, GDL vuelve a topar por debajo de su actual (Math.max lo deja
-  // plano en 439, igual que en el arreglo de corte-14/15-sep) — mismo patrón
-  // de siempre, no amerita revisar el interruptor. MTP sigue sin techo
-  // (Marite no lo ha confirmado); pendiente su revisión si el pipeline de
-  // MTP se estabiliza.
-  const SEDES_CON_TECHO_TICKET = { CDMX: false, GDL: false, MTP: false };
-  const ATENCIONES_MEZCLA_RITMO_U3M = true;
-  // proyectarPorTendencia(actual, hist, sede): si el mes está cerrado, no
-  // hay días transcurridos, o actual=0, se deja el real tal cual en vez de
-  // inventar una proyección. Para Pacientes, si se recibió la proyección ya
-  // calculada de Atenciones (atencionesRef), se deriva de ahí por ratio (ver
-  // arriba); si no (fallback, ej. Atenciones sin datos ese mes), se usa la
-  // curva de pacing de Pacientes. Para Atenciones (esAtenciones=true) se usa
-  // la curva de pacing calibrada (shareEnDia, arriba) leída al día exacto de
-  // CORTE_REAL_DIA — YA NO hace falta recalibrar un número a mano cada vez
-  // que el corte avanza, la curva ya trae el punto correcto para cualquier
-  // día — con el techo por ticket promedio (arriba) aplicado solo en las
-  // sedes marcadas en SEDES_CON_TECHO_TICKET; si tampoco hay curva para la
-  // sede, cae de vuelta a la extrapolación lineal por fracción de días.
-  function proyectarPorTendencia(actual, hist, sede) {
-    if (cerrado || diasTr <= 0 || actual <= 0) return actual;
-    if (!esAtenciones && atencionesRef && atencionesRef[sede] && atencionesRef[sede].proy > 0) {
-      return Math.max(actual, atencionesRef[sede].proy * RATIO_PACIENTES_POR_ATENCION[sede]);
-    }
-    const CURVA = esAtenciones ? SHARE_CURVE_ATENCIONES : SHARE_CURVE_PACIENTES;
-    const share = shareEnDia(CURVA, sede, CORTE_REAL_DIA);
-    let proyBase = share > 0 ? actual / share : actual * (diasTot / diasTr);
-    // MEZCLA PACING + RITMO RECIENTE (5-oct-2026, ver bloque "AJUSTE ATENCIONES"
-    // arriba): promedio simple entre (a) Real / share mediano al día de corte y
-    // (b) Real + días hábiles equivalentes restantes x ritmo por día hábil
-    // equivalente de los últimos 3 meses cerrados (hist). Solo Atenciones.
-    if (esAtenciones && ATENCIONES_MEZCLA_RITMO_U3M && hist && hist.length >= 3) {
-      const ult = meses.slice(-3);
-      const tasas = ult.map((mes, i) => hist[hist.length - 3 + i] / pesoDiasMes(anio, mes));
-      const tasa = tasas.reduce((a, b) => a + b, 0) / tasas.length;
-      const restante = pesoDiasMes(anio, MES_VIGENTE) - pesoDiasMes(anio, MES_VIGENTE, CORTE_REAL_DIA);
-      if (tasa > 0 && restante > 0) {
-        proyBase = (proyBase + (actual + restante * tasa)) / 2;
-      }
-    }
-    if (esAtenciones && SEDES_CON_TECHO_TICKET[sede] && ingresosProyPesos && ingresosProyPesos[sede] > 0 && RATIO_TICKET_PROMEDIO_ATENCION[sede] > 0) {
-      const techoPorTicket = ingresosProyPesos[sede] / RATIO_TICKET_PROMEDIO_ATENCION[sede];
-      return Math.max(actual, Math.min(proyBase, techoPorTicket));
-    }
-    return esAtenciones ? Math.max(actual, proyBase) : proyBase;
-  }
-  // CONGELAMIENTO (21-sep-2026, corte 19->21) — DESACTIVADO desde el corte
-  // 27-sep-2026 (28-sep-2026, instrucción explícita de Marite: la
-  // proyección de Atenciones/Pacientes deja de congelarse y vuelve a
-  // recalcularse cada corte con la metodología conservadora normal, ver
-  // proyectarPorTendencia arriba). Se deja el bloque comentado como
-  // referencia histórica de cómo se manejó el freeze puntual de esa
-  // instrucción anterior ("No cambien la proyección"), no se usa más:
-  //
-  // const PROY_CONGELADA_SEP2026 = {
-  //   atenciones: { CDMX: 2057, GDL: 439, MTP: 163 },
-  //   pacientes:  { CDMX: 683,  GDL: 215, MTP: 55  },
-  // };
-  const out = {};
-  const lyPorSede = {};
-  let histTotal = meses.map(() => 0), actualTotal = 0, lyTotal = 0, tieneLYTotal = false;
-  for (const sede of SEDES) {
-    const m = bySede[sede] || {};
-    const hist = meses.map(n => m[n] || 0);
-    const actual = m[MES_VIGENTE] || 0;
-    let proy = proyectarPorTendencia(actual, hist, sede);
-    hist.forEach((v,i) => histTotal[i] += v);
-    actualTotal += actual;
-    const lm = hist[hist.length-1] || 0;
-    const ly = (bySedeLY[sede] || {})[MES_VIGENTE];
-    const tieneLY = ly != null && ly > 0;
-    if (tieneLY) { lyTotal += ly; tieneLYTotal = true; }
-    lyPorSede[sede] = tieneLY ? ly : null;
-    out[sede] = {
-      hist, actual, proy: Math.round(proy),
-      vsLM: pctOrNull(proy, lm), vsU3M: pctOrNull(proy, avgUlt3(hist)),
-      vsLY: tieneLY ? pctOrNull(proy, ly) : null,
-      nomLY: tieneLY ? Math.round(proy - ly) : null,
+    const gdl = {
+      labels,
+      hist: {
+        "Valoración":      [0, 0, 0, 0, 0, 0, 0, 0, 1],
+        "Programa Activo": [0, 1, 0, 0, 0, 0, 0, 0, 0],
+      },
+      actual: {
+        "Valoración":      { pacientes: 0, ingreso: 0, ticket: 0 },
+        "Programa Activo": { pacientes: 0, ingreso: 0, ticket: 0 },
+      },
+      totalPacientesYTD: { "Valoración": 1, "Programa Activo": 1 },
+      ingresoYTD: 36206.89,
     };
-  }
-  // ARREGLO (14-sep-2026, 3ª pasada): el total ya NO se proyecta de forma
-  // independiente con su propio share/ratio "total" — eso podía dar un
-  // número que no cuadraba exactamente con la suma de las 3 sedes (ruido
-  // propio del share "total" calibrado aparte) y, más importante, no
-  // heredaba el techo por ticket promedio que ahora se le aplica a CDMX
-  // (ver SEDES_CON_TECHO_TICKET arriba): el total seguía saliendo ~3,630
-  // aunque CDMX ya bajara a ~2,195. Ahora el total es simplemente la suma
-  // de los proy. ya calculados por sede (out[sede].proy, cada uno con su
-  // propio método/techo aplicado), así el header y las tarjetas por sede
-  // siempre cuadran entre sí.
-  const proyTotal = SEDES.reduce((acc, s) => acc + (out[s] ? out[s].proy : 0), 0);
-  const lmTotal = histTotal[histTotal.length-1] || 0;
-  out.total = {
-    hist: histTotal, actual: actualTotal, proy: proyTotal,
-    vsLM: pctOrNull(proyTotal, lmTotal), vsU3M: pctOrNull(proyTotal, avgUlt3(histTotal)),
-    vsLY: tieneLYTotal ? pctOrNull(proyTotal, lyTotal) : null,
-    nomLY: tieneLYTotal ? Math.round(proyTotal - lyTotal) : null,
-  };
-
-  // CASTIGO MANUAL A ATENCIONES, sep-2026 — RETIRADO (14-sep-2026).
-  // Historial: se había aplicado un tope de 2,990 mientras no se podía
-  // validar por qué Atenciones proyectaba arriba de agosto cuando Ingresos
-  // proyectaba por debajo (bloqueo: el mapeo Concepto de Agendamiento ->
-  // Servicio no estaba resuelto). Ese bloqueo ya se resolvió (Atención = 1
-  // renglón de "Cargos", igual que Pacientes) y Marite pidió explícitamente
-  // "no quiero tope" — así que este bloque se deja documentado pero inerte.
-  // Si se necesita reactivar un tope en el futuro, reponer aquí el mismo
-  // patrón (factor = TOPE / out.total.proy aplicado a cada sede y al total).
-
-  return out;
-}
-
-/**
- * Consultas: filas [Sede, MesNum, MesLabel, Real, Agendado, Año?].
- * Regresa { CDMX:{hist,real,agendado,vsLM,vsU3M,vsLY,nomLY}, ..., total:{...} }
- * para el año pedido (anio, default ANIO_VIGENTE) — mismo criterio de vsLY
- * que buildMonthlyRealMetric (null si no hay dato del año anterior).
- */
-function buildConsultasMetric(rows, anio = ANIO_VIGENTE) {
-  function bySedeParaAnio(targetAnio) {
-    const bySede = {};
-    for (const r of rows) {
-      const [sede, mesNumRaw, , realRaw, agendadoRaw, anioRaw] = r;
-      if (anioDeFila(anioRaw) !== targetAnio) continue;
-      const mesNum = Number(mesNumRaw);
-      bySede[sede] = bySede[sede] || {};
-      bySede[sede][mesNum] = { real: num(realRaw), agendado: num(agendadoRaw) };
-    }
-    return bySede;
-  }
-  const bySede = bySedeParaAnio(anio);
-  const bySedeLY = bySedeParaAnio(anio - 1);
-  const meses = rangoHist(MES_VIGENTE);
-  const out = {};
-  let histTotal = meses.map(() => 0), realVigTotal = 0, agenVigTotal = 0, lyTotal = 0, tieneLYTotal = false;
-  for (const sede of SEDES) {
-    const m = bySede[sede] || {};
-    const hist = meses.map(n => (m[n] && m[n].real) || 0);
-    const realVig = (m[MES_VIGENTE] && m[MES_VIGENTE].real) || 0;
-    const agendadoVig = (m[MES_VIGENTE] && m[MES_VIGENTE].agendado) || 0;
-    const proy = realVig + agendadoVig;
-    hist.forEach((v,i) => histTotal[i] += v);
-    realVigTotal += realVig; agenVigTotal += agendadoVig;
-    const lm = hist[hist.length-1] || 0;
-    const lyEntry = (bySedeLY[sede] || {})[MES_VIGENTE];
-    const ly = lyEntry ? lyEntry.real : 0;
-    const tieneLY = ly > 0;
-    if (tieneLY) { lyTotal += ly; tieneLYTotal = true; }
-    out[sede] = {
-      hist, real: realVig, agendado: agendadoVig,
-      vsLM: pctOrNull(proy, lm), vsU3M: pctOrNull(proy, avgUlt3(hist)),
-      vsLY: tieneLY ? pctOrNull(proy, ly) : null,
-      nomLY: tieneLY ? Math.round(proy - ly) : null,
+    const vacio = {
+      labels,
+      hist: {
+        "Valoración":      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "Programa Activo": [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      },
+      actual: {
+        "Valoración":      { pacientes: 0, ingreso: 0, ticket: 0 },
+        "Programa Activo": { pacientes: 0, ingreso: 0, ticket: 0 },
+      },
+      totalPacientesYTD: { "Valoración": 0, "Programa Activo": 0 },
+      ingresoYTD: 0,
     };
-  }
-  const proyTotal = realVigTotal + agenVigTotal;
-  const lmTotal = histTotal[histTotal.length-1] || 0;
-  out.total = {
-    hist: histTotal, real: realVigTotal, agendado: agenVigTotal,
-    vsLM: pctOrNull(proyTotal, lmTotal), vsU3M: pctOrNull(proyTotal, avgUlt3(histTotal)),
-    vsLY: tieneLYTotal ? pctOrNull(proyTotal, lyTotal) : null,
-    nomLY: tieneLYTotal ? Math.round(proyTotal - lyTotal) : null,
-  };
-  return out;
-}
+    const total = {
+      labels,
+      hist: {
+        "Valoración":      [16, 4, 0, 4, 11, 4, 3, 3, 92],
+        "Programa Activo": [0, 2, 0, 1, 1, 2, 3, 7, 4],
+      },
+      actual: {
+        "Valoración":      { pacientes: 1, ingreso: 1422.41, ticket: 1422.41 },
+        "Programa Activo": { pacientes: 1, ingreso: 0.0, ticket: 0.0 },
+      },
+      totalPacientesYTD: { "Valoración": 138, "Programa Activo": 21 },
+      ingresoYTD: 4119611.95,
+    };
+    return { total, CDMX: cdmx, GDL: gdl, MTP: vacio };
+  })(),
 
-/**
- * ConsultasRankingLive / ConsultasRankingLive2025: filas crudas tal como las
- * regresa el Apps Script (fila 0 = nota, fila 1 = encabezado de meses, filas
- * siguientes = Delegación, Concepto, mes1..mes12 — pivot en vivo de
- * RAW_Consultas + RAW_CitasAgendadas, ver Código.gs). Reemplaza la vieja
- * hoja estática "ConsultasRanking" (fija a Ago/Jul, sin selector de mes).
- * Regresa { CDMX:{concepto:[v1..v12]}, GDL:{...}, MTP:{...} }, ignorando
- * cualquier fila sin Delegación reconocida (nota, encabezado, o algún
- * renglón con Delegación en blanco en la fuente).
- */
-const DELEGACION_CODE = {
-  "FERTILIDAD INTEGRAL Ciudad de México": "CDMX",
-  "FERTILIDAD INTEGRAL Guadalajara": "GDL",
-  "FERTILIDAD INTEGRAL Metepec": "MTP",
+  conceptos: {},
 };
-
-// Mapa Concepto (crudo, tal como llega de Cargos/CitasAgendadas) -> Agrupación
-// de consulta, tomado de "Clasificación de productos 17.xlsx" hoja
-// "consultas" (Marite, sep-2026): el ranking debe agrupar varias variantes de
-// "Consulta primera vez" (online, gratis, 30min, "Consulta médica", etc.) en
-// una sola fila, no mostrarlas por separado. Cualquier Concepto que NO
-// aparezca aquí (ej. "Check up Integral", que no estaba en su archivo) se
-// deja tal cual (mapea a sí mismo) para no perder filas nuevas o no
-// contempladas.
-const CONSULTA_AGRUPACION = {
-  "(Ex) Consulta primera vez": "(Ex) Consulta primera vez",
-  "Check up Ginecologico": "Check up Ginecologico",
-  "Check-up SOP": "Check-up SOP",
-  "Consulta de Primera Vez IP's": "Consulta de Primera Vez IP's",
-  "Consulta ginecológica": "Consulta ginecológica",
-  "Consulta médica": "Consulta primera vez",
-  "Consulta Obstetricia": "Consulta Obstetricia",
-  "Consulta primera vez": "Consulta primera vez",
-  "Consulta primera vez 30min": "Consulta primera vez",
-  "Consulta primera vez gratis": "Consulta primera vez",
-  "Consulta primera vez online": "Consulta primera vez",
-  "Consulta primera vez online gratis": "Consulta primera vez",
-  "Fertility Check up Hombres": "Fertility Check up Hombres",
-  "Fertility Check up Mujeres": "Fertility Check up Mujeres",
-  "Fertility Check up Parejas": "Fertility Check up Parejas",
-  "Fertility Check up Virtual": "Fertility Check up Virtual",
-};
-function agruparConsulta(conceptoRaw) {
-  return CONSULTA_AGRUPACION[conceptoRaw] || conceptoRaw;
-}
-function parseConsultasRankingRows(rows) {
-  const out = { CDMX: {}, GDL: {}, MTP: {} };
-  for (const r of (rows || [])) {
-    const code = DELEGACION_CODE[r[0]];
-    const conceptoRaw = r[1];
-    if (!code || !conceptoRaw) continue;
-    const concepto = agruparConsulta(conceptoRaw);
-    const meses = [];
-    for (let m = 1; m <= 12; m++) meses.push(num(r[m + 1]));
-    if (out[code][concepto]) {
-      for (let i = 0; i < 12; i++) out[code][concepto][i] += meses[i];
-    } else {
-      out[code][concepto] = meses;
-    }
-  }
-  return out;
-}
-
-/**
- * Ranking "en vivo" por agrupación de consulta, por Delegación y Concepto,
- * para el mes vigente (mesVigente, 1-12). rowsActual/rowsLY = filas crudas
- * de la hoja "actual" (según ANIO_VIGENTE) y la de "año anterior" (para vs
- * LY) — rowsLY puede venir null si no hay año anterior disponible (ej.
- * viendo 2025, no existe 2024). vs LM sale de mesVigente-1 dentro de la
- * misma hoja "actual"; nuevo = true si ese mes anterior fue 0 (igual que
- * antes). "total" suma las 3 delegaciones concepto por concepto.
- */
-function buildConsultasRankingLive(rowsActual, rowsLY, mesVigente) {
-  const actual = parseConsultasRankingRows(rowsActual);
-  const ly = rowsLY ? parseConsultasRankingRows(rowsLY) : { CDMX: {}, GDL: {}, MTP: {} };
-  const out = { total: [], CDMX: [], GDL: [], MTP: [] };
-  const totalMap = {};
-  for (const code of SEDES) {
-    for (const concepto of Object.keys(actual[code])) {
-      const serie = actual[code][concepto];
-      const valor = serie[mesVigente - 1] || 0;
-      const valorLM = mesVigente > 1 ? (serie[mesVigente - 2] || 0) : 0;
-      const nuevo = valorLM === 0;
-      const serieLY = ly[code][concepto];
-      const valorLY = serieLY ? (serieLY[mesVigente - 1] || 0) : 0;
-      out[code].push({
-        nombre: concepto, valor, valorLM,
-        vsLM: nuevo ? null : pctOrNull(valor, valorLM),
-        nomLM: valor - valorLM,
-        vsLY: valorLY ? pctOrNull(valor, valorLY) : null,
-        nomLY: valorLY ? (valor - valorLY) : null,
-        ...(nuevo ? { nuevo: true } : {}),
-      });
-      const t = totalMap[concepto] = totalMap[concepto] || { valor: 0, valorLM: 0, valorLY: 0, tieneLY: false };
-      t.valor += valor;
-      t.valorLM += valorLM;
-      if (valorLY) { t.valorLY += valorLY; t.tieneLY = true; }
-    }
-  }
-  out.total = Object.keys(totalMap).map(concepto => {
-    const t = totalMap[concepto];
-    const nuevo = t.valorLM === 0;
-    return {
-      nombre: concepto, valor: t.valor, valorLM: t.valorLM,
-      vsLM: nuevo ? null : pctOrNull(t.valor, t.valorLM),
-      nomLM: t.valor - t.valorLM,
-      vsLY: t.tieneLY ? pctOrNull(t.valor, t.valorLY) : null,
-      nomLY: t.tieneLY ? (t.valor - t.valorLY) : null,
-      ...(nuevo ? { nuevo: true } : {}),
-    };
-  });
-  for (const scope of Object.keys(out)) out[scope].sort((a, b) => b.valor - a.valor);
-  return out;
-}
-
-// Arma el ranking según ANIO_VIGENTE (2026: 2026=actual, 2025=LY · 2025:
-// 2025=actual, sin LY) a partir de lo que ya esté en _rawCache — la usan
-// tanto fetchLiveOperativos() (primera carga) como rebuildAllFromCache()
-// (cambio de selector de mes o de año) para no duplicar esta lógica.
-function buildRankingFromCache() {
-  const rows2026 = _rawCache["ConsultasRankingLive"] || [];
-  const rows2025 = _rawCache["ConsultasRankingLive2025"] || [];
-  if (ANIO_VIGENTE === 2025) return buildConsultasRankingLive(rows2025, null, MES_VIGENTE);
-  return buildConsultasRankingLive(rows2026, rows2025, MES_VIGENTE);
-}
-
-/**
- * Metas: filas [Sede, MesNum, MesLabel, Meta] — Sede en códigos CDMX/GDL/MTP
- * (igual que Atenciones/Pacientes/Consultas), Meta en pesos MXN (se convierte
- * a MDP aquí mismo, igual que Ingresos). Una celda de Meta vacía = todavía no
- * se captura ese mes -> null, no se dibuja ese punto de la línea.
- * Regresa { CDMX:{hist:[7 MDP|null], actual MDP|null}, GDL:{...}, MTP:{...},
- *           total:{...}, _hasData: bool }
- */
-function buildMonthlyMetaMetric(rows) {
-  const bySede = {};
-  let anyData = false;
-  for (const [sede, mesNumRaw, , metaRaw] of rows) {
-    const mesNum = Number(mesNumRaw);
-    if (!sede || !mesNum) continue;
-    bySede[sede] = bySede[sede] || {};
-    const v = numOrNull(metaRaw);
-    bySede[sede][mesNum] = v;
-    if (v != null) anyData = true;
-  }
-  const toMDP = v => (v == null ? null : Math.round((v / 1e6) * 10) / 10);
-  const meses = rangoHist(MES_VIGENTE);
-  const out = {};
-  const histTotal = meses.map(() => null);
-  let actualTotal = null;
-  for (const sede of SEDES) {
-    const m = bySede[sede] || {};
-    const hist = meses.map(n => (m[n] == null ? null : m[n]));
-    const actual = m[MES_VIGENTE] == null ? null : m[MES_VIGENTE];
-    hist.forEach((v, i) => { if (v != null) histTotal[i] = (histTotal[i] || 0) + v; });
-    if (actual != null) actualTotal = (actualTotal || 0) + actual;
-    out[sede] = { hist: hist.map(toMDP), actual: toMDP(actual) };
-  }
-  out.total = { hist: histTotal.map(toMDP), actual: toMDP(actualTotal) };
-  out._hasData = anyData;
-  return out;
-}
-
-async function fetchLiveMetas() {
-  const rows = await fetchSheetJson("Metas");
-  return buildMonthlyMetaMetric(rows);
-}
-
-async function fetchLiveOperativos() {
-  const [atRows, puRows, consRows] = await Promise.all([
-    fetchSheetJson("Atenciones"),
-    fetchSheetJson("Pacientes"),
-    fetchSheetJson("Consultas"),
-  ]);
-  // ConsultasRankingLive (2026) y ConsultasRankingLive2025 se piden siempre
-  // los dos (aunque ANIO_VIGENTE arranque en 2026): el selector de año del
-  // panel de ranking cambia de vista sin volver a pedirle nada a Sheets (ver
-  // buildRankingFromCache/changeAnioVigente), igual que ya hace el selector
-  // de mes.
-  await Promise.all([
-    fetchSheetJson("ConsultasRankingLive"),
-    fetchSheetJson("ConsultasRankingLive2025"),
-  ]);
-  // "Base" (Ingresos) ya se descargó y quedó en _rawCache antes de este punto
-  // (ver loadLiveDataIntoDashboard) — se reusa esa copia para calcular el
-  // Ingresos proyectado por sede (en pesos) y pasárselo a Atenciones como
-  // techo de sanity-check (ver SEDES_CON_TECHO_TICKET / RATIO_TICKET_
-  // PROMEDIO_ATENCION más arriba). Si por lo que sea "Base" todavía no está
-  // en cache (ej. ese fetch falló), se sigue de largo sin techo — Atenciones
-  // cae de vuelta al share por día-12 solo, igual que antes de este cambio.
-  const ingresosProyPesos = getIngresosProyPesosPorSede();
-  const atencionesOut = buildMonthlyRealMetric(atRows, ANIO_VIGENTE, true, null, ingresosProyPesos);
-  return {
-    atenciones: atencionesOut,
-    pacientes: buildMonthlyRealMetric(puRows, ANIO_VIGENTE, false, atencionesOut),
-    consultas: buildConsultasMetric(consRows),
-    ranking: buildRankingFromCache(),
-  };
-}
-
-// Extrae, en pesos crudos (no millones), el Ingresos proyectado por sede del
-// mes vigente a partir de _rawCache["Base"] (si ya está cargado) — usado por
-// Atenciones como techo de sanity-check por ticket promedio (ver
-// SEDES_CON_TECHO_TICKET arriba). Devuelve null si "Base" todavía no está en
-// cache (Atenciones simplemente no aplica el techo ese ciclo).
-function getIngresosProyPesosPorSede() {
-  if (!_rawCache["Base"]) return null;
-  const live = buildIngresosMetric(_rawCache["Base"], ANIO_VIGENTE);
-  const out = {};
-  for (const code of Object.keys(live.sedesOut)) {
-    out[code] = (live.sedesOut[code].ingresos.proy || 0) * 1e6; // proy viene en millones (MDP)
-  }
-  out.total = (live.totalIngresos.proy || 0) * 1e6;
-  return out;
-}
-
-/*
-  ============================================================================
-  CARGA EN VIVO DE HUBSPOT (pipeline "Interesa2")
-  ============================================================================
-  Hojas: "Hubspot" (MesNum, MesLabel, Leads, Citas — compañía completa),
-  "HubspotSede" (Sede, LeadsAgo, CitasAgo, LeadsYTD, CitasYTD) y
-  "HubspotCohortes" (MesNum, MesLabel, Leads, M0, M1, M2 — conteos, el
-  dashboard calcula el % aquí mismo). Leads = deals creados en el mes
-  (createdate); Citas = deals con Fecha_CitaAgendada_Int2 en el mes.
-  ============================================================================
-*/
-
-function pct(n, base) {
-  return base ? Math.round((n / base) * 100) : 0;
-}
-
-function buildHubspotMetric(rows) {
-  const hist = [], leadsArr = [], citasArr = [];
-  for (const [, , leadsRaw, citasRaw] of rows) {
-    leadsArr.push(num(leadsRaw));
-    citasArr.push(num(citasRaw));
-  }
-  // rows[i] = mes i+1 (Ene=0, ..., Dic=11). El mes vigente es el que haya
-  // cargado HubSpot más recientemente — si ese pull todavía no llega al mes
-  // que el selector tiene seleccionado, esta vista simplemente muestra 0
-  // (HubSpot se refresca manual y por separado, no viene del pipeline de Cargos).
-  const leadsHist = leadsArr.slice(0, MES_VIGENTE - 1), citasHist = citasArr.slice(0, MES_VIGENTE - 1);
-  const leadsActual = leadsArr[MES_VIGENTE - 1] || 0, citasActual = citasArr[MES_VIGENTE - 1] || 0;
-  const convHist = leadsHist.map((l, i) => pct(citasHist[i], l));
-  return {
-    leads: { hist: leadsHist, actual: leadsActual },
-    citas: { hist: citasHist, actual: citasActual },
-    conversion_pct: { hist: convHist, actual: pct(citasActual, leadsActual) },
-  };
-}
-
-function buildHubspotSedeMensualMetric(rows) {
-  // CORREGIDO 29-sep-2026: reemplaza a la vieja "HubspotSede" (una sola foto
-  // fija, mal llamada "agosto" sin importar el mes elegido en el tablero —
-  // bug reportado por Marite). Esta hoja ("HubspotSedeMensual") trae Leads
-  // (createdate) y Citas (Fecha_CitaAgendada_Int2) por Sede para cada uno de
-  // los 9 meses con datos (Ene-Sep 2026), mismo criterio de "sucursal" que
-  // conversion_pct total. mensual[] tiene 12 casillas (Ene=0..Dic=11) para
-  // que el selector de mes vigente pueda indexar directo con MES_VIGENTE-1;
-  // los meses sin fila (Oct-Dic, aún no llegan) quedan en null. total2026 se
-  // recalcula sumando Leads/Citas de TODOS los meses con datos (no un valor
-  // aparte cacheado), así que se mantiene correcto automáticamente mes tras
-  // mes sin haber que tocar nada aquí.
-  // Filas: [MesNum, MesLabel, Sede, Leads, Citas].
-  const out = {};
-  for (const sede of SEDES) out[sede] = { mensual: Array(12).fill(null), leadsYtd: 0, citasYtd: 0 };
-  for (const [mesNumRaw, , sede, leadsRaw, citasRaw] of rows) {
-    if (!SEDES.includes(sede)) continue;
-    const mesNum = Number(mesNumRaw);
-    if (mesNum < 1 || mesNum > 12) continue;
-    const leads = num(leadsRaw), citas = num(citasRaw);
-    out[sede].mensual[mesNum - 1] = pct(citas, leads);
-    out[sede].leadsYtd += leads;
-    out[sede].citasYtd += citas;
-  }
-  for (const sede of SEDES) {
-    out[sede].total2026 = pct(out[sede].citasYtd, out[sede].leadsYtd);
-    delete out[sede].leadsYtd; delete out[sede].citasYtd;
-  }
-  return out;
-}
-
-function buildHubspotCohortes(rows) {
-  return rows.map(([, mesLabel, leadsRaw, m0Raw, m1Raw, m2Raw]) => {
-    const leads = num(leadsRaw);
-    const m0 = pct(num(m0Raw), leads), m1 = pct(num(m1Raw), leads), m2 = pct(num(m2Raw), leads);
-    return { mes: `${mesLabel}-26`, leads, m0, m1, m2, sin: Math.max(0, 100 - m0 - m1 - m2) };
-  });
-}
-
-async function fetchLiveHubspot() {
-  const [hsRows, sedeRows, cohortRows] = await Promise.all([
-    fetchSheetJson("Hubspot"),
-    fetchSheetJson("HubspotSedeMensual"),
-    fetchSheetJson("HubspotCohortes"),
-  ]);
-  const base = buildHubspotMetric(hsRows);
-  return {
-    ...base,
-    conversion_por_sede: buildHubspotSedeMensualMetric(sedeRows),
-    cohortes: buildHubspotCohortes(cohortRows),
-  };
-}
-
-/*
-  ============================================================================
-  CARGA EN VIVO DE CONCEPTOS (drill-down por servicio) Y SUBROGACIÓN
-  ============================================================================
-  "Conceptos" trae, para el mes vigente (agosto), el desglose de cada
-  servicio en sus líneas de cargo reales, con jerarquía de hasta 3 niveles
-  (ej. dentro de "Laboratorio": Subclas "Laboratorio Clínico" > Subclas2
-  "Hormonas, Sangre y Perfiles" > Concepto). Filas: [Sede, Servicio, Subclas,
-  Subclas2, Concepto, Ago, Jul] donde Sede es "CDMX"/"GDL"/"MTP"/"total",
-  Servicio es el nombre completo original (la misma llave que trae "servKey"
-  en cada fila de DATA.servicios), Subclas/Subclas2 vienen vacíos cuando ese
-  servicio no tiene ese nivel de clasificación (ej. Farmacia no tiene
-  Subclas, así que salta directo a Concepto), y Ago/Jul son los montos en
-  pesos del mes vigente y del mes anterior — el dashboard calcula "vs LM" al
-  vuelo en cualquier nivel de agrupación sumando Ago y Jul de ese grupo
-  (nunca promediando porcentajes). El dashboard usa esto para armar el
-  drill-down dinámico al hacer clic en un servicio de "Mezcla de servicios".
-
-  "SubrogacionPacientes" trae, mes a mes y por sede, cuántos PACIENTES (sin
-  nombres — solo el conteo) pasaron por cada etapa del embudo de Subrogación:
-  "Valoración" (candidatas gestantes que se hacen la valoración médica) y
-  "Programa Activo" (padres intencionales con un paquete de subrogación
-  contratado). Son dos poblaciones de personas distintas, no una tasa de
-  conversión de la misma persona — el dashboard lo aclara en el texto.
-  Filas: [MesNum, MesLabel, Sede, Etapa, Pacientes, Ingreso] — Sede en
-  códigos CDMX/GDL/MTP (Subrogación es ~100% CDMX, pero se guarda por sede
-  para que el filtro de Sede funcione igual que en el resto del dashboard;
-  el ticket promedio se calcula aquí mismo, no se guarda en el Sheet).
-  ============================================================================
-*/
-
-// (La vieja buildConceptosMetric, que leía una hoja "Conceptos" con columnas
-// fijas Ago/Jul, se retiró — la vista se deriva ahora con computeConceptosView
-// a partir de conceptosMensual + conceptosHier, reactiva al selector de mes.)
-
-/*
-  "ConceptosMensual" trae, por Sede ("CDMX"/"GDL"/"MTP"/"total") y Concepto
-  (mismo texto exacto que en "ConceptosHier"/"ConceptosPorMedico" — la
-  combinación Sede+Concepto es única), el histórico Ene-Dic de
-  Ingresos/Atenciones/UDS de esa línea de cargo (12 casillas siempre, se van
-  llenando conforme se cargan más meses — los que no tienen datos todavía
-  quedan en 0). Se usa para el detalle "evolutivo por concepto" Y para
-  derivar la vista "Mezcla de servicios" (antes venía de una hoja "Conceptos"
-  separada con columnas fijas Ago/Jul — ahora ambas vistas se calculan aquí
-  mismo según el mes que elija el selector, ver computeConceptosView).
-  Filas: [Sede, Concepto, MesNum, Ingresos, Atenciones, Uds].
-*/
-function buildConceptosMensualMetric(rows) {
-  const out = {};
-  for (const [sede, concepto, mesNumRaw, ingresosRaw, atRaw, udsRaw] of rows) {
-    if (!concepto) continue;
-    out[sede] = out[sede] || {};
-    out[sede][concepto] = out[sede][concepto] || {
-      labels: MESES_12, ingresos: Array(12).fill(0), atenciones: Array(12).fill(0), uds: Array(12).fill(0),
-    };
-    const idx = Number(mesNumRaw) - 1;
-    if (idx < 0 || idx > 11) continue;
-    out[sede][concepto].ingresos[idx] = num(ingresosRaw);
-    out[sede][concepto].atenciones[idx] = num(atRaw);
-    out[sede][concepto].uds[idx] = num(udsRaw);
-  }
-  return out;
-}
-
-/*
-  "ConceptosHier" es la jerarquía ESTÁTICA Concepto -> Servicio/Subclas/
-  Subclas2 (no cambia mes a mes, solo cuando aparece un concepto nuevo).
-  Reemplaza a la vieja hoja "Conceptos" (que traía una foto fija de Ago/Jul):
-  ahora la vista "Mezcla de servicios" se arma en vivo combinando esta
-  jerarquía con conceptosMensual + el mes que el selector tenga activo.
-  Filas: [Concepto, Servicio, Subclas, Subclas2].
-*/
-function buildConceptosHierMetric(rows) {
-  const out = {};
-  for (const [concepto, servicio, subclas, subclas2] of rows) {
-    if (!concepto || !servicio) continue;
-    out[concepto] = {
-      servicio,
-      subclas: String(subclas ?? "").trim() || null,
-      subclas2: String(subclas2 ?? "").trim() || null,
-    };
-  }
-  return out;
-}
-
-/**
- * Deriva la vista "Mezcla de servicios" (D.conceptos[scope][servKey] = [{
- * subclas, subclas2, concepto, ago, jul, count, uds }]) directamente de
- * conceptosMensual + conceptosHier, para el mes que MES_VIGENTE tenga en ese
- * momento — "ago"/"jul" son nombres heredados de cuando Agosto era el mes
- * fijo, pero ya significan simplemente "mes vigente" / "mes anterior".
- * Se recalcula cada vez que cambia el selector de mes (no requiere volver a
- * pedir nada al Sheet).
- */
-function computeConceptosView(conceptosMensual, conceptosHier) {
-  const out = { total: {}, CDMX: {}, GDL: {}, MTP: {} };
-  const idxVig = MES_VIGENTE - 1, idxLM = MES_VIGENTE - 2;
-  for (const scope of Object.keys(out)) {
-    const porConcepto = (conceptosMensual && conceptosMensual[scope]) || {};
-    for (const concepto of Object.keys(porConcepto)) {
-      const serie = porConcepto[concepto];
-      const ago = serie.ingresos[idxVig] || 0;
-      const jul = idxLM >= 0 ? (serie.ingresos[idxLM] || 0) : 0;
-      const count = serie.atenciones[idxVig] || 0;
-      const uds = serie.uds[idxVig] || 0;
-      // si ni el mes vigente ni ningún mes anterior tienen dato, no tiene
-      // caso listar el concepto en este scope (ej. concepto que solo vende
-      // en otra sede) — pero si tuvo venta en CUALQUIER mes ya cargado, se
-      // incluye aunque el mes vigente esté en 0 (esa es la alerta de "sin venta").
-      const tuvoAlgunaVenta = serie.ingresos.some(v => v > 0);
-      if (!tuvoAlgunaVenta) continue;
-      const hier = (conceptosHier && conceptosHier[concepto]) || { servicio: "Otros", subclas: null, subclas2: null };
-      out[scope][hier.servicio] = out[scope][hier.servicio] || [];
-      out[scope][hier.servicio].push({ subclas: hier.subclas, subclas2: hier.subclas2, concepto, ago, jul, count, uds });
-    }
-    for (const serv of Object.keys(out[scope])) {
-      out[scope][serv].sort((a, b) => b.ago - a.ago);
-    }
-  }
-  return out;
-}
-
-/*
-  "ConceptosPorMedico" trae, por Sede ("CDMX"/"GDL"/"MTP"/"total") y Concepto
-  (mismo texto exacto que en "Conceptos"/"ConceptosMensual"), el desglose por
-  Profesional Historia (médico que atendió/recetó) acumulado Ene-Ago 2026:
-  Ingresos, Atenciones (# líneas de cargo) y Uds. Se usa en el detalle
-  "evolutivo por concepto" para mostrar qué médico usa más cada producto/
-  servicio (tabla "Por médico"). Filas: [Sede, Concepto, Medico, Ingresos,
-  Atenciones, Uds].
-*/
-function buildConceptosPorMedicoMetric(rows) {
-  const out = {};
-  for (const [sede, concepto, medico, ingresosRaw, atRaw, udsRaw] of rows) {
-    if (!concepto || !medico) continue;
-    out[sede] = out[sede] || {};
-    out[sede][concepto] = out[sede][concepto] || [];
-    out[sede][concepto].push({ medico, ingresos: num(ingresosRaw), atenciones: num(atRaw), uds: num(udsRaw) });
-  }
-  return out;
-}
-
-const SUBROGACION_ETAPAS = ["Valoración", "Programa Activo"];
-
-/**
- * Arma la métrica de Subrogación para UN scope (total/CDMX/GDL/MTP), con los
- * 8 meses (Ene-Ago) siempre presentes (rellenando con 0 los que no traigan
- * fila) para que el filtro de Sede nunca rompa la alineación de meses aunque
- * una sede no tenga nada ese mes (ej. GDL/MTP la mayoría de meses).
- */
-function buildSubrogacionForScope(rows, scope) {
-  const byMes = {};
-  for (let m = 1; m <= 12; m++) {
-    byMes[m] = { "Valoración": { pacientes: 0, ingreso: 0 }, "Programa Activo": { pacientes: 0, ingreso: 0 } };
-  }
-  for (const [mesNumRaw, , sede, etapa, pacientesRaw, ingresoRaw] of rows) {
-    if (scope !== "total" && sede !== scope) continue;
-    const mesNum = Number(mesNumRaw);
-    if (!byMes[mesNum] || !SUBROGACION_ETAPAS.includes(etapa)) continue;
-    byMes[mesNum][etapa].pacientes += num(pacientesRaw);
-    byMes[mesNum][etapa].ingreso += num(ingresoRaw);
-  }
-  const meses = rangoHist(MES_VIGENTE);
-  const hist = {};
-  for (const etapa of SUBROGACION_ETAPAS) hist[etapa] = meses.map(m => byMes[m][etapa].pacientes);
-  const actual = {};
-  for (const etapa of SUBROGACION_ETAPAS) {
-    const a = byMes[MES_VIGENTE][etapa];
-    actual[etapa] = { pacientes: a.pacientes, ingreso: a.ingreso, ticket: a.pacientes ? Math.round(a.ingreso / a.pacientes) : 0 };
-  }
-  const totalPacientesYTD = {}, ingresoYTDByEtapa = {};
-  let ingresoYTD = 0;
-  for (const etapa of SUBROGACION_ETAPAS) {
-    totalPacientesYTD[etapa] = hist[etapa].reduce((a,b)=>a+b,0) + actual[etapa].pacientes;
-    const ingEtapa = [...meses, MES_VIGENTE].reduce((a,m)=>a+byMes[m][etapa].ingreso, 0);
-    ingresoYTDByEtapa[etapa] = ingEtapa;
-    ingresoYTD += ingEtapa;
-  }
-  return { labels: MESES_12.slice(0, meses.length), hist, actual, totalPacientesYTD, ingresoYTD, byMes };
-}
-
-// El cálculo de vs LM / vs U3M / nominal por periodo para Subrogación se
-// hace en index.html con el helper genérico periodStats(hist, actual,
-// periodo) — mismo patrón que usa la nueva sección "Evolutivo por médico" —
-// ya que sub.hist[etapa] (7 valores) + sub.actual[etapa].pacientes tienen
-// exactamente esa forma.
-
-function buildSubrogacionMetric(rows) {
-  return {
-    total: buildSubrogacionForScope(rows, "total"),
-    CDMX: buildSubrogacionForScope(rows, "CDMX"),
-    GDL: buildSubrogacionForScope(rows, "GDL"),
-    MTP: buildSubrogacionForScope(rows, "MTP"),
-  };
-}
-
-async function fetchLiveConceptosYSubrogacion() {
-  const [hierRows, subRows, concMensualRows, concPorMedicoRows] = await Promise.all([
-    fetchSheetJson("ConceptosHier"),
-    fetchSheetJson("SubrogacionPacientes"),
-    fetchSheetJson("ConceptosMensual"),
-    fetchSheetJson("ConceptosPorMedico"),
-  ]);
-  const conceptosHier = buildConceptosHierMetric(hierRows);
-  const conceptosMensual = buildConceptosMensualMetric(concMensualRows);
-  // OJO: MES_VIGENTE NO se reasigna aquí — ya se autodetectó (con el clamp
-  // contra la hoja "Base", ver loadLiveDataIntoDashboard) antes de que
-  // corra cualquier fetch, incluido este. Reasignarlo aquí sin el clamp
-  // adelantaría el mes vigente en cuanto Conceptos tenga un mes que Base
-  // todavía no, rompiendo los KPIs principales (quedarían en $0).
-  return {
-    conceptosHier,
-    conceptosMensual,
-    conceptos: computeConceptosView(conceptosMensual, conceptosHier),
-    subrogacion: buildSubrogacionMetric(subRows),
-    conceptosPorMedico: buildConceptosPorMedicoMetric(concPorMedicoRows),
-  };
-}
-
-/*
-  ============================================================================
-  CARGA EN VIVO POR MÉDICO (Profesional Historia)
-  ============================================================================
-  "PorMedico" trae, mes a mes, sede y médico ("Profesional Historia" del
-  archivo de cargos — misma fuente y misma definición de línea de cargo =
-  atención, Historia = paciente, que Ingresos/Atenciones/Pacientes Únicos),
-  cuánto ingreso, cuántas atenciones y cuántos pacientes únicos generó cada
-  médico ese mes. Filas: [Sede, Profesional, MesNum, MesLabel, Ingreso,
-  Atenciones, Pacientes]. El scope "total" se arma sumando, para el mismo
-  nombre de médico, sus 3 posibles sedes (igual criterio que Pacientes
-  Únicos total: suma simple, no dedup de paciente cruzando sede).
-  ============================================================================
-*/
-
-function buildDoctoresMetric(rows) {
-  const bySedeDoc = {};
-  for (const [sede, prof, mesNumRaw, , ingresoRaw, atRaw, pacRaw] of rows) {
-    if (!SEDES.includes(sede) || !prof) continue;
-    const mesNum = Number(mesNumRaw);
-    if (mesNum < 1 || mesNum > 12) continue;
-    const key = sede + "||" + prof;
-    bySedeDoc[key] = bySedeDoc[key] || { sede, prof, ingreso: Array(12).fill(0), atenciones: Array(12).fill(0), pacientes: Array(12).fill(0) };
-    bySedeDoc[key].ingreso[mesNum-1] += num(ingresoRaw);
-    bySedeDoc[key].atenciones[mesNum-1] += num(atRaw);
-    bySedeDoc[key].pacientes[mesNum-1] += num(pacRaw);
-  }
-  const nHist = MES_VIGENTE - 1;
-  function mk(){ return { ingreso:{hist:Array(nHist).fill(0),actual:0}, atenciones:{hist:Array(nHist).fill(0),actual:0}, pacientes:{hist:Array(nHist).fill(0),actual:0} }; }
-  const out = { total: {}, CDMX: {}, GDL: {}, MTP: {} };
-  for (const key of Object.keys(bySedeDoc)) {
-    const d = bySedeDoc[key];
-    const entry = {
-      ingreso: { hist: d.ingreso.slice(0,nHist).map(v=>Math.round(v)), actual: Math.round(d.ingreso[MES_VIGENTE-1]) },
-      atenciones: { hist: d.atenciones.slice(0,nHist), actual: d.atenciones[MES_VIGENTE-1] },
-      pacientes: { hist: d.pacientes.slice(0,nHist), actual: d.pacientes[MES_VIGENTE-1] },
-    };
-    out[d.sede][d.prof] = entry;
-    out.total[d.prof] = out.total[d.prof] || mk();
-    for (const metric of ["ingreso","atenciones","pacientes"]) {
-      for (let i=0;i<nHist;i++) out.total[d.prof][metric].hist[i] += entry[metric].hist[i];
-      out.total[d.prof][metric].actual += entry[metric].actual;
-    }
-  }
-  return out;
-}
-
-async function fetchLiveDoctores() {
-  const rows = await fetchSheetJson("PorMedico");
-  return buildDoctoresMetric(rows);
-}
-
-/**
- * Mezcla los datos en vivo (si el fetch funciona) sobre window.DATA, que ya
- * trae los valores del último corte como respaldo (fallback).
- */
-async function loadLiveDataIntoDashboard() {
-  // Se autodetecta MES_VIGENTE ANTES que cualquier otro fetch (todos los
-  // builders de abajo lo leen como variable global), para que el primer
-  // render ya arranque en el último mes con datos reales y no en el default
-  // de Agosto. Si falla (sin conexión), se queda en el default y el selector
-  // de mes de la UI lo puede corregir a mano.
-  try {
-    const [preRows, baseRows] = await Promise.all([
-      fetchSheetJson("ConceptosMensual"),
-      fetchSheetJson("Base"),
-    ]);
-    const mesConceptos = detectarMesVigente(buildConceptosMensualMetric(preRows));
-    const mesBase = detectarMesVigenteBase(baseRows, ANIO_VIGENTE);
-    // Nunca adelantar el mes vigente más allá de lo que "Base" (Evolutivo
-    // 2026, fuente de los KPIs principales de Ingresos/Servicios) ya tiene
-    // real. Si Conceptos ya trae un mes nuevo pero Base todavía no se
-    // actualizó ese mes, nos quedamos en el último mes que Base sí tiene,
-    // para no mostrar $0 en los KPIs mientras Marite termina de actualizar
-    // Base. El selector de mes de la UI siempre permite adelantarlo a mano.
-    MES_VIGENTE = mesBase > 0 ? Math.min(mesConceptos, mesBase) : mesConceptos;
-  } catch (e) {
-    console.warn("No se pudo autodetectar el mes vigente, usando default:", e);
-  }
-  // Se guarda UNA sola vez el mes con el que arrancó el tablero (autodetectado
-  // arriba, o el default si falló) — es el mes al que corresponden los
-  // Highlights redactados a mano en data.js. buildServicios() en index.html
-  // lo compara contra el mes que el selector tenga elegido en cada momento:
-  // si coinciden, muestra los Highlights curados; si no, arma unos
-  // automáticos a partir de los datos de ese otro mes (ver buildHighlightsAuto).
-  window.MES_CORTE_ORIGINAL = MES_VIGENTE;
-  syncMesesHistYActual();
-
-  // ARREGLO (sep-2026): antes estas 6 secciones se pedían una por una con
-  // "await" en fila -- cada llamada a Apps Script tarda ~2-3s (a veces más
-  // en frío), así que la carga completa tomaba 10-20+ segundos, Y la página
-  // no mostraba NINGÚN aviso de "cargando" mientras tanto (ver banner en
-  // index.html), por lo que el tablero parecía "no cargar" cuando en
-  // realidad seguía esperando. Ahora se piden las 6 en paralelo con
-  // Promise.allSettled: el tiempo total baja al de la más lenta de las 6 (no
-  // la suma de las 6), y cada una sigue teniendo su propio fallback
-  // independiente si falla (igual que antes).
-  const [ingresosR, operativosR, hubspotR, conceptosR, doctoresR, metasR] = await Promise.allSettled([
-    fetchLiveIngresos(),
-    fetchLiveOperativos(),
-    fetchLiveHubspot(),
-    fetchLiveConceptosYSubrogacion(),
-    fetchLiveDoctores(),
-    fetchLiveMetas(),
-  ]);
-
-  if (ingresosR.status === "fulfilled") {
-    const live = ingresosR.value;
-    window.DATA.total.ingresos = live.totalIngresos;
-    for (const code of Object.keys(live.sedesOut)) {
-      window.DATA.sedes[code].ingresos = live.sedesOut[code].ingresos;
-    }
-    window.DATA.servicios = live.serviciosOut;
-    window.DATA._liveOk = true;
-  } else {
-    window.DATA._liveOk = false;
-    window.DATA._liveError = String(ingresosR.reason?.message || ingresosR.reason);
-    console.warn("No se pudo cargar Ingresos/Servicios en vivo desde Sheets, usando último valor guardado:", ingresosR.reason);
-  }
-
-  if (operativosR.status === "fulfilled") {
-    const op = operativosR.value;
-    window.DATA.total.atenciones = { ...window.DATA.total.atenciones, ...op.atenciones.total };
-    window.DATA.total.pacientes = { ...window.DATA.total.pacientes, ...op.pacientes.total };
-    window.DATA.total.consultas = { ...window.DATA.total.consultas, ...op.consultas.total };
-    for (const code of SEDES) {
-      window.DATA.sedes[code].atenciones = { ...window.DATA.sedes[code].atenciones, ...op.atenciones[code] };
-      window.DATA.sedes[code].pacientes = { ...window.DATA.sedes[code].pacientes, ...op.pacientes[code] };
-      window.DATA.sedes[code].consultas = { ...window.DATA.sedes[code].consultas, ...op.consultas[code] };
-    }
-    window.DATA.consultas_ranking = op.ranking;
-    window.DATA._liveOkOperativos = true;
-  } else {
-    window.DATA._liveOkOperativos = false;
-    window.DATA._liveErrorOperativos = String(operativosR.reason?.message || operativosR.reason);
-    console.warn("No se pudo cargar Atenciones/Pacientes/Consultas en vivo desde Sheets, usando último valor guardado:", operativosR.reason);
-  }
-
-  if (hubspotR.status === "fulfilled") {
-    window.DATA.hubspot = { ...window.DATA.hubspot, ...hubspotR.value };
-    window.DATA._liveOkHubspot = true;
-  } else {
-    window.DATA._liveOkHubspot = false;
-    window.DATA._liveErrorHubspot = String(hubspotR.reason?.message || hubspotR.reason);
-    console.warn("No se pudo cargar HubSpot en vivo desde Sheets, usando último valor guardado:", hubspotR.reason);
-  }
-
-  if (conceptosR.status === "fulfilled") {
-    const cs = conceptosR.value;
-    window.DATA.conceptos = cs.conceptos;
-    window.DATA.subrogacion = cs.subrogacion;
-    window.DATA.conceptosMensual = cs.conceptosMensual;
-    window.DATA.conceptosHier = cs.conceptosHier;
-    window.DATA.conceptosPorMedico = cs.conceptosPorMedico;
-    window.DATA._liveOkConceptos = true;
-  } else {
-    window.DATA._liveOkConceptos = false;
-    window.DATA._liveErrorConceptos = String(conceptosR.reason?.message || conceptosR.reason);
-    console.warn("No se pudo cargar Conceptos/Subrogación en vivo desde Sheets, usando último valor guardado:", conceptosR.reason);
-  }
-
-  if (doctoresR.status === "fulfilled") {
-    window.DATA.doctores = doctoresR.value;
-    window.DATA._liveOkDoctores = true;
-  } else {
-    window.DATA._liveOkDoctores = false;
-    window.DATA._liveErrorDoctores = String(doctoresR.reason?.message || doctoresR.reason);
-    console.warn("No se pudo cargar Por médico en vivo desde Sheets:", doctoresR.reason);
-  }
-
-  // Metas es opcional (hoja nueva, se llena poco a poco por sede/mes): si
-  // falla o todavía no tiene datos, la gráfica de Ingresos simplemente no
-  // dibuja la línea de meta — no rompe nada más del dashboard.
-  if (metasR.status === "fulfilled" && metasR.value._hasData) {
-    window.DATA.total.meta = metasR.value.total;
-    for (const code of SEDES) window.DATA.sedes[code].meta = metasR.value[code];
-  } else if (metasR.status === "rejected") {
-    console.warn("No se pudo cargar Metas en vivo desde Sheets (opcional, sin fallback):", metasR.reason);
-  }
-}
-
-/**
- * Recalcula TODO el tablero a partir de las filas ya cacheadas en _rawCache
- * (sin volver a llamar a Google Sheets) para el MES_VIGENTE actual. La usa
- * changeMesVigente() cuando el selector de mes (Ene-Dic) cambia — cada hoja
- * que no se haya podido cargar todavía simplemente se salta (deja lo que ya
- * había en window.DATA), igual que loadLiveDataIntoDashboard.
- */
-function rebuildAllFromCache() {
-  syncMesesHistYActual();
-  if (_rawCache["Base"]) {
-    const live = buildIngresosMetric(_rawCache["Base"], ANIO_VIGENTE);
-    window.DATA.total.ingresos = live.totalIngresos;
-    for (const code of Object.keys(live.sedesOut)) {
-      window.DATA.sedes[code].ingresos = live.sedesOut[code].ingresos;
-    }
-    window.DATA.servicios = live.serviciosOut;
-  }
-
-  if (_rawCache["Atenciones"] || _rawCache["Pacientes"] || _rawCache["Consultas"]) {
-    const ingresosProyPesos = getIngresosProyPesosPorSede();
-    const atenciones = buildMonthlyRealMetric(_rawCache["Atenciones"] || [], ANIO_VIGENTE, true, null, ingresosProyPesos);
-    const pacientes = buildMonthlyRealMetric(_rawCache["Pacientes"] || [], ANIO_VIGENTE, false, atenciones);
-    const consultas = buildConsultasMetric(_rawCache["Consultas"] || []);
-    window.DATA.total.atenciones = { ...window.DATA.total.atenciones, ...atenciones.total };
-    window.DATA.total.pacientes = { ...window.DATA.total.pacientes, ...pacientes.total };
-    window.DATA.total.consultas = { ...window.DATA.total.consultas, ...consultas.total };
-    for (const code of SEDES) {
-      window.DATA.sedes[code].atenciones = { ...window.DATA.sedes[code].atenciones, ...atenciones[code] };
-      window.DATA.sedes[code].pacientes = { ...window.DATA.sedes[code].pacientes, ...pacientes[code] };
-      window.DATA.sedes[code].consultas = { ...window.DATA.sedes[code].consultas, ...consultas[code] };
-    }
-  }
-  if (_rawCache["ConsultasRankingLive"]) {
-    window.DATA.consultas_ranking = buildRankingFromCache();
-  }
-
-  // HubSpot no tiene fuente 2025 (pipeline "Interesa2" solo se ha estado
-  // subiendo para 2026) — con ANIO_VIGENTE=2025 se deja todo en 0 en vez de
-  // mostrar los números de 2026 disfrazados de 2025 (ver nota junto a
-  // ANIO_VIGENTE arriba; instrucción explícita: "Hubspot no hay información,
-  // dejalo en 0").
-  if (ANIO_VIGENTE !== 2026) {
-    const vacio = { hist: [], actual: 0 };
-    window.DATA.hubspot = {
-      ...window.DATA.hubspot,
-      leads: { ...vacio }, citas: { ...vacio }, conversion_pct: { ...vacio },
-      conversion_por_sede: {}, cohortes: [],
-      _sinDatosEsteAnio: true,
-    };
-  } else if (_rawCache["Hubspot"]) {
-    const base = buildHubspotMetric(_rawCache["Hubspot"]);
-    window.DATA.hubspot = {
-      ...window.DATA.hubspot, ...base,
-      conversion_por_sede: _rawCache["HubspotSede"] ? buildHubspotSedeMetric(_rawCache["HubspotSede"]) : (window.DATA.hubspot || {}).conversion_por_sede,
-      cohortes: _rawCache["HubspotCohortes"] ? buildHubspotCohortes(_rawCache["HubspotCohortes"]) : (window.DATA.hubspot || {}).cohortes,
-      _sinDatosEsteAnio: false,
-    };
-  }
-
-  if (_rawCache["ConceptosMensual"]) {
-    const conceptosMensual = buildConceptosMensualMetric(_rawCache["ConceptosMensual"]);
-    const conceptosHier = _rawCache["ConceptosHier"] ? buildConceptosHierMetric(_rawCache["ConceptosHier"]) : window.DATA.conceptosHier;
-    window.DATA.conceptosMensual = conceptosMensual;
-    window.DATA.conceptosHier = conceptosHier;
-    window.DATA.conceptos = computeConceptosView(conceptosMensual, conceptosHier);
-  }
-  if (_rawCache["SubrogacionPacientes"]) {
-    window.DATA.subrogacion = buildSubrogacionMetric(_rawCache["SubrogacionPacientes"]);
-  }
-  if (_rawCache["ConceptosPorMedico"]) {
-    window.DATA.conceptosPorMedico = buildConceptosPorMedicoMetric(_rawCache["ConceptosPorMedico"]);
-  }
-  if (_rawCache["PorMedico"]) {
-    window.DATA.doctores = buildDoctoresMetric(_rawCache["PorMedico"]);
-  }
-  if (_rawCache["Metas"]) {
-    const metas = buildMonthlyMetaMetric(_rawCache["Metas"]);
-    if (metas._hasData) {
-      window.DATA.total.meta = metas.total;
-      for (const code of SEDES) window.DATA.sedes[code].meta = metas[code];
-    }
-  }
-}
-
-/**
- * Punto de entrada del selector de mes (Ene-Dic) en index.html. Cambia
- * MES_VIGENTE, recalcula todo desde la cache y vuelve a dibujar el tablero.
- * Ningún panel cuya hoja fuente todavía no tenga ese mes cargado va a
- * tronar — simplemente muestra 0 / "sin venta" para ese mes, como cualquier
- * otro mes sin datos.
- */
-function changeMesVigente(nuevoMes) {
-  MES_VIGENTE = nuevoMes;
-  rebuildAllFromCache();
-  if (typeof renderAll === "function") renderAll();
-}
-window.changeMesVigente = changeMesVigente;
-window.getMesVigente = () => MES_VIGENTE;
-window.MESES_12 = MESES_12;
-
-/**
- * Punto de entrada del selector de año (2025/2026) GLOBAL, en la barra de
- * filtros de arriba (junto a Sede/Periodo/Mes Vigente). Afecta TODO el
- * tablero (ver nota junto a ANIO_VIGENTE arriba) — recalcula desde
- * _rawCache (todas las hojas relevantes ya se piden en ambos años desde el
- * primer load, no vuelve a pedirle nada a Sheets) y vuelve a dibujar todo el
- * tablero, igual que changeMesVigente.
- */
-function changeAnioVigente(nuevoAnio) {
-  ANIO_VIGENTE = Number(nuevoAnio);
-  rebuildAllFromCache();
-  if (typeof renderAll === "function") renderAll();
-}
-window.changeAnioVigente = changeAnioVigente;
-window.getAnioVigente = () => ANIO_VIGENTE;
-
-/**
- * Las gráficas "Evolutivo con proyección" (buildSeries() en index.html)
- * arman sus labels con [...D.meses_hist, D.mes_actual, "Proy."] — esos dos
- * campos venían fijos en data.js (Ene-Jul / "Ago") y nunca se recalculaban
- * al cambiar MES_VIGENTE, por lo que al pasar a septiembre las labels (9)
- * dejaban de cuadrar con los values (10) y Chart.js recortaba la última
- * barra: la etiqueta "Proy." terminaba mostrando el valor REAL del mes en
- * vez de la proyección. Se recalculan aquí para que labels y values de
- * buildSeries() siempre queden alineados, sin importar el mes vigente.
- */
-function syncMesesHistYActual() {
-  window.DATA.meses_hist = MESES_12.slice(0, MES_VIGENTE - 1);
-  window.DATA.mes_actual = MESES_12[MES_VIGENTE - 1];
-}
-window.syncMesesHistYActual = syncMesesHistYActual;
