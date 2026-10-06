@@ -128,6 +128,8 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // Real. Ver el bloque "RECALIBRACIÓN 5-oct-2026" junto a SHARE_CURVE_* más
 // abajo: la ventana de 8 meses cerrados se corre a Feb-Sep (sale enero, entra
 // septiembre) y se regeneraron curvas y ratios conservadores.
+// 6-oct-2026 (carga en 1 llamada): el Apps Script ahora acepta ?sheets=A,B,... y devuelve
+// todas las hojas en una sola ejecución (ver cargarLote()); ?sheet=NOMBRE sigue de respaldo.
 // ACTUALIZADO 6-oct-2026 (corte del 5-oct): corte sube de 4 a 5 con
 // Cargos_y_Facturas_41.xlsx + Consultas_21.xlsx + Cargos_y_consultas_2025_1.xlsx
 // (Real MTD de 5 días; el lunes 5-oct fue un día fuerte, $694K). Se actualizaron
@@ -609,8 +611,56 @@ function _refrescarEnSegundoPlano(nombre, rowsViejas) {
   });
 }
 
-// Descarga directa de red (con timeout + 1 reintento). Lógica original.
+// ============================================================================
+// CARGA EN 1 LLAMADA (6-oct-2026)
+// ============================================================================
+// Causa raíz de "no carga": el tablero lanzaba ~15 peticiones simultáneas a
+// Apps Script (una por hoja) y Google las encola / rechaza ("No se pudo abrir el
+// archivo en este momento"). Se agregó al Apps Script el modo ?sheets=A,B,C que
+// devuelve TODAS las hojas en UNA sola ejecución ({sheets:{A:{values},...}}):
+// medido el 6-oct, 15 hojas (1.3 MB) en ~7 s desde github.io. El modo anterior
+// ?sheet=NOMBRE sigue existiendo y se usa de respaldo si el lote falla.
+const HOJAS_LOTE = ["Base", "ConceptosMensual", "Atenciones", "Pacientes", "Consultas",
+  "ConsultasRankingLive", "ConsultasRankingLive2025", "Hubspot", "HubspotSedeMensual",
+  "HubspotCohortes", "ConceptosHier", "SubrogacionPacientes", "ConceptosPorMedico",
+  "PorMedico", "Metas"];
+const TIMEOUT_LOTE_MS = 60000;
+let _lotePromesa = null;
+// Devuelve { hoja: filas } o null si el lote falló (nunca lanza). Se pide UNA vez.
+function cargarLote() {
+  if (_lotePromesa) return _lotePromesa;
+  _lotePromesa = (async () => {
+    for (let intento = 1; intento <= 2; intento++) {
+      try {
+        const res = await fetchConTimeout(`${WEB_APP_URL}?sheets=${HOJAS_LOTE.join(",")}`, TIMEOUT_LOTE_MS);
+        if (!res.ok) throw new Error(`Apps Script HTTP ${res.status} (lote)`);
+        const json = await res.json();
+        if (!json || !json.sheets) throw new Error("Apps Script no devolvió 'sheets' (lote)");
+        const out = {};
+        for (const n of Object.keys(json.sheets)) {
+          const h = json.sheets[n];
+          if (h && Array.isArray(h.values)) out[n] = h.values; // hojas con error se piden sueltas
+        }
+        return out;
+      } catch (e) {
+        console.warn("Carga en lote falló (intento " + intento + "):", e);
+        if (intento < 2) await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+    return null;
+  })();
+  return _lotePromesa;
+}
+
+// Descarga directa de red: primero del lote; si no está, hoja suelta (con timeout + 1 reintento).
 async function fetchSheetJsonRed(sheetName, intento = 1) {
+  if (intento === 1 && HOJAS_LOTE.indexOf(sheetName) !== -1) {
+    const lote = await cargarLote();
+    if (lote && lote[sheetName]) {
+      _rawCache[sheetName] = lote[sheetName];
+      return lote[sheetName];
+    }
+  }
   try {
     const res = await fetchConTimeout(`${WEB_APP_URL}?sheet=${encodeURIComponent(sheetName)}`, TIMEOUT_SHEET_FETCH_MS);
     if (!res.ok) throw new Error(`Apps Script HTTP ${res.status} (${sheetName})`);
