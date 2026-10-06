@@ -128,7 +128,14 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // Real. Ver el bloque "RECALIBRACIÓN 5-oct-2026" junto a SHARE_CURVE_* más
 // abajo: la ventana de 8 meses cerrados se corre a Feb-Sep (sale enero, entra
 // septiembre) y se regeneraron curvas y ratios conservadores.
-let CORTE_REAL_DIA = 4;
+// ACTUALIZADO 6-oct-2026 (corte del 5-oct): corte sube de 4 a 5 con
+// Cargos_y_Facturas_41.xlsx + Consultas_21.xlsx + Cargos_y_consultas_2025_1.xlsx
+// (Real MTD de 5 días; el lunes 5-oct fue un día fuerte, $694K). Se actualizaron
+// en el Sheet Base (Real/Proy central), Atenciones, Pacientes, Consultas,
+// PorMedico, ConceptosMensual/PorMedico/Hier, SubrogacionPacientes y las 3 hojas
+// de HubSpot (Interesa2, 1-5 oct). Las curvas SHARE_CURVE_* y los ratios no
+// cambian: solo se mueve el día de corte.
+let CORTE_REAL_DIA = 5;
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 
@@ -515,7 +522,95 @@ async function fetchConTimeout(url, timeoutMs) {
   }
 }
 
-async function fetchSheetJson(sheetName, intento = 1) {
+// ============================================================================
+// CACHÉ LOCAL + REFRESCO EN SEGUNDO PLANO (stale-while-revalidate) — 6-oct-2026
+// ============================================================================
+// Reporte de Marite: "demora mucho en cargar el link". Diagnóstico (medido el
+// 6-oct): los 4 archivos de GitHub Pages cargan en ~20 ms; lo lento son las ~15
+// consultas simultáneas al Apps Script. Cada llamada tarda 3-25 s sin importar
+// el tamaño (una hoja de 200 bytes como "Hubspot" tardó 22 s mientras
+// "ConceptosPorMedico", de ~500 KB, tardó 3 s): es cola/arranque en frío de
+// Apps Script, y con timeout de 45 s + 1 reintento el peor caso pasa de 1 min.
+//
+// Ahora cada hoja que se descarga bien se guarda en localStorage del navegador.
+// En la siguiente visita el tablero PINTA AL INSTANTE con esa copia y, en
+// paralelo, pide los datos frescos a Apps Script; cuando llegan, si algo cambió,
+// se recalcula y se vuelve a dibujar solo (rebuildAllFromCache + renderAll). La
+// PRIMERA visita en cada navegador (o con la caché borrada) sigue siendo lenta.
+// Para saltarse la caché: agrega ?fresh=1 al link. No cambia ninguna fórmula.
+const CACHE_PREFIJO = "fi_sheet_v1:";
+const CACHE_MAX_EDAD_MS = 14 * 24 * 3600 * 1000; // más viejo que 14 días = se ignora
+const _usarCache = !/[?&]fresh=1/.test((typeof location !== "undefined" && location.search) || "");
+let _refrescosPendientes = 0, _huboCambios = false, _refrescosFallidos = 0, _timerRefresco = null;
+const _refrescando = {}; // hoja -> true mientras su refresco en segundo plano está en curso (evita pedirla 2 veces)
+
+function cacheLeer(nombre) {
+  try {
+    const raw = localStorage.getItem(CACHE_PREFIJO + nombre);
+    if (!raw) return null;
+    const o = JSON.parse(raw);
+    if (!o || !Array.isArray(o.rows) || !o.t || Date.now() - o.t > CACHE_MAX_EDAD_MS) return null;
+    return o;
+  } catch (e) { return null; }
+}
+function cacheGuardar(nombre, rows) {
+  try { localStorage.setItem(CACHE_PREFIJO + nombre, JSON.stringify({ t: Date.now(), rows })); }
+  catch (e) { /* cuota llena / modo privado: simplemente no se guarda */ }
+}
+function _fmtFechaCache(t) {
+  try { return new Date(t).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); }
+  catch (e) { return ""; }
+}
+function _bannerCache(tipo, texto) {
+  const b = typeof document !== "undefined" && document.getElementById && document.getElementById("live-status-banner");
+  if (!b) return;
+  b.style.display = "block";
+  const col = { ok: ["#ECFDF5", "#065F46"], warn: ["#FFFBEB", "#92400E"], info: ["#EFF6FF", "#1E3A8A"] }[tipo];
+  b.style.background = col[0]; b.style.color = col[1];
+  b.textContent = texto;
+  if (tipo === "ok") setTimeout(() => { b.style.display = "none"; }, 4000);
+}
+function _finalizarRefresco() {
+  clearTimeout(_timerRefresco);
+  // Pequeña espera: los refrescos del segundo bloque de hojas arrancan unos ms
+  // después de los del primero; así no se "termina" antes de tiempo.
+  _timerRefresco = setTimeout(() => {
+    if (_refrescosPendientes > 0) return;
+    if (_huboCambios) {
+      _huboCambios = false;
+      try {
+        rebuildAllFromCache();
+        if (typeof renderAll === "function") renderAll();
+      } catch (e) { console.warn("No se pudo redibujar tras el refresco en segundo plano:", e); }
+      _bannerCache("ok", "✓ Datos actualizados desde Google Sheets (había cambios desde la última visita).");
+    } else if (_refrescosFallidos > 0) {
+      _bannerCache("warn", "⚠ No se pudo actualizar desde Google Sheets (" + _refrescosFallidos + " hoja(s)); se muestran los datos guardados" + (window.DATA._cacheFecha ? " del " + window.DATA._cacheFecha : "") + " — recarga en unos minutos.");
+    } else {
+      _bannerCache("ok", "✓ Datos al día con Google Sheets.");
+    }
+  }, 2500);
+}
+function _refrescarEnSegundoPlano(nombre, rowsViejas) {
+  if (_refrescando[nombre]) return;
+  _refrescando[nombre] = true;
+  _refrescosPendientes++;
+  clearTimeout(_timerRefresco);
+  fetchSheetJsonRed(nombre).then(rows => {
+    if (JSON.stringify(rows) !== JSON.stringify(rowsViejas)) _huboCambios = true;
+    cacheGuardar(nombre, rows); // fetchSheetJsonRed ya dejó rows frescas en _rawCache
+  }).catch(e => {
+    _refrescosFallidos++;
+    _rawCache[nombre] = rowsViejas; // se queda con la copia guardada
+    console.warn("Refresco en segundo plano falló (" + nombre + "):", e);
+  }).finally(() => {
+    _refrescando[nombre] = false;
+    _refrescosPendientes--;
+    if (_refrescosPendientes === 0) _finalizarRefresco();
+  });
+}
+
+// Descarga directa de red (con timeout + 1 reintento). Lógica original.
+async function fetchSheetJsonRed(sheetName, intento = 1) {
   try {
     const res = await fetchConTimeout(`${WEB_APP_URL}?sheet=${encodeURIComponent(sheetName)}`, TIMEOUT_SHEET_FETCH_MS);
     if (!res.ok) throw new Error(`Apps Script HTTP ${res.status} (${sheetName})`);
@@ -530,10 +625,30 @@ async function fetchSheetJson(sheetName, intento = 1) {
     // la concurrencia de abrir el tablero (ver nota arriba).
     if (intento < 2) {
       await new Promise(r => setTimeout(r, 1500));
-      return fetchSheetJson(sheetName, intento + 1);
+      return fetchSheetJsonRed(sheetName, intento + 1);
     }
     throw e;
   }
+}
+
+async function fetchSheetJson(sheetName) {
+  if (_usarCache) {
+    const c = cacheLeer(sheetName);
+    if (c) {
+      _rawCache[sheetName] = c.rows;
+      window.DATA = window.DATA || {};
+      window.DATA._desdeCache = true;
+      if (!window.DATA._cacheT || c.t < window.DATA._cacheT) {
+        window.DATA._cacheT = c.t;
+        window.DATA._cacheFecha = _fmtFechaCache(c.t);
+      }
+      _refrescarEnSegundoPlano(sheetName, c.rows);
+      return c.rows;
+    }
+  }
+  const rows = await fetchSheetJsonRed(sheetName);
+  cacheGuardar(sheetName, rows);
+  return rows;
 }
 
 const SEDES = ["CDMX", "GDL", "MTP"];
