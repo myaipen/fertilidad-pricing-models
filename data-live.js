@@ -1230,6 +1230,7 @@ const CONSULTA_AGRUPACION = {
   "(Ex) Consulta primera vez": "(Ex) Consulta primera vez",
   "Check up Ginecologico": "Check up Ginecologico",
   "Check-up SOP": "Check-up SOP",
+  "Check-up SOMP": "Check-up SOP", // Marite (12-oct-2026): SOMP y SOP se unen en un solo grupo
   "Consulta de Primera Vez IP's": "Consulta de Primera Vez IP's",
   "Consulta ginecológica": "Consulta ginecológica",
   "Consulta médica": "Consulta primera vez",
@@ -1244,6 +1245,59 @@ const CONSULTA_AGRUPACION = {
   "Fertility Check up Parejas": "Fertility Check up Parejas",
   "Fertility Check up Virtual": "Fertility Check up Virtual",
 };
+
+// Octubre 2026 del ranking de consultas desde vRepro (corte 11-oct-2026):
+// Terminadas 1-11 oct + citas Citado/Confirmada 12-31 oct, grupo Primera Vez
+// (Anulada/No asiste excluidas). Reemplaza la columna de octubre (mes 10) de
+// la hoja ConsultasRankingLive, que es una tabla dinamica sobre RAW_* y no se
+// puede sobreescribir. Llave: "Delegacion|Concepto".
+const CONSULTAS_VREPRO_OCT_2026 = {
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 1,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online": 18,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez online": 4,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Mujeres": 21,
+ "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 24,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez": 22,
+ "FERTILIDAD INTEGRAL Guadalajara|Check up Ginecologico": 17,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez": 39,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 1,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Parejas": 10,
+ "FERTILIDAD INTEGRAL Ciudad de México|Check up Integral": 3,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez gratis": 1,
+ "FERTILIDAD INTEGRAL Ciudad de México|Check-up SOMP": 3,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 3,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez": 12,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 4,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Mujeres": 10,
+ "FERTILIDAD INTEGRAL Guadalajara|Check up Integral": 6,
+ "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 1,
+ "FERTILIDAD INTEGRAL Metepec|Check-up SOMP": 2,
+ "FERTILIDAD INTEGRAL Ciudad de México|Check up Ginecologico": 3,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Parejas": 6
+};
+function aplicarOverrideVRepro(rows) {
+  if (ANIO_VIGENTE !== 2026) return rows;
+  const out = [];
+  const vistos = new Set();
+  for (const r of (rows || [])) {
+    const code = DELEGACION_CODE[r[0]];
+    if (!code || !r[1]) { out.push(r); continue; }
+    const k = r[0] + "|" + r[1];
+    const nr = r.slice();
+    while (nr.length < 14) nr.push("");
+    nr[11] = CONSULTAS_VREPRO_OCT_2026[k] || "";
+    vistos.add(k);
+    out.push(nr);
+  }
+  for (const k of Object.keys(CONSULTAS_VREPRO_OCT_2026)) {
+    if (vistos.has(k)) continue;
+    const [d, c] = k.split("|");
+    const nr = [d, c]; while (nr.length < 14) nr.push("");
+    nr[11] = CONSULTAS_VREPRO_OCT_2026[k];
+    out.push(nr);
+  }
+  return out;
+}
 function agruparConsulta(conceptoRaw) {
   return CONSULTA_AGRUPACION[conceptoRaw] || conceptoRaw;
 }
@@ -1322,7 +1376,7 @@ function buildConsultasRankingLive(rowsActual, rowsLY, mesVigente) {
 // tanto fetchLiveOperativos() (primera carga) como rebuildAllFromCache()
 // (cambio de selector de mes o de año) para no duplicar esta lógica.
 function buildRankingFromCache() {
-  const rows2026 = _rawCache["ConsultasRankingLive"] || [];
+  const rows2026 = aplicarOverrideVRepro(_rawCache["ConsultasRankingLive"] || []);
   const rows2025 = _rawCache["ConsultasRankingLive2025"] || [];
   if (ANIO_VIGENTE === 2025) return buildConsultasRankingLive(rows2025, null, MES_VIGENTE);
   return buildConsultasRankingLive(rows2026, rows2025, MES_VIGENTE);
