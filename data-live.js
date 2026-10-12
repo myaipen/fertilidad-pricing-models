@@ -137,7 +137,10 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // PorMedico, ConceptosMensual/PorMedico/Hier, SubrogacionPacientes y las 3 hojas
 // de HubSpot (Interesa2, 1-5 oct). Las curvas SHARE_CURVE_* y los ratios no
 // cambian: solo se mueve el día de corte.
-let CORTE_REAL_DIA = 5;
+// ACTUALIZADO 12-oct-2026 (PRUEBA vRepro): corte sube de 5 a 11 con cargos y citas del
+// 1 al 11 oct leídos directo de vRepro (1-5 oct validados contra los Excel). Real MTD de
+// $4.63M; Proyectado central $13.59M (misma metodología, solo cambia el día de corte).
+let CORTE_REAL_DIA = 11;
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 
