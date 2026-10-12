@@ -1231,7 +1231,9 @@ const CONSULTA_AGRUPACION = {
   "Check up Ginecologico": "Check up Ginecologico",
   "Check-up SOP": "Check-up SOP",
   "Check-up SOMP": "Check-up SOP", // Marite (12-oct-2026): SOMP y SOP se unen en un solo grupo
-  "Consulta de Primera Vez IP's": "Consulta de Primera Vez IP's",
+  // Marite (12-oct-2026): Primera Vez IP's (padres de intención) es Subrogación,
+  // no Consulta -> se excluye del ranking de consultas (null = omitir).
+  "Consulta de Primera Vez IP's": null,
   "Consulta ginecológica": "Consulta ginecológica",
   "Consulta médica": "Consulta primera vez",
   "Consulta Obstetricia": "Consulta Obstetricia",
@@ -1299,7 +1301,8 @@ function aplicarOverrideVRepro(rows) {
   return out;
 }
 function agruparConsulta(conceptoRaw) {
-  return CONSULTA_AGRUPACION[conceptoRaw] || conceptoRaw;
+  if (Object.prototype.hasOwnProperty.call(CONSULTA_AGRUPACION, conceptoRaw)) return CONSULTA_AGRUPACION[conceptoRaw];
+  return conceptoRaw;
 }
 function parseConsultasRankingRows(rows) {
   const out = { CDMX: {}, GDL: {}, MTP: {} };
@@ -1308,6 +1311,7 @@ function parseConsultasRankingRows(rows) {
     const conceptoRaw = r[1];
     if (!code || !conceptoRaw) continue;
     const concepto = agruparConsulta(conceptoRaw);
+    if (!concepto) continue;
     const meses = [];
     for (let m = 1; m <= 12; m++) meses.push(num(r[m + 1]));
     if (out[code][concepto]) {
