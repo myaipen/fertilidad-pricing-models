@@ -8,7 +8,7 @@ CDMX,(EX) EmbryoScope Kit,6,10344.84,3,3
 CDMX,(EX) EmbryoScope Kit,7,6896.56,2,2
 CDMX,(EX) EmbryoScope Kit,8,6896.55,2,2
 CDMX,(EX) EmbryoScope Kit,9,34482.75,9,9
-CDMX,(EX) EmbryoScope Kit,10,0.0,1,1
+CDMX,(EX) EmbryoScope Kit,10,6896.55,2,2
 CDMX,(EX) EmbryoScope Kit,11,0.0,0,0
 CDMX,(EX) EmbryoScope Kit,12,0.0,0,0
 CDMX,(EX) Fertilización PICSI / Microfluidos,1,9051.72,3,3
@@ -272,7 +272,7 @@ CDMX,ASPIRINA PROTEC 100MG 28 TAB,6,14075.6,59,59
 CDMX,ASPIRINA PROTEC 100MG 28 TAB,7,15091.2,62,63
 CDMX,ASPIRINA PROTEC 100MG 28 TAB,8,11731.2,49,49
 CDMX,ASPIRINA PROTEC 100MG 28 TAB,9,12520.0,50,50
-CDMX,ASPIRINA PROTEC 100MG 28 TAB,10,5720.0,22,22
+CDMX,ASPIRINA PROTEC 100MG 28 TAB,10,7020.0,27,27
 CDMX,ASPIRINA PROTEC 100MG 28 TAB,11,0.0,0,0
 CDMX,ASPIRINA PROTEC 100MG 28 TAB,12,0.0,0,0
 CDMX,AUN NO SUCEDE EL TRATAMIENTO,1,0.0,0,0
@@ -452,7 +452,7 @@ CDMX,Almacenamiento de gametos 1 año,6,249223.95,50,50
 CDMX,Almacenamiento de gametos 1 año,7,413792.89,75,78
 CDMX,Almacenamiento de gametos 1 año,8,432973.86,86,88
 CDMX,Almacenamiento de gametos 1 año,9,711637.59,122,123
-CDMX,Almacenamiento de gametos 1 año,10,681034.19,111,109
+CDMX,Almacenamiento de gametos 1 año,10,689654.88,112,111
 CDMX,Almacenamiento de gametos 1 año,11,0.0,0,0
 CDMX,Almacenamiento de gametos 1 año,12,0.0,0,0
 CDMX,Almacenamiento de gametos 5 años,1,0.0,0,0
@@ -464,7 +464,7 @@ CDMX,Almacenamiento de gametos 5 años,6,374999.89,27,27
 CDMX,Almacenamiento de gametos 5 años,7,310344.78,21,21
 CDMX,Almacenamiento de gametos 5 años,8,444396.47,36,37
 CDMX,Almacenamiento de gametos 5 años,9,274827.59,21,21
-CDMX,Almacenamiento de gametos 5 años,10,67931.04,4,4
+CDMX,Almacenamiento de gametos 5 años,10,85172.42,5,5
 CDMX,Almacenamiento de gametos 5 años,11,0.0,0,0
 CDMX,Almacenamiento de gametos 5 años,12,0.0,0,0
 CDMX,Androstenediona,1,0.0,0,0
@@ -512,7 +512,7 @@ CDMX,Antimulleriana AMH (Nanogramos),6,11965.53,83,83
 CDMX,Antimulleriana AMH (Nanogramos),7,11965.53,68,68
 CDMX,Antimulleriana AMH (Nanogramos),8,22413.82,72,72
 CDMX,Antimulleriana AMH (Nanogramos),9,17241.4,63,63
-CDMX,Antimulleriana AMH (Nanogramos),10,8517.25,21,21
+CDMX,Antimulleriana AMH (Nanogramos),10,8517.25,23,23
 CDMX,Antimulleriana AMH (Nanogramos),11,0.0,0,0
 CDMX,Antimulleriana AMH (Nanogramos),12,0.0,0,0
 CDMX,Antitrombina III,1,0.0,0,0
@@ -800,7 +800,7 @@ CDMX,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),6,52884.0,37,52
 CDMX,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),7,64071.0,38,64
 CDMX,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),8,71190.0,46,70
 CDMX,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),9,88013.8,43,84
-CDMX,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),10,33170.0,20,31
+CDMX,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),10,44940.0,26,42
 CDMX,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),11,0.0,0,0
 CDMX,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),12,0.0,0,0
 CDMX,Capacitación espermática,1,0.0,0,0
@@ -944,7 +944,7 @@ CDMX,Cetrotide 0.25mg,6,203339.2,71,156
 CDMX,Cetrotide 0.25mg,7,244300.96,73,184
 CDMX,Cetrotide 0.25mg,8,240640.32,89,188
 CDMX,Cetrotide 0.25mg,9,216016.8,71,160
-CDMX,Cetrotide 0.25mg,10,67116.0,22,48
+CDMX,Cetrotide 0.25mg,10,75516.0,24,54
 CDMX,Cetrotide 0.25mg,11,0.0,0,0
 CDMX,Cetrotide 0.25mg,12,0.0,0,0
 CDMX,Check up Fertilidad Hombres,1,0.0,0,0
@@ -1004,7 +1004,7 @@ CDMX,Check up Fertilidad Mujeres,6,104965.43,58,58
 CDMX,Check up Fertilidad Mujeres,7,67991.32,37,37
 CDMX,Check up Fertilidad Mujeres,8,60575.81,32,32
 CDMX,Check up Fertilidad Mujeres,9,78894.77,46,46
-CDMX,Check up Fertilidad Mujeres,10,21948.26,12,12
+CDMX,Check up Fertilidad Mujeres,10,27637.92,15,15
 CDMX,Check up Fertilidad Mujeres,11,0.0,0,0
 CDMX,Check up Fertilidad Mujeres,12,0.0,0,0
 CDMX,Check up Fertilidad Parejas,1,0.0,0,0
@@ -1124,7 +1124,7 @@ CDMX,Check up ginecologico,6,16810.34,12,12
 CDMX,Check up ginecologico,7,19396.54,13,13
 CDMX,Check up ginecologico,8,16211.2,12,12
 CDMX,Check up ginecologico,9,11034.48,11,11
-CDMX,Check up ginecologico,10,1724.14,1,1
+CDMX,Check up ginecologico,10,1724.14,2,2
 CDMX,Check up ginecologico,11,0.0,0,0
 CDMX,Check up ginecologico,12,0.0,0,0
 CDMX,Check up ginecologico (sin papanicolao) CDMX,1,0.0,0,0
@@ -1220,7 +1220,7 @@ CDMX,Cita primera vez IPS,6,3448.28,4,4
 CDMX,Cita primera vez IPS,7,2586.21,3,3
 CDMX,Cita primera vez IPS,8,8620.7,12,12
 CDMX,Cita primera vez IPS,9,6034.49,8,8
-CDMX,Cita primera vez IPS,10,3448.28,5,5
+CDMX,Cita primera vez IPS,10,5172.42,7,7
 CDMX,Cita primera vez IPS,11,0.0,0,0
 CDMX,Cita primera vez IPS,12,0.0,0,0
 CDMX,Citomegalovirus IgG,1,0.0,0,0
@@ -1352,7 +1352,7 @@ CDMX,Congelamiento de óvulos CDMX,6,993318.95,15,15
 CDMX,Congelamiento de óvulos CDMX,7,765301.73,12,12
 CDMX,Congelamiento de óvulos CDMX,8,555818.97,8,8
 CDMX,Congelamiento de óvulos CDMX,9,1286853.45,26,26
-CDMX,Congelamiento de óvulos CDMX,10,335775.86,6,6
+CDMX,Congelamiento de óvulos CDMX,10,417672.41,7,7
 CDMX,Congelamiento de óvulos CDMX,11,0.0,0,0
 CDMX,Congelamiento de óvulos CDMX,12,0.0,0,0
 CDMX,Congelamiento de óvulos CDMX Promoción Marzo,1,0.0,0,0
@@ -1448,7 +1448,7 @@ CDMX,Consulta de primera vez,6,52199.06,53,51
 CDMX,Consulta de primera vez,7,43319.32,38,38
 CDMX,Consulta de primera vez,8,80775.77,91,91
 CDMX,Consulta de primera vez,9,104840.56,154,154
-CDMX,Consulta de primera vez,10,9051.72,12,12
+CDMX,Consulta de primera vez,10,9051.72,13,13
 CDMX,Consulta de primera vez,11,0.0,0,0
 CDMX,Consulta de primera vez,12,0.0,0,0
 CDMX,Consulta de primera vez + HAM,1,0.0,0,0
@@ -1676,7 +1676,7 @@ CDMX,Cultivo de Exudado Vaginal,6,4482.72,8,8
 CDMX,Cultivo de Exudado Vaginal,7,5603.4,10,10
 CDMX,Cultivo de Exudado Vaginal,8,2801.7,5,5
 CDMX,Cultivo de Exudado Vaginal,9,5603.4,13,13
-CDMX,Cultivo de Exudado Vaginal,10,2801.7,5,5
+CDMX,Cultivo de Exudado Vaginal,10,3922.39,7,7
 CDMX,Cultivo de Exudado Vaginal,11,0.0,0,0
 CDMX,Cultivo de Exudado Vaginal,12,0.0,0,0
 CDMX,Cultivo de orina,1,0.0,0,0
@@ -1940,7 +1940,7 @@ CDMX,Donación esperma - LAFER - Nacional,6,12931.03,1,1
 CDMX,Donación esperma - LAFER - Nacional,7,0.0,0,0
 CDMX,Donación esperma - LAFER - Nacional,8,0.0,0,0
 CDMX,Donación esperma - LAFER - Nacional,9,59482.75,4,4
-CDMX,Donación esperma - LAFER - Nacional,10,0.0,0,0
+CDMX,Donación esperma - LAFER - Nacional,10,15517.24,1,1
 CDMX,Donación esperma - LAFER - Nacional,11,0.0,0,0
 CDMX,Donación esperma - LAFER - Nacional,12,0.0,0,0
 CDMX,Donadora de ovulos categoria 3,1,0.0,0,0
@@ -2024,7 +2024,7 @@ CDMX,EmbryoScope Kit Interno,6,25862.07,3,3
 CDMX,EmbryoScope Kit Interno,7,36637.93,5,5
 CDMX,EmbryoScope Kit Interno,8,17241.38,4,4
 CDMX,EmbryoScope Kit Interno,9,0.0,1,1
-CDMX,EmbryoScope Kit Interno,10,17241.38,2,2
+CDMX,EmbryoScope Kit Interno,10,25862.07,3,3
 CDMX,EmbryoScope Kit Interno,11,0.0,0,0
 CDMX,EmbryoScope Kit Interno,12,0.0,0,0
 CDMX,Endometrio,1,0.0,0,0
@@ -2108,7 +2108,7 @@ CDMX,Essentials Surrogacy Package CDMX,6,0.0,0,0
 CDMX,Essentials Surrogacy Package CDMX,7,0.0,0,0
 CDMX,Essentials Surrogacy Package CDMX,8,94655.17,1,1
 CDMX,Essentials Surrogacy Package CDMX,9,105172.41,1,1
-CDMX,Essentials Surrogacy Package CDMX,10,0.0,0,0
+CDMX,Essentials Surrogacy Package CDMX,10,105172.41,1,1
 CDMX,Essentials Surrogacy Package CDMX,11,0.0,0,0
 CDMX,Essentials Surrogacy Package CDMX,12,0.0,0,0
 CDMX,Estradiol,1,4109.83,7,9
@@ -2372,7 +2372,7 @@ CDMX,Fragmentación del ADN espermático,6,59722.48,18,18
 CDMX,Fragmentación del ADN espermático,7,78844.92,23,23
 CDMX,Fragmentación del ADN espermático,8,61120.76,18,18
 CDMX,Fragmentación del ADN espermático,9,92327.7,29,29
-CDMX,Fragmentación del ADN espermático,10,17241.4,5,5
+CDMX,Fragmentación del ADN espermático,10,20689.68,6,6
 CDMX,Fragmentación del ADN espermático,11,0.0,0,0
 CDMX,Fragmentación del ADN espermático,12,0.0,0,0
 CDMX,Fragmentación del ADN espermático - CDMX,1,76551.84,24,24
@@ -2396,7 +2396,7 @@ CDMX,Fresh egg donor Surrogacy Package,6,0.0,0,0
 CDMX,Fresh egg donor Surrogacy Package,7,0.0,0,0
 CDMX,Fresh egg donor Surrogacy Package,8,0.0,0,0
 CDMX,Fresh egg donor Surrogacy Package,9,423146.55,1,1
-CDMX,Fresh egg donor Surrogacy Package,10,0.0,0,0
+CDMX,Fresh egg donor Surrogacy Package,10,568965.52,1,1
 CDMX,Fresh egg donor Surrogacy Package,11,0.0,0,0
 CDMX,Fresh egg donor Surrogacy Package,12,0.0,0,0
 CDMX,GONAL-F PEN2.0 - 300IU,1,0.0,0,0
@@ -2420,7 +2420,7 @@ CDMX,GONAL-F PEN2.0 - 900IU,6,489762.0,29,36
 CDMX,GONAL-F PEN2.0 - 900IU,7,432705.0,25,32
 CDMX,GONAL-F PEN2.0 - 900IU,8,529893.0,31,39
 CDMX,GONAL-F PEN2.0 - 900IU,9,426250.0,27,31
-CDMX,GONAL-F PEN2.0 - 900IU,10,128970.0,7,9
+CDMX,GONAL-F PEN2.0 - 900IU,10,157630.0,9,11
 CDMX,GONAL-F PEN2.0 - 900IU,11,0.0,0,0
 CDMX,GONAL-F PEN2.0 - 900IU,12,0.0,0,0
 CDMX,Globulina Transportadora de Hormonas sexuales ( SHBG),1,0.0,0,0
@@ -2444,7 +2444,7 @@ CDMX,Glucosa,6,1327.62,7,7
 CDMX,Glucosa,7,2655.24,14,14
 CDMX,Glucosa,8,1422.45,8,8
 CDMX,Glucosa,9,1896.6,10,10
-CDMX,Glucosa,10,758.64,4,4
+CDMX,Glucosa,10,948.3,5,5
 CDMX,Glucosa,11,0.0,0,0
 CDMX,Glucosa,12,0.0,0,0
 CDMX,Gonal F 300 UI,1,119696.0,23,25
@@ -2480,7 +2480,7 @@ CDMX,Gonapeptyl Daily 0.1 (por ampolla),6,38822.4,33,81
 CDMX,Gonapeptyl Daily 0.1 (por ampolla),7,40147.2,35,85
 CDMX,Gonapeptyl Daily 0.1 (por ampolla),8,34924.8,35,77
 CDMX,Gonapeptyl Daily 0.1 (por ampolla),9,34892.4,33,71
-CDMX,Gonapeptyl Daily 0.1 (por ampolla),10,12178.8,10,24
+CDMX,Gonapeptyl Daily 0.1 (por ampolla),10,14218.8,12,28
 CDMX,Gonapeptyl Daily 0.1 (por ampolla),11,0.0,0,0
 CDMX,Gonapeptyl Daily 0.1 (por ampolla),12,0.0,0,0
 CDMX,Grupo Sanguíneo RH,1,2759.09,54,54
@@ -2516,7 +2516,7 @@ CDMX,Hemoglobina glicosilada,6,4712.95,10,10
 CDMX,Hemoglobina glicosilada,7,7557.79,16,16
 CDMX,Hemoglobina glicosilada,8,2844.84,6,6
 CDMX,Hemoglobina glicosilada,9,6163.82,13,13
-CDMX,Hemoglobina glicosilada,10,1896.56,4,4
+CDMX,Hemoglobina glicosilada,10,3318.97,7,7
 CDMX,Hemoglobina glicosilada,11,0.0,0,0
 CDMX,Hemoglobina glicosilada,12,0.0,0,0
 CDMX,Hepatitis B HBeAg,1,0.0,0,0
@@ -2756,7 +2756,7 @@ CDMX,Insulina basal,6,6637.96,14,14
 CDMX,Insulina basal,7,10848.32,23,23
 CDMX,Insulina basal,8,6609.51,14,14
 CDMX,Insulina basal,9,8060.38,17,17
-CDMX,Insulina basal,10,4741.4,10,10
+CDMX,Insulina basal,10,6163.81,13,13
 CDMX,Insulina basal,11,0.0,0,0
 CDMX,Insulina basal,12,0.0,0,0
 CDMX,Integrated Frozen Donor Surrogacy Package CDMX,1,0.0,0,0
@@ -2876,7 +2876,7 @@ CDMX,Merapur 75 UI (por ampolla),6,269029.2,73,308
 CDMX,Merapur 75 UI (por ampolla),7,313351.2,82,354
 CDMX,Merapur 75 UI (por ampolla),8,390443.0,89,441
 CDMX,Merapur 75 UI (por ampolla),9,348329.6,78,394
-CDMX,Merapur 75 UI (por ampolla),10,78960.0,21,84
+CDMX,Merapur 75 UI (por ampolla),10,99640.0,25,106
 CDMX,Merapur 75 UI (por ampolla),11,0.0,0,0
 CDMX,Merapur 75 UI (por ampolla),12,0.0,0,0
 CDMX,Meticorten 5 mg,1,0.0,0,0
@@ -2972,7 +2972,7 @@ CDMX,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),6,8100.0,8,9
 CDMX,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),7,13500.0,13,15
 CDMX,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),8,5400.0,5,6
 CDMX,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),9,4500.0,5,5
-CDMX,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),10,2835.0,3,3
+CDMX,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),10,3780.0,4,4
 CDMX,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),11,0.0,0,0
 CDMX,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),12,0.0,0,0
 CDMX,OVIDREL F-PEN 250MCG - PLUMAS,1,0.0,0,0
@@ -2984,7 +2984,7 @@ CDMX,OVIDREL F-PEN 250MCG - PLUMAS,6,49350.0,21,21
 CDMX,OVIDREL F-PEN 250MCG - PLUMAS,7,70077.0,29,30
 CDMX,OVIDREL F-PEN 250MCG - PLUMAS,8,90193.0,39,40
 CDMX,OVIDREL F-PEN 250MCG - PLUMAS,9,86231.0,36,36
-CDMX,OVIDREL F-PEN 250MCG - PLUMAS,10,19611.8,8,8
+CDMX,OVIDREL F-PEN 250MCG - PLUMAS,10,24551.8,10,10
 CDMX,OVIDREL F-PEN 250MCG - PLUMAS,11,0.0,0,0
 CDMX,OVIDREL F-PEN 250MCG - PLUMAS,12,0.0,0,0
 CDMX,Oestrogel,1,8100.0,3,9
@@ -3116,7 +3116,7 @@ CDMX,PERGOVERIS PEN 900/450IU,6,287850.0,13,19
 CDMX,PERGOVERIS PEN 900/450IU,7,605091.0,28,40
 CDMX,PERGOVERIS PEN 900/450IU,8,526311.0,24,39
 CDMX,PERGOVERIS PEN 900/450IU,9,522418.0,25,34
-CDMX,PERGOVERIS PEN 900/450IU,10,189965.4,11,12
+CDMX,PERGOVERIS PEN 900/450IU,10,205875.4,12,13
 CDMX,PERGOVERIS PEN 900/450IU,11,0.0,0,0
 CDMX,PERGOVERIS PEN 900/450IU,12,0.0,0,0
 CDMX,PGT por embrion (1 a 3) CDMX,1,31034.49,2,3
@@ -3140,7 +3140,7 @@ CDMX,PGT-A por embrion,6,836336.17,25,87
 CDMX,PGT-A por embrion,7,825853.44,21,89
 CDMX,PGT-A por embrion,8,1126724.08,39,126
 CDMX,PGT-A por embrion,9,1320517.22,32,128
-CDMX,PGT-A por embrion,10,291206.88,12,22
+CDMX,PGT-A por embrion,10,381724.12,13,29
 CDMX,PGT-A por embrion,11,0.0,0,0
 CDMX,PGT-A por embrion,12,0.0,0,0
 CDMX,PGT-M hasta 12 embriones,1,0.0,0,0
@@ -3188,7 +3188,7 @@ CDMX,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,6,750.0,1,1
 CDMX,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,7,1500.0,2,2
 CDMX,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,8,750.0,1,1
 CDMX,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,9,750.0,1,1
-CDMX,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,10,750.0,1,1
+CDMX,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,10,2250.0,3,3
 CDMX,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,11,0.0,0,0
 CDMX,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,12,0.0,0,0
 CDMX,PRIMOGYN 1MG C/28 GRA,1,0.0,0,0
@@ -3212,7 +3212,7 @@ CDMX,PRIMOGYN 2 MG C/28 GRAG,6,241940.0,96,242
 CDMX,PRIMOGYN 2 MG C/28 GRAG,7,253000.0,104,253
 CDMX,PRIMOGYN 2 MG C/28 GRAG,8,261700.0,106,263
 CDMX,PRIMOGYN 2 MG C/28 GRAG,9,286181.0,116,278
-CDMX,PRIMOGYN 2 MG C/28 GRAG,10,119700.0,46,114
+CDMX,PRIMOGYN 2 MG C/28 GRAG,10,149100.0,58,142
 CDMX,PRIMOGYN 2 MG C/28 GRAG,11,0.0,0,0
 CDMX,PRIMOGYN 2 MG C/28 GRAG,12,0.0,0,0
 CDMX,Panel de drogas en orina (III),1,1594.83,1,1
@@ -3248,7 +3248,7 @@ CDMX,Paquete Análisis Serología,6,86077.49,46,46
 CDMX,Paquete Análisis Serología,7,93340.42,55,55
 CDMX,Paquete Análisis Serología,8,110452.47,75,75
 CDMX,Paquete Análisis Serología,9,76379.23,56,56
-CDMX,Paquete Análisis Serología,10,32198.24,22,22
+CDMX,Paquete Análisis Serología,10,36508.58,24,24
 CDMX,Paquete Análisis Serología,11,0.0,0,0
 CDMX,Paquete Análisis Serología,12,0.0,0,0
 CDMX,Paquete DFT Fertilización de óvulos congelados y transferencia + 6 Ovulos FI,1,0.0,0,0
@@ -3368,7 +3368,7 @@ CDMX,Perfil ETS - Cultivo,6,0.0,0,0
 CDMX,Perfil ETS - Cultivo,7,0.0,0,0
 CDMX,Perfil ETS - Cultivo,8,0.0,0,0
 CDMX,Perfil ETS - Cultivo,9,108482.78,24,24
-CDMX,Perfil ETS - Cultivo,10,94258.64,20,20
+CDMX,Perfil ETS - Cultivo,10,113224.16,24,24
 CDMX,Perfil ETS - Cultivo,11,0.0,0,0
 CDMX,Perfil ETS - Cultivo,12,0.0,0,0
 CDMX,Perfil ETS Femenino / Cultivos infecciosos,1,122784.4,31,31
@@ -3560,7 +3560,7 @@ CDMX,Perfil disparo captura,6,717.0,29,29
 CDMX,Perfil disparo captura,7,2585.98,38,38
 CDMX,Perfil disparo captura,8,717.0,35,35
 CDMX,Perfil disparo captura,9,1434.0,30,30
-CDMX,Perfil disparo captura,10,717.0,8,8
+CDMX,Perfil disparo captura,10,1434.0,10,10
 CDMX,Perfil disparo captura,11,0.0,0,0
 CDMX,Perfil disparo captura,12,0.0,0,0
 CDMX,Perfil ginecológico,1,0.0,0,0
@@ -3584,7 +3584,7 @@ CDMX,Perfil inicio,6,478.0,51,51
 CDMX,Perfil inicio,7,0.0,68,68
 CDMX,Perfil inicio,8,1985.18,80,80
 CDMX,Perfil inicio,9,478.0,65,65
-CDMX,Perfil inicio,10,0.0,28,28
+CDMX,Perfil inicio,10,0.0,37,37
 CDMX,Perfil inicio,11,0.0,0,0
 CDMX,Perfil inicio,12,0.0,0,0
 CDMX,Perfil pre captura,1,0.0,8,8
@@ -3608,7 +3608,7 @@ CDMX,Perfil pre operatorio CDMX,6,862.06,16,16
 CDMX,Perfil pre operatorio CDMX,7,3017.21,26,26
 CDMX,Perfil pre operatorio CDMX,8,3448.24,35,35
 CDMX,Perfil pre operatorio CDMX,9,1293.09,35,35
-CDMX,Perfil pre operatorio CDMX,10,2155.15,11,11
+CDMX,Perfil pre operatorio CDMX,10,2586.18,14,14
 CDMX,Perfil pre operatorio CDMX,11,0.0,0,0
 CDMX,Perfil pre operatorio CDMX,12,0.0,0,0
 CDMX,Perfil pre operatorios,1,0.0,0,0
@@ -3620,7 +3620,7 @@ CDMX,Perfil pre operatorios,6,0.0,10,10
 CDMX,Perfil pre operatorios,7,646.55,12,12
 CDMX,Perfil pre operatorios,8,431.03,6,6
 CDMX,Perfil pre operatorios,9,862.06,3,3
-CDMX,Perfil pre operatorios,10,431.03,1,1
+CDMX,Perfil pre operatorios,10,862.06,2,2
 CDMX,Perfil pre operatorios,11,0.0,0,0
 CDMX,Perfil pre operatorios,12,0.0,0,0
 CDMX,Perfil pre transferencia,1,0.0,26,26
@@ -3644,7 +3644,7 @@ CDMX,Perfil prenatal,6,60603.54,19,19
 CDMX,Perfil prenatal,7,41465.58,17,17
 CDMX,Perfil prenatal,8,76551.84,30,30
 CDMX,Perfil prenatal,9,66982.86,24,24
-CDMX,Perfil prenatal,10,25517.28,11,11
+CDMX,Perfil prenatal,10,31896.59,13,13
 CDMX,Perfil prenatal,11,0.0,0,0
 CDMX,Perfil prenatal,12,0.0,0,0
 CDMX,Perfil preoperatorio básico,1,0.0,0,0
@@ -3668,7 +3668,7 @@ CDMX,Perfil preparación endometrial,6,956.0,52,52
 CDMX,Perfil preparación endometrial,7,478.0,56,56
 CDMX,Perfil preparación endometrial,8,2390.0,59,59
 CDMX,Perfil preparación endometrial,9,0.0,39,39
-CDMX,Perfil preparación endometrial,10,3346.0,21,21
+CDMX,Perfil preparación endometrial,10,4302.0,27,27
 CDMX,Perfil preparación endometrial,11,0.0,0,0
 CDMX,Perfil preparación endometrial,12,0.0,0,0
 CDMX,Perfil seguimiento folicular,1,0.0,118,118
@@ -3680,7 +3680,7 @@ CDMX,Perfil seguimiento folicular,6,2390.0,79,79
 CDMX,Perfil seguimiento folicular,7,3345.18,90,90
 CDMX,Perfil seguimiento folicular,8,956.0,79,79
 CDMX,Perfil seguimiento folicular,9,2390.0,83,83
-CDMX,Perfil seguimiento folicular,10,956.0,24,24
+CDMX,Perfil seguimiento folicular,10,1434.0,27,27
 CDMX,Perfil seguimiento folicular,11,0.0,0,0
 CDMX,Perfil seguimiento folicular,12,0.0,0,0
 CDMX,Perfil tiroideo sin anticuerpos,1,0.0,0,0
@@ -3848,7 +3848,7 @@ CDMX,Prolactina,6,4655.16,12,12
 CDMX,Prolactina,7,8146.53,21,21
 CDMX,Prolactina,8,7370.67,19,19
 CDMX,Prolactina,9,8922.39,23,23
-CDMX,Prolactina,10,1939.65,5,5
+CDMX,Prolactina,10,2715.51,7,7
 CDMX,Prolactina,11,0.0,0,0
 CDMX,Prolactina,12,0.0,0,0
 CDMX,Proteína C de la Coagulación (Actividad),1,0.0,0,0
@@ -4160,7 +4160,7 @@ CDMX,Subunidad beta cuantitativa,6,4267.26,56,56
 CDMX,Subunidad beta cuantitativa,7,1896.56,35,35
 CDMX,Subunidad beta cuantitativa,8,2370.7,50,50
 CDMX,Subunidad beta cuantitativa,9,2844.84,45,45
-CDMX,Subunidad beta cuantitativa,10,3793.12,15,15
+CDMX,Subunidad beta cuantitativa,10,4267.26,16,16
 CDMX,Subunidad beta cuantitativa,11,0.0,0,0
 CDMX,Subunidad beta cuantitativa,12,0.0,0,0
 CDMX,Suplemento Forcel Duo,1,5655.0,5,5
@@ -4376,7 +4376,7 @@ CDMX,Traslado de gametos locales,6,2586.21,1,1
 CDMX,Traslado de gametos locales,7,5172.42,2,2
 CDMX,Traslado de gametos locales,8,2586.21,1,1
 CDMX,Traslado de gametos locales,9,2586.21,1,1
-CDMX,Traslado de gametos locales,10,5172.42,2,2
+CDMX,Traslado de gametos locales,10,7758.63,3,3
 CDMX,Traslado de gametos locales,11,0.0,0,0
 CDMX,Traslado de gametos locales,12,0.0,0,0
 CDMX,Traslado de gametos nacional,1,12931.03,1,1
@@ -4400,7 +4400,7 @@ CDMX,UTROGESTAN 200 MG 14 CÁPSULAS,6,168616.0,71,241
 CDMX,UTROGESTAN 200 MG 14 CÁPSULAS,7,172900.0,80,250
 CDMX,UTROGESTAN 200 MG 14 CÁPSULAS,8,185416.0,85,266
 CDMX,UTROGESTAN 200 MG 14 CÁPSULAS,9,197475.0,82,270
-CDMX,UTROGESTAN 200 MG 14 CÁPSULAS,10,72000.0,28,96
+CDMX,UTROGESTAN 200 MG 14 CÁPSULAS,10,82500.0,35,110
 CDMX,UTROGESTAN 200 MG 14 CÁPSULAS,11,0.0,0,0
 CDMX,UTROGESTAN 200 MG 14 CÁPSULAS,12,0.0,0,0
 CDMX,UTrogestan 200 mg,1,200236.0,96,307
@@ -4424,7 +4424,7 @@ CDMX,Ultrasonido,6,42672.3,33,33
 CDMX,Ultrasonido,7,55603.31,42,44
 CDMX,Ultrasonido,8,36767.14,29,29
 CDMX,Ultrasonido,9,72413.62,69,72
-CDMX,Ultrasonido,10,12931.0,10,10
+CDMX,Ultrasonido,10,14224.1,11,11
 CDMX,Ultrasonido,11,0.0,0,0
 CDMX,Ultrasonido,12,0.0,0,0
 CDMX,Ultrasonido incluído,1,0.0,0,0
@@ -4448,7 +4448,7 @@ CDMX,Urocultivo,6,1637.94,2,2
 CDMX,Urocultivo,7,1637.94,2,2
 CDMX,Urocultivo,8,3275.88,4,4
 CDMX,Urocultivo,9,4913.82,7,7
-CDMX,Urocultivo,10,3275.88,4,4
+CDMX,Urocultivo,10,4094.85,5,5
 CDMX,Urocultivo,11,0.0,0,0
 CDMX,Urocultivo,12,0.0,0,0
 CDMX,Uso de Quirófano,1,0.0,0,0
@@ -4736,7 +4736,7 @@ CDMX,[EX] Captura + fertilización CDMX,6,198750.0,8,8
 CDMX,[EX] Captura + fertilización CDMX,7,329770.5,15,15
 CDMX,[EX] Captura + fertilización CDMX,8,308781.75,15,15
 CDMX,[EX] Captura + fertilización CDMX,9,316281.75,13,13
-CDMX,[EX] Captura + fertilización CDMX,10,145000.0,7,7
+CDMX,[EX] Captura + fertilización CDMX,10,220000.0,10,10
 CDMX,[EX] Captura + fertilización CDMX,11,0.0,0,0
 CDMX,[EX] Captura + fertilización CDMX,12,0.0,0,0
 CDMX,[EX] Captura CDMX,1,9482.76,1,1
@@ -4772,7 +4772,7 @@ CDMX,[EX] Captura+ Vitrificacion de ovocitos CDMX,6,325894.93,13,13
 CDMX,[EX] Captura+ Vitrificacion de ovocitos CDMX,7,162963.88,7,7
 CDMX,[EX] Captura+ Vitrificacion de ovocitos CDMX,8,183534.81,8,8
 CDMX,[EX] Captura+ Vitrificacion de ovocitos CDMX,9,48189.65,2,2
-CDMX,[EX] Captura+ Vitrificacion de ovocitos CDMX,10,51724.14,2,2
+CDMX,[EX] Captura+ Vitrificacion de ovocitos CDMX,10,103448.28,4,4
 CDMX,[EX] Captura+ Vitrificacion de ovocitos CDMX,11,0.0,0,0
 CDMX,[EX] Captura+ Vitrificacion de ovocitos CDMX,12,0.0,0,0
 CDMX,[EX] Congelamiento de semen,1,0.0,0,0
@@ -4808,7 +4808,7 @@ CDMX,[EX] Desvitrificación CDMX,6,6751.45,1,1
 CDMX,[EX] Desvitrificación CDMX,7,7931.03,1,1
 CDMX,[EX] Desvitrificación CDMX,8,28092.44,5,5
 CDMX,[EX] Desvitrificación CDMX,9,22441.1,3,3
-CDMX,[EX] Desvitrificación CDMX,10,0.0,0,0
+CDMX,[EX] Desvitrificación CDMX,10,15862.07,2,2
 CDMX,[EX] Desvitrificación CDMX,11,0.0,0,0
 CDMX,[EX] Desvitrificación CDMX,12,0.0,0,0
 CDMX,"[EX] Desvitrificación de óvulos congelados, Fertilización + Transferencia en fresco CDMX",1,0.0,0,0
@@ -4844,7 +4844,7 @@ CDMX,[EX] Fertilización,6,0.0,0,0
 CDMX,[EX] Fertilización,7,0.0,0,0
 CDMX,[EX] Fertilización,8,17499.99,3,3
 CDMX,[EX] Fertilización,9,30172.4,5,5
-CDMX,[EX] Fertilización,10,12068.96,2,2
+CDMX,[EX] Fertilización,10,24137.93,4,4
 CDMX,[EX] Fertilización,11,0.0,0,0
 CDMX,[EX] Fertilización,12,0.0,0,0
 CDMX,[EX] Fertilización [Facturador],1,0.0,0,0
@@ -4880,7 +4880,7 @@ CDMX,[EX] Histeroscopia diagnostica,6,15086.21,1,1
 CDMX,[EX] Histeroscopia diagnostica,7,30172.42,2,2
 CDMX,[EX] Histeroscopia diagnostica,8,75431.05,5,5
 CDMX,[EX] Histeroscopia diagnostica,9,0.0,0,0
-CDMX,[EX] Histeroscopia diagnostica,10,0.0,0,0
+CDMX,[EX] Histeroscopia diagnostica,10,15086.21,1,1
 CDMX,[EX] Histeroscopia diagnostica,11,0.0,0,0
 CDMX,[EX] Histeroscopia diagnostica,12,0.0,0,0
 CDMX,[EX] Histeroscopia diagnostica GDL,1,15086.21,1,1
@@ -5648,7 +5648,7 @@ GDL,Cetrotide 0.25mg,6,54853.2,21,42
 GDL,Cetrotide 0.25mg,7,24048.0,11,18
 GDL,Cetrotide 0.25mg,8,47294.4,19,36
 GDL,Cetrotide 0.25mg,9,0.0,0,0
-GDL,Cetrotide 0.25mg,10,7000.0,2,5
+GDL,Cetrotide 0.25mg,10,13379.0,4,10
 GDL,Cetrotide 0.25mg,11,0.0,0,0
 GDL,Cetrotide 0.25mg,12,0.0,0,0
 GDL,Check up Fertilidad Hombres GDL,1,6465.51,3,3
@@ -5720,7 +5720,7 @@ GDL,Check up Fertilidad Parejas,6,21120.68,7,7
 GDL,Check up Fertilidad Parejas,7,9051.72,3,3
 GDL,Check up Fertilidad Parejas,8,35086.19,15,13
 GDL,Check up Fertilidad Parejas,9,15086.2,6,6
-GDL,Check up Fertilidad Parejas,10,9051.72,5,3
+GDL,Check up Fertilidad Parejas,10,12068.96,6,4
 GDL,Check up Fertilidad Parejas,11,0.0,0,0
 GDL,Check up Fertilidad Parejas,12,0.0,0,0
 GDL,Check up Integral,1,0.0,0,0
@@ -5768,7 +5768,7 @@ GDL,Check up ginecologico,6,37499.9,40,34
 GDL,Check up ginecologico,7,24568.92,20,20
 GDL,Check up ginecologico,8,41810.32,33,33
 GDL,Check up ginecologico,9,49224.17,33,33
-GDL,Check up ginecologico,10,12155.17,9,9
+GDL,Check up ginecologico,10,13189.65,10,10
 GDL,Check up ginecologico,11,0.0,0,0
 GDL,Check up ginecologico,12,0.0,0,0
 GDL,Check up ginecologico (sin papanicolao) GDL,1,0.0,0,0
@@ -5960,7 +5960,7 @@ GDL,Consulta Andrología,6,0.0,0,0
 GDL,Consulta Andrología,7,0.0,0,0
 GDL,Consulta Andrología,8,0.0,0,0
 GDL,Consulta Andrología,9,2586.2,2,2
-GDL,Consulta Andrología,10,3879.3,3,3
+GDL,Consulta Andrología,10,3879.3,4,4
 GDL,Consulta Andrología,11,0.0,0,0
 GDL,Consulta Andrología,12,0.0,0,0
 GDL,Consulta Fertilidad GDL,1,1103.45,2,2
@@ -6992,7 +6992,7 @@ GDL,Merapur 75 UI (por ampolla),6,49573.0,15,56
 GDL,Merapur 75 UI (por ampolla),7,48950.0,19,55
 GDL,Merapur 75 UI (por ampolla),8,55180.0,18,62
 GDL,Merapur 75 UI (por ampolla),9,9986.0,4,12
-GDL,Merapur 75 UI (por ampolla),10,14100.0,6,15
+GDL,Merapur 75 UI (por ampolla),10,15980.0,7,17
 GDL,Merapur 75 UI (por ampolla),11,0.0,0,0
 GDL,Merapur 75 UI (por ampolla),12,0.0,0,0
 GDL,Miomectomía,1,0.0,0,0
@@ -7052,7 +7052,7 @@ GDL,OVIDREL F-PEN 250MCG - PLUMAS,6,21032.5,9,9
 GDL,OVIDREL F-PEN 250MCG - PLUMAS,7,11178.95,5,5
 GDL,OVIDREL F-PEN 250MCG - PLUMAS,8,23030.0,10,10
 GDL,OVIDREL F-PEN 250MCG - PLUMAS,9,7410.0,3,3
-GDL,OVIDREL F-PEN 250MCG - PLUMAS,10,4940.0,2,2
+GDL,OVIDREL F-PEN 250MCG - PLUMAS,10,7410.0,3,3
 GDL,OVIDREL F-PEN 250MCG - PLUMAS,11,0.0,0,0
 GDL,OVIDREL F-PEN 250MCG - PLUMAS,12,0.0,0,0
 GDL,Omega + colina (Holiherb),1,0.0,0,0
@@ -7436,7 +7436,7 @@ GDL,Perfil inicio,6,0.0,7,7
 GDL,Perfil inicio,7,0.0,10,10
 GDL,Perfil inicio,8,0.0,13,13
 GDL,Perfil inicio,9,0.0,5,5
-GDL,Perfil inicio,10,0.0,3,3
+GDL,Perfil inicio,10,0.0,4,4
 GDL,Perfil inicio,11,0.0,0,0
 GDL,Perfil inicio,12,0.0,0,0
 GDL,Perfil pre operatorios,1,0.0,0,0
@@ -7472,7 +7472,7 @@ GDL,Perfil preparación endometrial,6,478.0,6,6
 GDL,Perfil preparación endometrial,7,0.0,8,8
 GDL,Perfil preparación endometrial,8,0.0,14,14
 GDL,Perfil preparación endometrial,9,956.0,11,11
-GDL,Perfil preparación endometrial,10,0.0,1,1
+GDL,Perfil preparación endometrial,10,478.0,2,2
 GDL,Perfil preparación endometrial,11,0.0,0,0
 GDL,Perfil preparación endometrial,12,0.0,0,0
 GDL,Perfil seguimiento folicular,1,0.0,9,9
@@ -7484,7 +7484,7 @@ GDL,Perfil seguimiento folicular,6,0.0,16,16
 GDL,Perfil seguimiento folicular,7,0.0,11,11
 GDL,Perfil seguimiento folicular,8,0.0,15,15
 GDL,Perfil seguimiento folicular,9,0.0,0,0
-GDL,Perfil seguimiento folicular,10,0.0,1,1
+GDL,Perfil seguimiento folicular,10,0.0,3,3
 GDL,Perfil seguimiento folicular,11,0.0,0,0
 GDL,Perfil seguimiento folicular,12,0.0,0,0
 GDL,Perfil trombofílico GDL,1,0.0,0,0
@@ -8084,7 +8084,7 @@ GDL,Ultrasonido,6,14224.11,10,11
 GDL,Ultrasonido,7,16207.72,14,14
 GDL,Ultrasonido,8,5172.4,4,4
 GDL,Ultrasonido,9,13448.24,13,13
-GDL,Ultrasonido,10,1293.1,3,1
+GDL,Ultrasonido,10,7758.62,4,6
 GDL,Ultrasonido,11,0.0,0,0
 GDL,Ultrasonido,12,0.0,0,0
 GDL,Ultrasonido incluído,1,0.0,19,19
@@ -8120,7 +8120,7 @@ GDL,Uso de consultorio1hr con US,6,1336.2,5,3
 GDL,Uso de consultorio1hr con US,7,948.66,2,2
 GDL,Uso de consultorio1hr con US,8,1120.68,2,2
 GDL,Uso de consultorio1hr con US,9,2499.99,8,6
-GDL,Uso de consultorio1hr con US,10,387.93,1,1
+GDL,Uso de consultorio1hr con US,10,775.86,2,2
 GDL,Uso de consultorio1hr con US,11,0.0,0,0
 GDL,Uso de consultorio1hr con US,12,0.0,0,0
 GDL,VDRL,1,0.0,0,0
@@ -8648,7 +8648,7 @@ MTP,Biometria Hemática Pack,6,0.0,0,0
 MTP,Biometria Hemática Pack,7,0.0,0,0
 MTP,Biometria Hemática Pack,8,0.0,2,2
 MTP,Biometria Hemática Pack,9,0.0,0,0
-MTP,Biometria Hemática Pack,10,172.41,1,1
+MTP,Biometria Hemática Pack,10,172.41,2,2
 MTP,Biometria Hemática Pack,11,0.0,0,0
 MTP,Biometria Hemática Pack,12,0.0,0,0
 MTP,Biometría hemática,1,0.0,1,1
@@ -8708,7 +8708,7 @@ MTP,Cetrotide 0.25mg,6,10688.0,3,8
 MTP,Cetrotide 0.25mg,7,18704.0,4,14
 MTP,Cetrotide 0.25mg,8,32064.0,10,24
 MTP,Cetrotide 0.25mg,9,15220.0,5,11
-MTP,Cetrotide 0.25mg,10,2800.0,1,2
+MTP,Cetrotide 0.25mg,10,7000.0,2,5
 MTP,Cetrotide 0.25mg,11,0.0,0,0
 MTP,Cetrotide 0.25mg,12,0.0,0,0
 MTP,Check up Fertilidad Hombres MET,1,0.0,0,0
@@ -8924,7 +8924,7 @@ MTP,Consulta de primera vez,6,2586.2,4,4
 MTP,Consulta de primera vez,7,862.07,19,19
 MTP,Consulta de primera vez,8,0.0,25,25
 MTP,Consulta de primera vez,9,3879.31,31,31
-MTP,Consulta de primera vez,10,862.07,10,10
+MTP,Consulta de primera vez,10,2155.17,12,12
 MTP,Consulta de primera vez,11,0.0,0,0
 MTP,Consulta de primera vez,12,0.0,0,0
 MTP,Consulta de primera vez online,1,0.0,0,0
@@ -9080,7 +9080,7 @@ MTP,Espermatobioscopía (ED),6,2586.2,3,3
 MTP,Espermatobioscopía (ED),7,6465.5,6,6
 MTP,Espermatobioscopía (ED),8,5172.4,10,10
 MTP,Espermatobioscopía (ED),9,3879.3,5,5
-MTP,Espermatobioscopía (ED),10,2586.2,2,2
+MTP,Espermatobioscopía (ED),10,3879.3,3,3
 MTP,Espermatobioscopía (ED),11,0.0,0,0
 MTP,Espermatobioscopía (ED),12,0.0,0,0
 MTP,Estradiol,1,0.0,0,0
@@ -9212,7 +9212,7 @@ MTP,GONAL-F PEN2.0 - 300IU,6,5500.0,1,1
 MTP,GONAL-F PEN2.0 - 300IU,7,27500.0,3,5
 MTP,GONAL-F PEN2.0 - 300IU,8,22000.0,4,4
 MTP,GONAL-F PEN2.0 - 300IU,9,5500.0,1,1
-MTP,GONAL-F PEN2.0 - 300IU,10,0.0,0,0
+MTP,GONAL-F PEN2.0 - 300IU,10,5780.0,1,1
 MTP,GONAL-F PEN2.0 - 300IU,11,0.0,0,0
 MTP,GONAL-F PEN2.0 - 300IU,12,0.0,0,0
 MTP,GONAL-F PEN2.0 - 900IU,1,0.0,0,0
@@ -9284,7 +9284,7 @@ MTP,Grupo Sanguíneo RH,6,0.0,0,0
 MTP,Grupo Sanguíneo RH,7,318.97,4,4
 MTP,Grupo Sanguíneo RH,8,0.0,5,5
 MTP,Grupo Sanguíneo RH,9,0.0,2,2
-MTP,Grupo Sanguíneo RH,10,0.0,1,1
+MTP,Grupo Sanguíneo RH,10,0.0,2,2
 MTP,Grupo Sanguíneo RH,11,0.0,0,0
 MTP,Grupo Sanguíneo RH,12,0.0,0,0
 MTP,Histerosonografía,1,2887.93,1,1
@@ -9380,7 +9380,7 @@ MTP,Merapur 75 UI (por ampolla),6,19580.0,3,22
 MTP,Merapur 75 UI (por ampolla),7,84550.0,16,95
 MTP,Merapur 75 UI (por ampolla),8,72090.0,15,81
 MTP,Merapur 75 UI (por ampolla),9,34180.0,6,37
-MTP,Merapur 75 UI (por ampolla),10,0.0,0,0
+MTP,Merapur 75 UI (por ampolla),10,1880.0,1,2
 MTP,Merapur 75 UI (por ampolla),11,0.0,0,0
 MTP,Merapur 75 UI (por ampolla),12,0.0,0,0
 MTP,Meticorten 20 mg,1,2250.0,3,3
@@ -9476,7 +9476,7 @@ MTP,PERGOVERIS PEN 900/450IU,6,0.0,0,0
 MTP,PERGOVERIS PEN 900/450IU,7,0.0,0,0
 MTP,PERGOVERIS PEN 900/450IU,8,0.0,0,0
 MTP,PERGOVERIS PEN 900/450IU,9,0.0,0,0
-MTP,PERGOVERIS PEN 900/450IU,10,0.0,0,0
+MTP,PERGOVERIS PEN 900/450IU,10,31820.0,1,2
 MTP,PERGOVERIS PEN 900/450IU,11,0.0,0,0
 MTP,PERGOVERIS PEN 900/450IU,12,0.0,0,0
 MTP,PGT-A por embrion,1,22344.83,1,2
@@ -9644,7 +9644,7 @@ MTP,Perfil inicio,6,0.0,4,4
 MTP,Perfil inicio,7,0.0,6,6
 MTP,Perfil inicio,8,0.0,5,5
 MTP,Perfil inicio,9,0.0,8,8
-MTP,Perfil inicio,10,0.0,4,4
+MTP,Perfil inicio,10,0.0,5,5
 MTP,Perfil inicio,11,0.0,0,0
 MTP,Perfil inicio,12,0.0,0,0
 MTP,Perfil pre captura,1,0.0,1,1
@@ -9692,7 +9692,7 @@ MTP,Perfil seguimiento folicular,6,0.0,3,3
 MTP,Perfil seguimiento folicular,7,0.0,7,7
 MTP,Perfil seguimiento folicular,8,0.0,10,10
 MTP,Perfil seguimiento folicular,9,0.0,7,7
-MTP,Perfil seguimiento folicular,10,0.0,2,2
+MTP,Perfil seguimiento folicular,10,0.0,3,3
 MTP,Perfil seguimiento folicular,11,0.0,0,0
 MTP,Perfil seguimiento folicular,12,0.0,0,0
 MTP,Perfil tiroideo sin anticuerpos,1,0.0,0,0
@@ -9827,6 +9827,18 @@ MTP,REGENESIX MAX CAPSULAS,9,800.0,1,1
 MTP,REGENESIX MAX CAPSULAS,10,1600.0,2,2
 MTP,REGENESIX MAX CAPSULAS,11,0.0,0,0
 MTP,REGENESIX MAX CAPSULAS,12,0.0,0,0
+MTP,Retiro de DIU,1,0.0,0,0
+MTP,Retiro de DIU,2,0.0,0,0
+MTP,Retiro de DIU,3,0.0,0,0
+MTP,Retiro de DIU,4,0.0,0,0
+MTP,Retiro de DIU,5,0.0,0,0
+MTP,Retiro de DIU,6,0.0,0,0
+MTP,Retiro de DIU,7,0.0,0,0
+MTP,Retiro de DIU,8,0.0,0,0
+MTP,Retiro de DIU,9,0.0,0,0
+MTP,Retiro de DIU,10,1293.1,1,1
+MTP,Retiro de DIU,11,0.0,0,0
+MTP,Retiro de DIU,12,0.0,0,0
 MTP,SUPLEMENTO - FORCELL FEM,1,0.0,0,0
 MTP,SUPLEMENTO - FORCELL FEM,2,895.0,1,1
 MTP,SUPLEMENTO - FORCELL FEM,3,3580.0,3,4
@@ -9944,7 +9956,7 @@ MTP,Tiempos de Coagulación,6,0.0,0,0
 MTP,Tiempos de Coagulación,7,905.17,4,4
 MTP,Tiempos de Coagulación,8,0.0,5,5
 MTP,Tiempos de Coagulación,9,0.0,2,2
-MTP,Tiempos de Coagulación,10,0.0,1,1
+MTP,Tiempos de Coagulación,10,0.0,2,2
 MTP,Tiempos de Coagulación,11,0.0,0,0
 MTP,Tiempos de Coagulación,12,0.0,0,0
 MTP,Traslado de gametos locales,1,0.0,0,0
@@ -10040,7 +10052,7 @@ total,(EX) EmbryoScope Kit,6,10344.84,3,3
 total,(EX) EmbryoScope Kit,7,6896.56,2,2
 total,(EX) EmbryoScope Kit,8,6896.55,2,2
 total,(EX) EmbryoScope Kit,9,34482.75,9,9
-total,(EX) EmbryoScope Kit,10,0.0,1,1
+total,(EX) EmbryoScope Kit,10,6896.55,2,2
 total,(EX) EmbryoScope Kit,11,0.0,0,0
 total,(EX) EmbryoScope Kit,12,0.0,0,0
 total,(EX) Fertilización PICSI / Microfluidos,1,9051.72,3,3
@@ -10352,7 +10364,7 @@ total,ASPIRINA PROTEC 100MG 28 TAB,6,14555.6,61,61
 total,ASPIRINA PROTEC 100MG 28 TAB,7,15571.2,64,65
 total,ASPIRINA PROTEC 100MG 28 TAB,8,12691.2,53,53
 total,ASPIRINA PROTEC 100MG 28 TAB,9,13540.0,54,54
-total,ASPIRINA PROTEC 100MG 28 TAB,10,5980.0,23,23
+total,ASPIRINA PROTEC 100MG 28 TAB,10,7280.0,28,28
 total,ASPIRINA PROTEC 100MG 28 TAB,11,0.0,0,0
 total,ASPIRINA PROTEC 100MG 28 TAB,12,0.0,0,0
 total,AUN NO SUCEDE EL TRATAMIENTO,1,0.0,0,0
@@ -10592,7 +10604,7 @@ total,Almacenamiento de gametos 1 año,6,272499.8,57,57
 total,Almacenamiento de gametos 1 año,7,461206.74,85,88
 total,Almacenamiento de gametos 1 año,8,549353.11,118,121
 total,Almacenamiento de gametos 1 año,9,830818.58,144,145
-total,Almacenamiento de gametos 1 año,10,753447.95,123,121
+total,Almacenamiento de gametos 1 año,10,762068.64,124,123
 total,Almacenamiento de gametos 1 año,11,0.0,0,0
 total,Almacenamiento de gametos 1 año,12,0.0,0,0
 total,Almacenamiento de gametos 5 años,1,0.0,0,0
@@ -10604,7 +10616,7 @@ total,Almacenamiento de gametos 5 años,6,413792.98,30,30
 total,Almacenamiento de gametos 5 años,7,332327.53,23,25
 total,Almacenamiento de gametos 5 años,8,509051.64,40,41
 total,Almacenamiento de gametos 5 años,9,378275.87,28,28
-total,Almacenamiento de gametos 5 años,10,85172.42,5,5
+total,Almacenamiento de gametos 5 años,10,102413.8,6,6
 total,Almacenamiento de gametos 5 años,11,0.0,0,0
 total,Almacenamiento de gametos 5 años,12,0.0,0,0
 total,Androstenediona,1,0.0,0,0
@@ -10652,7 +10664,7 @@ total,Antimulleriana AMH (Nanogramos),6,17655.19,114,114
 total,Antimulleriana AMH (Nanogramos),7,17137.95,108,108
 total,Antimulleriana AMH (Nanogramos),8,31034.52,122,122
 total,Antimulleriana AMH (Nanogramos),9,29310.38,111,111
-total,Antimulleriana AMH (Nanogramos),10,11534.49,33,33
+total,Antimulleriana AMH (Nanogramos),10,11534.49,35,35
 total,Antimulleriana AMH (Nanogramos),11,0.0,0,0
 total,Antimulleriana AMH (Nanogramos),12,0.0,0,0
 total,Antitrombina III,1,0.0,0,0
@@ -10784,7 +10796,7 @@ total,Biometria Hemática Pack,6,387.93,11,11
 total,Biometria Hemática Pack,7,1140.59,14,14
 total,Biometria Hemática Pack,8,775.86,11,11
 total,Biometria Hemática Pack,9,1472.38,15,15
-total,Biometria Hemática Pack,10,818.95,5,5
+total,Biometria Hemática Pack,10,818.95,6,6
 total,Biometria Hemática Pack,11,0.0,0,0
 total,Biometria Hemática Pack,12,0.0,0,0
 total,Biometria hematica fi,1,0.0,0,0
@@ -11000,7 +11012,7 @@ total,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),6,52884.0,37,52
 total,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),7,64071.0,38,64
 total,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),8,71190.0,46,70
 total,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),9,89083.8,44,85
-total,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),10,35310.0,21,33
+total,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),10,47080.0,27,44
 total,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),11,0.0,0,0
 total,CUERPO AMARILLO FTE 6X2 50ML/2MG AMP (PROGESTERONA),12,0.0,0,0
 total,Capacitación espermática,1,0.0,0,0
@@ -11192,7 +11204,7 @@ total,Cetrotide 0.25mg,6,268880.4,95,206
 total,Cetrotide 0.25mg,7,287052.96,88,216
 total,Cetrotide 0.25mg,8,319998.72,118,248
 total,Cetrotide 0.25mg,9,231236.8,76,171
-total,Cetrotide 0.25mg,10,76916.0,25,55
+total,Cetrotide 0.25mg,10,95895.0,30,69
 total,Cetrotide 0.25mg,11,0.0,0,0
 total,Cetrotide 0.25mg,12,0.0,0,0
 total,Check up Fertilidad Hombres,1,0.0,0,0
@@ -11264,7 +11276,7 @@ total,Check up Fertilidad Mujeres,6,129879.21,73,73
 total,Check up Fertilidad Mujeres,7,96660.27,58,58
 total,Check up Fertilidad Mujeres,8,100077.5,57,55
 total,Check up Fertilidad Mujeres,9,126433.52,76,74
-total,Check up Fertilidad Mujeres,10,33155.15,18,18
+total,Check up Fertilidad Mujeres,10,38844.81,21,21
 total,Check up Fertilidad Mujeres,11,0.0,0,0
 total,Check up Fertilidad Mujeres,12,0.0,0,0
 total,Check up Fertilidad Mujeres GDL,1,0.0,0,0
@@ -11324,7 +11336,7 @@ total,Check up Fertilidad Parejas,6,87275.83,31,31
 total,Check up Fertilidad Parejas,7,62241.35,21,21
 total,Check up Fertilidad Parejas,8,92413.75,34,32
 total,Check up Fertilidad Parejas,9,69396.52,25,25
-total,Check up Fertilidad Parejas,10,24137.92,10,8
+total,Check up Fertilidad Parejas,10,27155.16,11,9
 total,Check up Fertilidad Parejas,11,0.0,0,0
 total,Check up Fertilidad Parejas,12,0.0,0,0
 total,Check up Fertilidad masculino,1,0.0,0,0
@@ -11456,7 +11468,7 @@ total,Check up ginecologico,6,56896.44,54,48
 total,Check up ginecologico,7,47844.76,36,36
 total,Check up ginecologico,8,59314.62,61,61
 total,Check up ginecologico,9,64568.99,54,54
-total,Check up ginecologico,10,15172.41,11,11
+total,Check up ginecologico,10,16206.89,13,13
 total,Check up ginecologico,11,0.0,0,0
 total,Check up ginecologico,12,0.0,0,0
 total,Check up ginecologico (sin papanicolao) CDMX,1,0.0,0,0
@@ -11588,7 +11600,7 @@ total,Cita primera vez IPS,6,3448.28,4,4
 total,Cita primera vez IPS,7,2586.21,3,3
 total,Cita primera vez IPS,8,8620.7,12,12
 total,Cita primera vez IPS,9,6034.49,8,8
-total,Cita primera vez IPS,10,3448.28,5,5
+total,Cita primera vez IPS,10,5172.42,7,7
 total,Cita primera vez IPS,11,0.0,0,0
 total,Cita primera vez IPS,12,0.0,0,0
 total,Citomegalovirus IgG,1,0.0,0,0
@@ -11804,7 +11816,7 @@ total,Congelamiento de óvulos CDMX,6,993318.95,15,15
 total,Congelamiento de óvulos CDMX,7,765301.73,12,12
 total,Congelamiento de óvulos CDMX,8,555818.97,8,8
 total,Congelamiento de óvulos CDMX,9,1286853.45,26,26
-total,Congelamiento de óvulos CDMX,10,335775.86,6,6
+total,Congelamiento de óvulos CDMX,10,417672.41,7,7
 total,Congelamiento de óvulos CDMX,11,0.0,0,0
 total,Congelamiento de óvulos CDMX,12,0.0,0,0
 total,Congelamiento de óvulos CDMX Promoción Marzo,1,0.0,0,0
@@ -11876,7 +11888,7 @@ total,Consulta Andrología,6,0.0,0,0
 total,Consulta Andrología,7,0.0,0,0
 total,Consulta Andrología,8,0.0,0,0
 total,Consulta Andrología,9,2586.2,2,2
-total,Consulta Andrología,10,3879.3,3,3
+total,Consulta Andrología,10,3879.3,4,4
 total,Consulta Andrología,11,0.0,0,0
 total,Consulta Andrología,12,0.0,0,0
 total,Consulta Fertilidad CDMX,1,20560.9,20,20
@@ -12032,7 +12044,7 @@ total,Consulta de primera vez,6,88371.43,93,89
 total,Consulta de primera vez,7,67888.23,76,76
 total,Consulta de primera vez,8,113448.14,168,156
 total,Consulta de primera vez,9,136047.57,227,221
-total,Consulta de primera vez,10,12500.0,30,28
+total,Consulta de primera vez,10,13793.1,33,31
 total,Consulta de primera vez,11,0.0,0,0
 total,Consulta de primera vez,12,0.0,0,0
 total,Consulta de primera vez + HAM,1,0.0,0,0
@@ -12284,7 +12296,7 @@ total,Cultivo de Exudado Vaginal,6,6163.74,11,11
 total,Cultivo de Exudado Vaginal,7,7284.42,13,13
 total,Cultivo de Exudado Vaginal,8,3922.38,7,7
 total,Cultivo de Exudado Vaginal,9,8405.1,19,19
-total,Cultivo de Exudado Vaginal,10,2801.7,5,5
+total,Cultivo de Exudado Vaginal,10,3922.39,7,7
 total,Cultivo de Exudado Vaginal,11,0.0,0,0
 total,Cultivo de Exudado Vaginal,12,0.0,0,0
 total,Cultivo de anaerobios,1,0.0,0,0
@@ -12596,7 +12608,7 @@ total,Donación esperma - LAFER - Nacional,6,25862.06,2,2
 total,Donación esperma - LAFER - Nacional,7,38793.1,2,3
 total,Donación esperma - LAFER - Nacional,8,0.0,0,0
 total,Donación esperma - LAFER - Nacional,9,59482.75,4,4
-total,Donación esperma - LAFER - Nacional,10,0.0,0,0
+total,Donación esperma - LAFER - Nacional,10,15517.24,1,1
 total,Donación esperma - LAFER - Nacional,11,0.0,0,0
 total,Donación esperma - LAFER - Nacional,12,0.0,0,0
 total,Donadora de ovulos categoria 3,1,0.0,0,0
@@ -12704,7 +12716,7 @@ total,EmbryoScope Kit Interno,6,25862.07,3,3
 total,EmbryoScope Kit Interno,7,36637.93,5,5
 total,EmbryoScope Kit Interno,8,17241.38,5,5
 total,EmbryoScope Kit Interno,9,0.0,1,1
-total,EmbryoScope Kit Interno,10,17241.38,2,2
+total,EmbryoScope Kit Interno,10,25862.07,3,3
 total,EmbryoScope Kit Interno,11,0.0,0,0
 total,EmbryoScope Kit Interno,12,0.0,0,0
 total,Endometrio,1,0.0,0,0
@@ -12752,7 +12764,7 @@ total,Espermatobioscopía (ED),6,27025.79,41,41
 total,Espermatobioscopía (ED),7,37499.9,42,42
 total,Espermatobioscopía (ED),8,35922.33,65,63
 total,Espermatobioscopía (ED),9,52607.63,111,111
-total,Espermatobioscopía (ED),10,15517.2,17,17
+total,Espermatobioscopía (ED),10,16810.3,18,18
 total,Espermatobioscopía (ED),11,0.0,0,0
 total,Espermatobioscopía (ED),12,0.0,0,0
 total,Espermatobioscopía (ED) - GDL,1,0.0,2,2
@@ -12800,7 +12812,7 @@ total,Essentials Surrogacy Package CDMX,6,0.0,0,0
 total,Essentials Surrogacy Package CDMX,7,0.0,0,0
 total,Essentials Surrogacy Package CDMX,8,94655.17,1,1
 total,Essentials Surrogacy Package CDMX,9,105172.41,1,1
-total,Essentials Surrogacy Package CDMX,10,0.0,0,0
+total,Essentials Surrogacy Package CDMX,10,105172.41,1,1
 total,Essentials Surrogacy Package CDMX,11,0.0,0,0
 total,Essentials Surrogacy Package CDMX,12,0.0,0,0
 total,Estradiol,1,4109.83,8,10
@@ -13232,7 +13244,7 @@ total,Fragmentación del ADN espermático,6,76963.88,23,23
 total,Fragmentación del ADN espermático,7,92638.04,27,27
 total,Fragmentación del ADN espermático,8,108707.02,34,32
 total,Fragmentación del ADN espermático,9,111961.34,35,35
-total,Fragmentación del ADN espermático,10,27586.24,8,8
+total,Fragmentación del ADN espermático,10,31034.52,9,9
 total,Fragmentación del ADN espermático,11,0.0,0,0
 total,Fragmentación del ADN espermático,12,0.0,0,0
 total,Fragmentación del ADN espermático - CDMX,1,76551.84,24,24
@@ -13268,7 +13280,7 @@ total,Fresh egg donor Surrogacy Package,6,0.0,0,0
 total,Fresh egg donor Surrogacy Package,7,0.0,0,0
 total,Fresh egg donor Surrogacy Package,8,0.0,0,0
 total,Fresh egg donor Surrogacy Package,9,423146.55,1,1
-total,Fresh egg donor Surrogacy Package,10,0.0,0,0
+total,Fresh egg donor Surrogacy Package,10,568965.52,1,1
 total,Fresh egg donor Surrogacy Package,11,0.0,0,0
 total,Fresh egg donor Surrogacy Package,12,0.0,0,0
 total,GONAL-F PEN2.0 - 300IU,1,0.0,0,0
@@ -13280,7 +13292,7 @@ total,GONAL-F PEN2.0 - 300IU,6,104170.0,18,19
 total,GONAL-F PEN2.0 - 300IU,7,125510.0,17,23
 total,GONAL-F PEN2.0 - 300IU,8,126500.0,22,23
 total,GONAL-F PEN2.0 - 300IU,9,54602.0,9,10
-total,GONAL-F PEN2.0 - 300IU,10,0.0,0,0
+total,GONAL-F PEN2.0 - 300IU,10,5780.0,1,1
 total,GONAL-F PEN2.0 - 300IU,11,0.0,0,0
 total,GONAL-F PEN2.0 - 300IU,12,0.0,0,0
 total,GONAL-F PEN2.0 - 450IU,1,0.0,0,0
@@ -13304,7 +13316,7 @@ total,GONAL-F PEN2.0 - 900IU,6,571662.0,35,42
 total,GONAL-F PEN2.0 - 900IU,7,637455.0,41,47
 total,GONAL-F PEN2.0 - 900IU,8,761943.0,45,56
 total,GONAL-F PEN2.0 - 900IU,9,482210.0,30,35
-total,GONAL-F PEN2.0 - 900IU,10,157630.0,9,11
+total,GONAL-F PEN2.0 - 900IU,10,186290.0,11,13
 total,GONAL-F PEN2.0 - 900IU,11,0.0,0,0
 total,GONAL-F PEN2.0 - 900IU,12,0.0,0,0
 total,Globulina Transportadora de Hormonas sexuales ( SHBG),1,0.0,0,0
@@ -13328,7 +13340,7 @@ total,Glucosa,6,1896.6,10,10
 total,Glucosa,7,3413.88,18,18
 total,Glucosa,8,1991.43,11,11
 total,Glucosa,9,2844.9,16,16
-total,Glucosa,10,948.3,5,5
+total,Glucosa,10,1137.96,6,6
 total,Glucosa,11,0.0,0,0
 total,Glucosa,12,0.0,0,0
 total,Gonal F 300 UI,1,149804.0,28,31
@@ -13376,7 +13388,7 @@ total,Gonapeptyl Daily 0.1 (por ampolla),6,47414.4,42,99
 total,Gonapeptyl Daily 0.1 (por ampolla),7,43987.2,39,93
 total,Gonapeptyl Daily 0.1 (por ampolla),8,48172.8,49,105
 total,Gonapeptyl Daily 0.1 (por ampolla),9,37892.4,36,77
-total,Gonapeptyl Daily 0.1 (por ampolla),10,13198.8,11,26
+total,Gonapeptyl Daily 0.1 (por ampolla),10,15238.8,13,30
 total,Gonapeptyl Daily 0.1 (por ampolla),11,0.0,0,0
 total,Gonapeptyl Daily 0.1 (por ampolla),12,0.0,0,0
 total,Grupo Sanguíneo RH,1,2759.09,62,62
@@ -13388,7 +13400,7 @@ total,Grupo Sanguíneo RH,6,0.0,1,1
 total,Grupo Sanguíneo RH,7,637.94,10,10
 total,Grupo Sanguíneo RH,8,637.94,11,11
 total,Grupo Sanguíneo RH,9,956.91,6,6
-total,Grupo Sanguíneo RH,10,0.0,3,3
+total,Grupo Sanguíneo RH,10,0.0,4,4
 total,Grupo Sanguíneo RH,11,0.0,0,0
 total,Grupo Sanguíneo RH,12,0.0,0,0
 total,HIOSCINA 10 MG C/24 (BUSCAPINA),1,0.0,0,0
@@ -13412,7 +13424,7 @@ total,Hemoglobina glicosilada,6,4712.95,10,10
 total,Hemoglobina glicosilada,7,8246.59,18,18
 total,Hemoglobina glicosilada,8,2844.84,6,6
 total,Hemoglobina glicosilada,9,6163.82,14,14
-total,Hemoglobina glicosilada,10,1896.56,4,4
+total,Hemoglobina glicosilada,10,3318.97,7,7
 total,Hemoglobina glicosilada,11,0.0,0,0
 total,Hemoglobina glicosilada,12,0.0,0,0
 total,Hepatitis B HBeAg,1,0.0,0,0
@@ -13724,7 +13736,7 @@ total,Insulina basal,6,8060.38,17,17
 total,Insulina basal,7,15405.24,34,34
 total,Insulina basal,8,9402.62,20,20
 total,Insulina basal,9,11379.36,24,24
-total,Insulina basal,10,6163.82,13,13
+total,Insulina basal,10,7586.23,16,16
 total,Insulina basal,11,0.0,0,0
 total,Insulina basal,12,0.0,0,0
 total,Integrated Frozen Donor Surrogacy Package CDMX,1,0.0,0,0
@@ -13880,7 +13892,7 @@ total,Merapur 75 UI (por ampolla),6,338182.2,91,386
 total,Merapur 75 UI (por ampolla),7,446851.2,117,504
 total,Merapur 75 UI (por ampolla),8,517713.0,122,584
 total,Merapur 75 UI (por ampolla),9,392495.6,88,443
-total,Merapur 75 UI (por ampolla),10,93060.0,27,99
+total,Merapur 75 UI (por ampolla),10,117500.0,33,125
 total,Merapur 75 UI (por ampolla),11,0.0,0,0
 total,Merapur 75 UI (por ampolla),12,0.0,0,0
 total,Meticorten 20 mg,1,2250.0,3,3
@@ -14012,7 +14024,7 @@ total,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),6,9000.0,9,10
 total,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),7,13500.0,14,16
 total,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),8,5400.0,5,6
 total,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),9,4500.0,5,5
-total,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),10,2835.0,3,3
+total,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),10,3780.0,4,4
 total,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),11,0.0,0,0
 total,OESTROGEL .0.06 / 100 G (ESTRADIOL EN GEL),12,0.0,0,0
 total,OGESTAN ANDRACTIV 30 CAPSULAS,1,0.0,0,0
@@ -14048,7 +14060,7 @@ total,OVIDREL F-PEN 250MCG - PLUMAS,6,75082.5,32,32
 total,OVIDREL F-PEN 250MCG - PLUMAS,7,88305.95,37,38
 total,OVIDREL F-PEN 250MCG - PLUMAS,8,127323.0,55,56
 total,OVIDREL F-PEN 250MCG - PLUMAS,9,105871.0,44,44
-total,OVIDREL F-PEN 250MCG - PLUMAS,10,24551.8,10,10
+total,OVIDREL F-PEN 250MCG - PLUMAS,10,31961.8,13,13
 total,OVIDREL F-PEN 250MCG - PLUMAS,11,0.0,0,0
 total,OVIDREL F-PEN 250MCG - PLUMAS,12,0.0,0,0
 total,Oestrogel,1,8100.0,3,9
@@ -14216,7 +14228,7 @@ total,PERGOVERIS PEN 900/450IU,6,415273.5,21,28
 total,PERGOVERIS PEN 900/450IU,7,650541.0,31,43
 total,PERGOVERIS PEN 900/450IU,8,671631.01,32,49
 total,PERGOVERIS PEN 900/450IU,9,584538.0,27,38
-total,PERGOVERIS PEN 900/450IU,10,276389.4,15,18
+total,PERGOVERIS PEN 900/450IU,10,324119.4,17,21
 total,PERGOVERIS PEN 900/450IU,11,0.0,0,0
 total,PERGOVERIS PEN 900/450IU,12,0.0,0,0
 total,PGT por embrion (1 a 3) CDMX,1,31034.49,2,3
@@ -14240,7 +14252,7 @@ total,PGT-A por embrion,6,1163836.22,38,119
 total,PGT-A por embrion,7,1188094.96,32,126
 total,PGT-A por embrion,8,1775474.17,56,197
 total,PGT-A por embrion,9,1383448.27,35,133
-total,PGT-A por embrion,10,332586.19,13,26
+total,PGT-A por embrion,10,423103.43,14,33
 total,PGT-A por embrion,11,0.0,0,0
 total,PGT-A por embrion,12,0.0,0,0
 total,PGT-M hasta 12 embriones,1,0.0,0,0
@@ -14288,7 +14300,7 @@ total,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,6,2250.0,3,3
 total,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,7,3000.0,4,4
 total,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,8,1500.0,2,2
 total,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,9,2250.0,3,3
-total,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,10,2250.0,3,3
+total,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,10,3750.0,5,5
 total,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,11,0.0,0,0
 total,PREDNISONA 20 MG C/30 TAB (METICORTEN) ASPEN,12,0.0,0,0
 total,PRIMOGYN 1MG C/28 GRA,1,0.0,0,0
@@ -14312,7 +14324,7 @@ total,PRIMOGYN 2 MG C/28 GRAG,6,247940.0,100,248
 total,PRIMOGYN 2 MG C/28 GRAG,7,262000.0,113,264
 total,PRIMOGYN 2 MG C/28 GRAG,8,282700.0,119,285
 total,PRIMOGYN 2 MG C/28 GRAG,9,309731.0,123,301
-total,PRIMOGYN 2 MG C/28 GRAG,10,124950.0,48,119
+total,PRIMOGYN 2 MG C/28 GRAG,10,154350.0,60,147
 total,PRIMOGYN 2 MG C/28 GRAG,11,0.0,0,0
 total,PRIMOGYN 2 MG C/28 GRAG,12,0.0,0,0
 total,PROVERA 5 MG 24 TAB,1,0.0,0,0
@@ -14384,7 +14396,7 @@ total,Paquete Análisis Serología,6,90387.83,57,57
 total,Paquete Análisis Serología,7,112736.95,68,68
 total,Paquete Análisis Serología,8,125538.66,90,90
 total,Paquete Análisis Serología,9,80689.57,59,59
-total,Paquete Análisis Serología,10,34353.41,24,24
+total,Paquete Análisis Serología,10,38663.75,26,26
 total,Paquete Análisis Serología,11,0.0,0,0
 total,Paquete Análisis Serología,12,0.0,0,0
 total,Paquete ConFianza - GDL,1,0.0,0,0
@@ -14552,7 +14564,7 @@ total,Perfil ETS - Cultivo,6,0.0,0,0
 total,Perfil ETS - Cultivo,7,0.0,0,0
 total,Perfil ETS - Cultivo,8,0.0,0,0
 total,Perfil ETS - Cultivo,9,113224.16,26,26
-total,Perfil ETS - Cultivo,10,99000.02,21,21
+total,Perfil ETS - Cultivo,10,117965.54,25,25
 total,Perfil ETS - Cultivo,11,0.0,0,0
 total,Perfil ETS - Cultivo,12,0.0,0,0
 total,Perfil ETS Femenino / Cultivos infecciosos,1,137655.08,35,35
@@ -14792,7 +14804,7 @@ total,Perfil disparo captura,6,717.0,47,47
 total,Perfil disparo captura,7,2585.98,47,47
 total,Perfil disparo captura,8,717.0,59,59
 total,Perfil disparo captura,9,1434.0,34,34
-total,Perfil disparo captura,10,1434.0,10,10
+total,Perfil disparo captura,10,2151.0,12,12
 total,Perfil disparo captura,11,0.0,0,0
 total,Perfil disparo captura,12,0.0,0,0
 total,Perfil ginecológico,1,0.0,0,0
@@ -14816,7 +14828,7 @@ total,Perfil inicio,6,478.0,62,62
 total,Perfil inicio,7,0.0,84,84
 total,Perfil inicio,8,1985.18,98,98
 total,Perfil inicio,9,478.0,78,78
-total,Perfil inicio,10,0.0,35,35
+total,Perfil inicio,10,0.0,46,46
 total,Perfil inicio,11,0.0,0,0
 total,Perfil inicio,12,0.0,0,0
 total,Perfil pre captura,1,0.0,9,9
@@ -14840,7 +14852,7 @@ total,Perfil pre operatorio CDMX,6,862.06,16,16
 total,Perfil pre operatorio CDMX,7,3017.21,26,26
 total,Perfil pre operatorio CDMX,8,3448.24,35,35
 total,Perfil pre operatorio CDMX,9,1293.09,35,35
-total,Perfil pre operatorio CDMX,10,2155.15,11,11
+total,Perfil pre operatorio CDMX,10,2586.18,14,14
 total,Perfil pre operatorio CDMX,11,0.0,0,0
 total,Perfil pre operatorio CDMX,12,0.0,0,0
 total,Perfil pre operatorios,1,0.0,0,0
@@ -14852,7 +14864,7 @@ total,Perfil pre operatorios,6,431.03,19,19
 total,Perfil pre operatorios,7,646.55,17,17
 total,Perfil pre operatorios,8,1724.12,16,16
 total,Perfil pre operatorios,9,862.06,3,3
-total,Perfil pre operatorios,10,431.03,2,2
+total,Perfil pre operatorios,10,862.06,3,3
 total,Perfil pre operatorios,11,0.0,0,0
 total,Perfil pre operatorios,12,0.0,0,0
 total,Perfil pre transferencia,1,0.0,31,31
@@ -14876,7 +14888,7 @@ total,Perfil prenatal,6,60603.54,19,19
 total,Perfil prenatal,7,41465.58,17,17
 total,Perfil prenatal,8,76551.84,30,30
 total,Perfil prenatal,9,66982.86,24,24
-total,Perfil prenatal,10,25517.28,11,11
+total,Perfil prenatal,10,31896.59,13,13
 total,Perfil prenatal,11,0.0,0,0
 total,Perfil prenatal,12,0.0,0,0
 total,Perfil preoperatorio básico,1,0.0,0,0
@@ -14900,7 +14912,7 @@ total,Perfil preparación endometrial,6,1434.0,60,60
 total,Perfil preparación endometrial,7,478.0,73,73
 total,Perfil preparación endometrial,8,2390.0,77,77
 total,Perfil preparación endometrial,9,956.0,55,55
-total,Perfil preparación endometrial,10,3346.0,28,28
+total,Perfil preparación endometrial,10,4780.0,35,35
 total,Perfil preparación endometrial,11,0.0,0,0
 total,Perfil preparación endometrial,12,0.0,0,0
 total,Perfil seguimiento folicular,1,0.0,132,132
@@ -14912,7 +14924,7 @@ total,Perfil seguimiento folicular,6,2390.0,98,98
 total,Perfil seguimiento folicular,7,3345.18,108,108
 total,Perfil seguimiento folicular,8,956.0,104,104
 total,Perfil seguimiento folicular,9,2390.0,90,90
-total,Perfil seguimiento folicular,10,956.0,27,27
+total,Perfil seguimiento folicular,10,1434.0,33,33
 total,Perfil seguimiento folicular,11,0.0,0,0
 total,Perfil seguimiento folicular,12,0.0,0,0
 total,Perfil tiroideo sin anticuerpos,1,0.0,0,0
@@ -15140,7 +15152,7 @@ total,Prolactina,6,4655.16,12,12
 total,Prolactina,7,9310.32,24,24
 total,Prolactina,8,8922.39,24,24
 total,Prolactina,9,11249.97,30,30
-total,Prolactina,10,2715.51,7,7
+total,Prolactina,10,3491.37,9,9
 total,Prolactina,11,0.0,0,0
 total,Prolactina,12,0.0,0,0
 total,Proteína C de la Coagulación (Actividad),1,0.0,0,0
@@ -15344,7 +15356,7 @@ total,Retiro de DIU,6,1724.13,2,2
 total,Retiro de DIU,7,0.0,0,0
 total,Retiro de DIU,8,0.0,0,0
 total,Retiro de DIU,9,1724.13,2,2
-total,Retiro de DIU,10,0.0,0,0
+total,Retiro de DIU,10,1293.1,1,1
 total,Retiro de DIU,11,0.0,0,0
 total,Retiro de DIU,12,0.0,0,0
 total,SERVICIO DUPLICADO,1,0.0,0,0
@@ -15596,7 +15608,7 @@ total,Subunidad beta cuantitativa,6,4741.4,64,64
 total,Subunidad beta cuantitativa,7,3318.98,41,41
 total,Subunidad beta cuantitativa,8,2370.7,59,59
 total,Subunidad beta cuantitativa,9,4267.26,54,52
-total,Subunidad beta cuantitativa,10,4622.86,17,17
+total,Subunidad beta cuantitativa,10,5097.0,18,18
 total,Subunidad beta cuantitativa,11,0.0,0,0
 total,Subunidad beta cuantitativa,12,0.0,0,0
 total,Suplemento Forcel Duo,1,5655.0,5,5
@@ -15824,7 +15836,7 @@ total,Tiempos de Coagulación,6,2715.51,5,5
 total,Tiempos de Coagulación,7,1810.34,10,10
 total,Tiempos de Coagulación,8,1357.76,11,11
 total,Tiempos de Coagulación,9,905.17,5,5
-total,Tiempos de Coagulación,10,0.0,3,3
+total,Tiempos de Coagulación,10,0.0,4,4
 total,Tiempos de Coagulación,11,0.0,0,0
 total,Tiempos de Coagulación,12,0.0,0,0
 total,Transferencia CDMX,1,6896.55,1,1
@@ -15884,7 +15896,7 @@ total,Traslado de gametos locales,6,7171.56,3,3
 total,Traslado de gametos locales,7,7758.63,3,3
 total,Traslado de gametos locales,8,2586.21,1,1
 total,Traslado de gametos locales,9,5172.42,6,6
-total,Traslado de gametos locales,10,5172.42,2,2
+total,Traslado de gametos locales,10,7758.63,3,3
 total,Traslado de gametos locales,11,0.0,0,0
 total,Traslado de gametos locales,12,0.0,0,0
 total,Traslado de gametos nacional,1,12931.03,1,1
@@ -15932,7 +15944,7 @@ total,UTROGESTAN 200 MG 14 CÁPSULAS,6,170716.0,73,244
 total,UTROGESTAN 200 MG 14 CÁPSULAS,7,175700.0,81,254
 total,UTROGESTAN 200 MG 14 CÁPSULAS,8,195216.0,91,280
 total,UTROGESTAN 200 MG 14 CÁPSULAS,9,217775.0,88,298
-total,UTROGESTAN 200 MG 14 CÁPSULAS,10,78000.0,29,104
+total,UTROGESTAN 200 MG 14 CÁPSULAS,10,88500.0,36,118
 total,UTROGESTAN 200 MG 14 CÁPSULAS,11,0.0,0,0
 total,UTROGESTAN 200 MG 14 CÁPSULAS,12,0.0,0,0
 total,UTrogestan 100 mg,1,11500.0,8,23
@@ -15968,7 +15980,7 @@ total,Ultrasonido,6,62068.81,47,48
 total,Ultrasonido,7,79569.64,61,64
 total,Ultrasonido,8,47111.94,37,37
 total,Ultrasonido,9,89741.16,85,88
-total,Ultrasonido,10,14224.1,13,11
+total,Ultrasonido,10,21982.72,15,17
 total,Ultrasonido,11,0.0,0,0
 total,Ultrasonido,12,0.0,0,0
 total,Ultrasonido incluído,1,0.0,30,30
@@ -15992,7 +16004,7 @@ total,Urocultivo,6,1637.94,2,2
 total,Urocultivo,7,1637.94,2,2
 total,Urocultivo,8,3275.88,4,4
 total,Urocultivo,9,4913.82,8,8
-total,Urocultivo,10,3275.88,4,4
+total,Urocultivo,10,4094.85,5,5
 total,Urocultivo,11,0.0,0,0
 total,Urocultivo,12,0.0,0,0
 total,Uso de Quirófano,1,0.0,0,0
@@ -16016,7 +16028,7 @@ total,Uso de consultorio1hr con US,6,1896.54,6,4
 total,Uso de consultorio1hr con US,7,2069.34,4,4
 total,Uso de consultorio1hr con US,8,1681.02,3,3
 total,Uso de consultorio1hr con US,9,2499.99,8,6
-total,Uso de consultorio1hr con US,10,387.93,1,1
+total,Uso de consultorio1hr con US,10,775.86,2,2
 total,Uso de consultorio1hr con US,11,0.0,0,0
 total,Uso de consultorio1hr con US,12,0.0,0,0
 total,VDRL,1,0.0,2,2
@@ -16340,7 +16352,7 @@ total,[EX] Captura + fertilización CDMX,6,198750.0,8,8
 total,[EX] Captura + fertilización CDMX,7,329770.5,15,15
 total,[EX] Captura + fertilización CDMX,8,308781.75,15,15
 total,[EX] Captura + fertilización CDMX,9,316281.75,13,13
-total,[EX] Captura + fertilización CDMX,10,145000.0,7,7
+total,[EX] Captura + fertilización CDMX,10,220000.0,10,10
 total,[EX] Captura + fertilización CDMX,11,0.0,0,0
 total,[EX] Captura + fertilización CDMX,12,0.0,0,0
 total,[EX] Captura CDMX,1,9482.76,1,1
@@ -16400,7 +16412,7 @@ total,[EX] Captura+ Vitrificacion de ovocitos CDMX,6,325894.93,13,13
 total,[EX] Captura+ Vitrificacion de ovocitos CDMX,7,162963.88,7,7
 total,[EX] Captura+ Vitrificacion de ovocitos CDMX,8,183534.81,8,8
 total,[EX] Captura+ Vitrificacion de ovocitos CDMX,9,48189.65,2,2
-total,[EX] Captura+ Vitrificacion de ovocitos CDMX,10,51724.14,2,2
+total,[EX] Captura+ Vitrificacion de ovocitos CDMX,10,103448.28,4,4
 total,[EX] Captura+ Vitrificacion de ovocitos CDMX,11,0.0,0,0
 total,[EX] Captura+ Vitrificacion de ovocitos CDMX,12,0.0,0,0
 total,[EX] Captura+ Vitrificacion de ovocitos GDL,1,139956.88,6,6
@@ -16448,7 +16460,7 @@ total,[EX] Desvitrificación CDMX,6,6751.45,1,1
 total,[EX] Desvitrificación CDMX,7,7931.03,1,1
 total,[EX] Desvitrificación CDMX,8,28092.44,5,5
 total,[EX] Desvitrificación CDMX,9,22441.1,3,3
-total,[EX] Desvitrificación CDMX,10,0.0,0,0
+total,[EX] Desvitrificación CDMX,10,15862.07,2,2
 total,[EX] Desvitrificación CDMX,11,0.0,0,0
 total,[EX] Desvitrificación CDMX,12,0.0,0,0
 total,[EX] Desvitrificación GDL,1,0.0,0,0
@@ -16544,7 +16556,7 @@ total,[EX] Fertilización,6,6034.48,1,1
 total,[EX] Fertilización,7,6034.48,1,1
 total,[EX] Fertilización,8,83200.82,16,14
 total,[EX] Fertilización,9,42241.36,9,7
-total,[EX] Fertilización,10,12068.96,2,2
+total,[EX] Fertilización,10,24137.93,4,4
 total,[EX] Fertilización,11,0.0,0,0
 total,[EX] Fertilización,12,0.0,0,0
 total,[EX] Fertilización [Facturador],1,0.0,0,0
@@ -16580,7 +16592,7 @@ total,[EX] Histeroscopia diagnostica,6,75431.05,5,5
 total,[EX] Histeroscopia diagnostica,7,54655.2,6,4
 total,[EX] Histeroscopia diagnostica,8,75431.05,5,5
 total,[EX] Histeroscopia diagnostica,9,12500.01,1,1
-total,[EX] Histeroscopia diagnostica,10,15086.21,1,1
+total,[EX] Histeroscopia diagnostica,10,30172.42,2,2
 total,[EX] Histeroscopia diagnostica,11,0.0,0,0
 total,[EX] Histeroscopia diagnostica,12,0.0,0,0
 total,[EX] Histeroscopia diagnostica GDL,1,30172.42,2,2
