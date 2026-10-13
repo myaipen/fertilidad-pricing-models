@@ -1245,9 +1245,9 @@ const CONSULTA_AGRUPACION = {
   "Check up Ginecologico": "Check up Ginecologico",
   "Check-up SOP": "Check-up SOP",
   "Check-up SOMP": "Check-up SOP", // Marite (12-oct-2026): SOMP y SOP se unen en un solo grupo
-  // Marite (12-oct-2026): Primera Vez IP's (padres de intención) es Subrogación,
-  // no Consulta -> se excluye del ranking de consultas (null = omitir).
-  "Consulta de Primera Vez IP's": null,
+  // Marite (13-oct-2026): las IP's (Primera Vez, padres de intención) SÍ cuentan como consulta
+  // y aparecen como su propia fila en el ranking.
+  "Consulta de Primera Vez IP's": "Consulta de Primera Vez IP's",
   "Consulta ginecológica": "Consulta ginecológica",
   "Consulta médica": "Consulta primera vez",
   "Consulta Obstetricia": "Consulta Obstetricia",
@@ -1262,34 +1262,36 @@ const CONSULTA_AGRUPACION = {
   "Fertility Check up Virtual": "Fertility Check up Virtual",
 };
 
-// Octubre 2026 del ranking de consultas desde vRepro (corte 12-oct-2026):
+// Octubre 2026 del ranking de consultas desde vRepro (corte 12-oct-2026; 13-oct: incluye IP's y Obstetricia):
 // Terminadas 1-12 oct + citas Citado/Confirmada 13-31 oct, grupo Primera Vez
 // (Anulada/No asiste excluidas). Reemplaza la columna de octubre (mes 10) de
 // la hoja ConsultasRankingLive, que es una tabla dinamica sobre RAW_* y no se
 // puede sobreescribir. Llave: "Delegacion|Concepto".
 const CONSULTAS_VREPRO_OCT_2026 = {
- "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 1,
- "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online": 17,
- "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez online": 5,
- "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Mujeres": 22,
- "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 24,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez": 24,
- "FERTILIDAD INTEGRAL Guadalajara|Check up Ginecologico": 17,
- "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez": 45,
- "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 1,
+ "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 24,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online": 17,
  "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Parejas": 11,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez": 46,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Mujeres": 10,
+ "FERTILIDAD INTEGRAL Metepec|Check-up SOMP": 2,
+ "FERTILIDAD INTEGRAL Guadalajara|Check up Integral": 9,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Mujeres": 23,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez online": 5,
+ "FERTILIDAD INTEGRAL Guadalajara|Check up Ginecologico": 17,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 3,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta Obstetricia": 2,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 4,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Parejas": 7,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta de Primera Vez IP's": 5,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez": 10,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 1,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 1,
  "FERTILIDAD INTEGRAL Ciudad de México|Check up Integral": 3,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez gratis": 1,
  "FERTILIDAD INTEGRAL Ciudad de México|Check-up SOMP": 3,
- "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 3,
- "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez": 10,
- "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 4,
- "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Mujeres": 10,
- "FERTILIDAD INTEGRAL Guadalajara|Check up Integral": 9,
- "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 1,
- "FERTILIDAD INTEGRAL Metepec|Check-up SOMP": 2,
- "FERTILIDAD INTEGRAL Ciudad de México|Check up Ginecologico": 3,
- "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Parejas": 7
+ "FERTILIDAD INTEGRAL Ciudad de México|Check up Ginecologico": 3
 };
 function aplicarOverrideVRepro(rows) {
   if (ANIO_VIGENTE !== 2026) return rows;
