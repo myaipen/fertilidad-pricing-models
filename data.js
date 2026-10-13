@@ -73,8 +73,8 @@ window.DATA = {
 
   servicios: {
     total: [
-      { nombre: "Tratamientos FIV/ICSI", valor: 3.51, vsLM: -16, vsU3M: -17 },
-      { nombre: "Congelación de Gametos", valor: 3.19, vsLM: -21, vsU3M: 7 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 3.51, vsLM: -22, vsU3M: -19 },
+      { nombre: "Congelación de Gametos", valor: 3.2, vsLM: -15, vsU3M: 10 },
       { nombre: "Farmacia", valor: 2.59, vsLM: -2, vsU3M: -13 },
       { nombre: "Laboratorio", valor: 1.98, vsLM: -15, vsU3M: -13 },
       { nombre: "Subrogación", valor: 1.19, vsLM: 35, vsU3M: 22 },
@@ -82,11 +82,11 @@ window.DATA = {
       { nombre: "Procedimientos / Quirúrgicos", valor: 0.33, vsLM: -14, vsU3M: -17 },
       { nombre: "Imágenes", valor: 0.07, vsLM: -50, vsU3M: -27 },
       { nombre: "Wellness", valor: 0.04, vsLM: -27, vsU3M: 36 },
-      { nombre: "Otros", valor: 0.03, vsLM: -31, vsU3M: -14 },
+      { nombre: "Otros", valor: 0.03, vsLM: -16, vsU3M: 23 },
     ],
     CDMX: [
-      { nombre: "Tratamientos FIV/ICSI", valor: 3.11, vsLM: -16, vsU3M: -14 },
-      { nombre: "Congelación de Gametos", valor: 2.75, vsLM: -22, vsU3M: 12 },
+      { nombre: "Tratamientos FIV/ICSI", valor: 3.11, vsLM: -23, vsU3M: -16 },
+      { nombre: "Congelación de Gametos", valor: 2.75, vsLM: -14, vsU3M: 16 },
       { nombre: "Farmacia", valor: 2.15, vsLM: -8, vsU3M: -13 },
       { nombre: "Laboratorio", valor: 1.61, vsLM: -24, vsU3M: -8 },
       { nombre: "Subrogación", valor: 1.18, vsLM: 38, vsU3M: 23 },
@@ -94,7 +94,7 @@ window.DATA = {
       { nombre: "Consultas", valor: 0.18, vsLM: -28, vsU3M: -19 },
       { nombre: "Imágenes", valor: 0.05, vsLM: -55, vsU3M: -30 },
       { nombre: "Wellness", valor: 0.03, vsLM: -21, vsU3M: 44 },
-      { nombre: "Otros", valor: 0.03, vsLM: -38, vsU3M: -6 },
+      { nombre: "Otros", valor: 0.02, vsLM: -33, vsU3M: 50 },
     ],
     GDL: [
       { nombre: "Congelación de Gametos", valor: 0.43, vsLM: -4, vsU3M: -4 },
@@ -105,7 +105,7 @@ window.DATA = {
       { nombre: "Procedimientos / Quirúrgicos", valor: 0.09, vsLM: 134, vsU3M: 57 },
       { nombre: "Imágenes", valor: 0.01, vsLM: 8, vsU3M: 25 },
       { nombre: "Wellness", valor: 0.01, vsLM: -39, vsU3M: 18 },
-      { nombre: "Otros", valor: 0.01, vsLM: 101, vsU3M: -42 },
+      { nombre: "Otros", valor: 0.01, vsLM: null, vsU3M: -28, nuevo: true },
       { nombre: "Subrogación", valor: 0.0, vsLM: -81, vsU3M: -42 },
     ],
     MTP: [
@@ -124,8 +124,8 @@ window.DATA = {
   highlights: {
     total: [
       "Octubre lleva 12 días de Real (corte 12-oct, leído de vRepro) y proyecta $13.30M: 13% debajo de septiembre ($15.22M) y 28% arriba de octubre 2025 ($10.37M). Confianza media: solo 9.2 de 25.0 días hábiles equivalentes y alta dispersión diaria (lun 12-oct $1.33M, vie 9-oct $948K, dom 11-oct $191K).",
-      "El lunes 12-oct dejó $1.33M de venta, empujado por Subrogación (paquetes Fresh egg donor $569K y Essentials $105K en CDMX) y Congelación ($191K), así que el Real a la fecha ($5.97M) ya cubre 45% de la proyección.",
-      "Subrogación es el servicio que más crece vs septiembre (+35% proy, $1.19M) por esos dos paquetes; Tratamientos FIV/ICSI ($3.51M, -16%) y Congelación ($3.19M, -21%) siguen siendo los dos servicios más grandes, pero ambos van por debajo de septiembre.",
+      "El lunes 12-oct dejó $1.33M de venta, empujado por Subrogación (paquetes Fresh egg donor $569K y Essentials $105K en CDMX) y Congelación ($193K), así que el Real a la fecha ($5.97M) ya cubre 45% de la proyección.",
+      "Subrogación es el servicio que más crece vs septiembre (+35% proy, $1.19M) por esos dos paquetes; Tratamientos FIV/ICSI ($3.51M, -22%) y Congelación ($3.20M, -15%) siguen siendo los dos servicios más grandes, pero ambos van por debajo de septiembre.",
       "Atenciones (2,959) y Pacientes (969) proyectan -16% y -27% vs septiembre (3,543 y 1,323) frente a -13% de Ingresos: septiembre tuvo un pico de pacientes únicos que el ratio promedio jul-sep solo recoge en parte. Sin techo por ticket.",
       "Consultas: 95 reales más 128 ya agendadas del 13 al 31 oct = 223 proyectadas (-29% vs septiembre); la cifra crece conforme se agenden nuevas citas, no es un techo. El % de No Show de octubre es 12.8% (14 inasistencias sobre 109 citas de primera vez), debajo del promedio ene-sep de 13.9%.",
       "HubSpot (Interesa2) al 12-oct: 758 leads y 177 citas agendadas (23% de conversión mensual parcial); el día 12 sumó 69 leads y 18 citas. La cohorte M0 de octubre va en 18% de los leads con cita en el mismo mes (septiembre cerró en 20%).",
@@ -133,7 +133,7 @@ window.DATA = {
     ],
     CDMX: [
       "CDMX concentra 87% del ingreso MTD de octubre ($5.20M de $5.97M) y proyecta $11.33M (-15% vs septiembre, -5% vs U3M); solo el lunes 12-oct facturó $1.26M.",
-      "Subrogación CDMX ya lleva $688K en el mes (proy $1.18M, +38% vs LM) y Congelación $1.48M real; Atenciones proy (2,264) y Pacientes proy (690) sin techo por ticket.",
+      "Subrogación CDMX ya lleva $688K en el mes (proy $1.18M, +38% vs LM) y Congelación $1.49M real; Atenciones proy (2,264) y Pacientes proy (690) sin techo por ticket.",
     ],
     GDL: [
       "GDL lleva $559K en 12 días y proyecta $1.67M (+15% vs septiembre, -12% vs U3M); el 12-oct solo facturó $22K, por eso su proyección baja $48K frente al corte del 11-oct.",
