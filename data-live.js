@@ -143,7 +143,8 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // ACTUALIZADO 13-oct-2026: corte sube de 11 a 12 (cargos y citas del 12-oct de vRepro;
 // HubSpot hasta 12-oct). Real MTD $5.97M. CDMX y GDL: misma metodología. Metepec: la
 // proyección de Ingresos se fija a mano en $0.30M en Base!F (ajuste manual) y la
-// proyección de Atenciones se escala en proporción (ver AJUSTE_MTP_OCT_2026 abajo).
+// proyección de Atenciones se escala en proporción; CDMX se deja en la proyección del
+// corte 11-oct ($11.33M) (ver AJUSTE_ATEN_OCT_2026 abajo).
 let CORTE_REAL_DIA = 12;
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
@@ -1106,14 +1107,14 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
     const hist = meses.map(n => m[n] || 0);
     const actual = m[MES_VIGENTE] || 0;
     let proy = proyectarPorTendencia(actual, hist, sede);
-    // AJUSTE MANUAL (13-oct-2026): Metepec octubre 2026. El remanente proyectado
-    // (proy - actual) se escala por (0.30M - Real MTD) / (proy central - Real MTD)
-    // de Ingresos = 0.2658, para que Atenciones y Pacientes (derivado) sigan la
-    // proyección de Ingresos de Metepec fijada en $0.30M. Solo Atenciones: Pacientes
-    // se deriva de ahí por ratio.
-    const AJUSTE_MTP_OCT_2026 = 0.2658;
-    if (esAtenciones && sede === "MTP" && MES_VIGENTE === 10 && ANIO_VIGENTE === 2026 && !cerrado && proy > actual) {
-      proy = actual + (proy - actual) * AJUSTE_MTP_OCT_2026;
+    // AJUSTE MANUAL (13-oct-2026): octubre 2026. El remanente proyectado de
+    // Atenciones (proy - actual) se escala para que Atenciones (y Pacientes,
+    // derivado por ratio) sigan la proyección de Ingresos fijada a mano en Base!F:
+    // Metepec $0.30M (factor 0.2658) y CDMX = proyección del corte 11-oct,
+    // $11.33M (factor 0.9612 sobre atenciones => 2,264). GDL sin ajuste.
+    const AJUSTE_ATEN_OCT_2026 = { MTP: 0.2658, CDMX: 0.9612 };
+    if (esAtenciones && AJUSTE_ATEN_OCT_2026[sede] != null && MES_VIGENTE === 10 && ANIO_VIGENTE === 2026 && !cerrado && proy > actual) {
+      proy = actual + (proy - actual) * AJUSTE_ATEN_OCT_2026[sede];
     }
     hist.forEach((v,i) => histTotal[i] += v);
     actualTotal += actual;
