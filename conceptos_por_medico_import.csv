@@ -275,8 +275,6 @@ CDMX,Biopsia testicular - CDMX,Eugenia Morán Orozco,28000.0,1,1
 CDMX,Bolentax 40mg,Jaime Antonio Hidalgo Carrera,4000.0,1,5
 CDMX,Búsqueda de microdeleciones del cromosoma Y,Enfermeria,5474.14,1,1
 CDMX,CA 125,Giovanni López Salamanca,1120.68,2,2
-CDMX,CARGO DOBLE,Eugenia Morán Orozco,0.0,3,3
-CDMX,CARGO DOBLE,Laboratorio FIV/Andrología,0.0,1,1
 CDMX,CARGO ERRADO,Eugenia Morán Orozco,0.0,1,1
 CDMX,CARGO ERRADO,Jairo Hernando Pedraza Pinto,0.0,2,10
 CDMX,CARGO ERRONEO,Monica Olavarria,0.0,1,1
@@ -721,7 +719,6 @@ CDMX,Donante Europeo E,Alma Victoria Villarreal Barranca,47413.79,1,1
 CDMX,Donante Europeo E,Jairo Hernando Pedraza Pinto,67241.38,1,1
 CDMX,Donante Europeo M,Alma Victoria Villarreal Barranca,24137.93,1,1
 CDMX,Donante fresco genevity,Eugenia Morán Orozco,39568.97,1,1
-CDMX,ERRADO CARGO,Giovanni López Salamanca,0.0,1,1
 CDMX,Electrolitos (6) de sangre,José Alfonso Gutiérrez Frusch,387.93,1,1
 CDMX,EmbryoScope Kit Interno,Alma Victoria Villarreal Barranca,53879.31,7,7
 CDMX,EmbryoScope Kit Interno,Armando Miguel Roque Sanchez,8620.69,1,1
@@ -3713,8 +3710,6 @@ total,Búsqueda de microdeleciones del cromosoma Y,Enfermeria,5474.14,1,1
 total,CA 125,Diana Duran,1120.68,2,2
 total,CA 125,Giovanni López Salamanca,1120.68,2,2
 total,CA 19-9 (Páncreas),David Alejandro laguna Pérez,862.07,1,1
-total,CARGO DOBLE,Eugenia Morán Orozco,0.0,3,3
-total,CARGO DOBLE,Laboratorio FIV/Andrología,0.0,1,1
 total,CARGO ERRADO,Eugenia Morán Orozco,0.0,1,1
 total,CARGO ERRADO,Jairo Hernando Pedraza Pinto,0.0,2,10
 total,CARGO ERRONEO,Monica Olavarria,0.0,1,1
@@ -4383,7 +4378,6 @@ total,Donante Europeo E,Jairo Hernando Pedraza Pinto,67241.38,1,1
 total,Donante Europeo M,Alma Victoria Villarreal Barranca,24137.93,1,1
 total,Donante fresco genevity,Eugenia Morán Orozco,39568.97,1,1
 total,ENDOMETRIO ERA+EMMA+ALICE,Carlos Parra,35129.31,1,1
-total,ERRADO CARGO,Giovanni López Salamanca,0.0,1,1
 total,Electrolitos (3) en sangre,Norma Sharey Vazquez Jimenez,301.72,1,1
 total,Electrolitos (6) de sangre,Jorge Michel,387.93,1,1
 total,Electrolitos (6) de sangre,José Alfonso Gutiérrez Frusch,387.93,1,1
