@@ -1171,6 +1171,44 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
  * para el año pedido (anio, default ANIO_VIGENTE) — mismo criterio de vsLY
  * que buildMonthlyRealMetric (null si no hay dato del año anterior).
  */
+/*
+  ============================================================================
+  PROYECCIÓN DE CONSULTAS (Primera Vez) — 19-oct-2026
+  ============================================================================
+  Antes: proy = Real + Agendado (toda la agenda pendiente contada como si fuera
+  a asistir, y sin citas nuevas). Ahora, para el mes/corte de abajo, el
+  "Agendado" que ve el tablero = proyección - Real, así KPIs, gráfica, trimestre,
+  año y highlights usan la misma cifra. La proyección sale del promedio de:
+   (a) modelo Piso + incremental (Bru): Piso = Real + Agenda pendiente × show rate;
+       Incremental = velocidad de agenda × días restantes × decay × show rate, con
+       velocidad calibrada a vRepro (10.2 citas/día, no las 14.9 de HubSpot: ~0.68
+       de los agendamientos de HubSpot llegan a vRepro), decay 0.52 a 13 días;
+   (b) blend run-rate ponderado (lun-vie 1, sáb 0.75, dom 0) + rezago de citas de
+       HubSpot (backtest Abr-Sep, error medio 3.5% al corte día 18).
+  Rango = proyección × 0.947 / × 1.063 (conservador / optimista de Bru). Piso =
+  solo lo ya terminado + agenda × show rate. Si cambia CORTE_REAL_DIA o el mes,
+  esta constante se ignora (y vuelve a Real + Agendado) hasta que se recalcule.
+  ============================================================================
+*/
+const CONSULTAS_PROY = {
+  anio: 2026, mes: 10, corte: 18, showRate: 84,
+  sedes: {
+    CDMX: { piso: 128, base: 137, min: 130, max: 146 },
+    GDL:  { piso: 91,  base: 116, min: 110, max: 123 },
+    MTP:  { piso: 32,  base: 48,  min: 45,  max: 51 },
+  },
+  total: { piso: 251, base: 301, min: 285, max: 320 },
+};
+function consultasProyActiva() {
+  return ANIO_VIGENTE === CONSULTAS_PROY.anio && MES_VIGENTE === CONSULTAS_PROY.mes && CORTE_REAL_DIA === CONSULTAS_PROY.corte;
+}
+function consultasAgendadoEsperado(sede, realVig, agendadoSheet) {
+  if (!consultasProyActiva()) return agendadoSheet;
+  const e = CONSULTAS_PROY.sedes[sede];
+  if (!e || realVig > e.base) return agendadoSheet;
+  return e.base - realVig;
+}
+
 function buildConsultasMetric(rows, anio = ANIO_VIGENTE) {
   function bySedeParaAnio(targetAnio) {
     const bySede = {};
@@ -1192,7 +1230,7 @@ function buildConsultasMetric(rows, anio = ANIO_VIGENTE) {
     const m = bySede[sede] || {};
     const hist = meses.map(n => (m[n] && m[n].real) || 0);
     const realVig = (m[MES_VIGENTE] && m[MES_VIGENTE].real) || 0;
-    const agendadoVig = (m[MES_VIGENTE] && m[MES_VIGENTE].agendado) || 0;
+    const agendadoVig = consultasAgendadoEsperado(sede, realVig, (m[MES_VIGENTE] && m[MES_VIGENTE].agendado) || 0);
     const proy = realVig + agendadoVig;
     hist.forEach((v,i) => histTotal[i] += v);
     realVigTotal += realVig; agenVigTotal += agendadoVig;
@@ -2272,6 +2310,36 @@ function buildHubspotMecanismo() {
 }
 window.buildHubspotMecanismo = buildHubspotMecanismo;
 
+// ---- Consultas: etiquetas y nota de la proyección (se aplica tras cada renderAll)
+function ajustarConsultasProyUI() {
+  const cont = document.getElementById("consultas-section");
+  if (!cont) return;
+  const sub = cont.previousElementSibling;
+  let nota = document.getElementById("consultas-proy-nota");
+  if (!consultasProyActiva()) { if (nota) nota.remove(); return; }
+  if (sub && sub.classList.contains("section-sub")) {
+    sub.textContent = "Consultas terminadas (real) + agenda pendiente × show rate + citas nuevas esperadas para completar el mes";
+  }
+  const ch = typeof charts !== "undefined" && charts["chart-consultas-stack"];
+  if (ch && ch.data && ch.data.datasets && ch.data.datasets[1] && ch.data.datasets[1].label === "Agendado") {
+    ch.data.datasets[1].label = "Agenda + nuevas citas esperadas";
+    ch.update("none");
+  }
+  const sc = (typeof currentScope !== "undefined" && currentScope !== "total") ? currentScope : "total";
+  const e = sc === "total" ? CONSULTAS_PROY.total : CONSULTAS_PROY.sedes[sc];
+  if (!e) return;
+  if (!nota) {
+    nota = document.createElement("p");
+    nota.id = "consultas-proy-nota";
+    nota.className = "section-sub";
+    nota.style.cssText = "margin:10px 0 0;";
+    cont.parentNode.insertBefore(nota, cont.nextSibling);
+  }
+  nota.innerHTML = "<b>Proyección " + MESES_12[CONSULTAS_PROY.mes - 1] + " (" + (sc === "total" ? "total" : sc) + "): " + e.base + " consultas</b> · rango " + e.min + "–" + e.max +
+    " · piso " + e.piso + " (real + agenda pendiente × show rate " + CONSULTAS_PROY.showRate + "%). Corte " + CONSULTAS_PROY.corte + "-oct. Promedio del modelo piso + incremental y del blend run-rate/HubSpot; no incluye consultas fuera del grupo Primera Vez.";
+}
+window.ajustarConsultasProyUI = ajustarConsultasProyUI;
+
 // Engancha renderAll (definida en index.html, que carga después): cada vez que el
 // tablero se redibuja, redibuja esta sección; si ya estaba dibujado, la pinta ya.
 (function engancharMecanismo() {
@@ -2283,11 +2351,12 @@ window.buildHubspotMecanismo = buildHubspotMecanismo;
       const nueva = function () {
         const r = orig.apply(this, arguments);
         try { buildHubspotMecanismo(); } catch (e) { console.warn("Sección mecanismo de conversión:", e); }
+        try { ajustarConsultasProyUI(); } catch (e) { console.warn("Nota proyección consultas:", e); }
         return r;
       };
       nueva.__mec = true;
       window.renderAll = nueva;
-      try { if (document.getElementById("hubspot-charts") && document.getElementById("hubspot-charts").children.length) buildHubspotMecanismo(); } catch (e) { console.warn(e); }
+      try { if (document.getElementById("hubspot-charts") && document.getElementById("hubspot-charts").children.length) buildHubspotMecanismo(); ajustarConsultasProyUI(); } catch (e) { console.warn(e); }
       clearInterval(t);
     } else if (intentos > 300) clearInterval(t);
   }, 100);
