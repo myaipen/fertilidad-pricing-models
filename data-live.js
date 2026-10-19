@@ -145,7 +145,11 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // proyección de Ingresos se fija a mano en $0.30M en Base!F (ajuste manual) y la
 // proyección de Atenciones se escala en proporción; CDMX se deja en la proyección del
 // corte 11-oct ($11.33M) (ver AJUSTE_ATEN_OCT_2026 abajo).
-let CORTE_REAL_DIA = 12;
+// ACTUALIZADO 19-oct-2026: corte sube de 12 a 18 (cargos y citas del 6 al 18 oct de vRepro;
+// HubSpot hasta 18-oct; el domingo 18-oct no tuvo cargos). Real MTD $8.53M. Metepec vuelve al
+// método central (el tope manual de $0.30M quedó por debajo del Real MTD). CDMX se mantiene
+// fijo en $11.33M / 2,264 atenciones (ver AJUSTE_ATEN_OCT_2026 abajo).
+let CORTE_REAL_DIA = 18;
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 
@@ -1107,12 +1111,11 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
     const hist = meses.map(n => m[n] || 0);
     const actual = m[MES_VIGENTE] || 0;
     let proy = proyectarPorTendencia(actual, hist, sede);
-    // AJUSTE MANUAL (13-oct-2026): octubre 2026. El remanente proyectado de
-    // Atenciones (proy - actual) se escala para que Atenciones (y Pacientes,
-    // derivado por ratio) sigan la proyección de Ingresos fijada a mano en Base!F:
-    // Metepec $0.30M (factor 0.2658) y CDMX = proyección del corte 11-oct,
-    // $11.33M (factor 0.9612 sobre atenciones => 2,264). GDL sin ajuste.
-    const AJUSTE_ATEN_OCT_2026 = { MTP: 0.2658, CDMX: 0.9612 };
+    // AJUSTE MANUAL (19-oct-2026, corte 18-oct): octubre 2026. El remanente proyectado de
+    // Atenciones (proy - actual) de CDMX se escala para dejarla en 2,264 (y Pacientes,
+    // derivado por ratio, en 690), consistente con la proyección de Ingresos fijada a mano
+    // en Base!F ($11.33M). Metepec y GDL sin ajuste (método central).
+    const AJUSTE_ATEN_OCT_2026 = { CDMX: 1.0226 };
     if (esAtenciones && AJUSTE_ATEN_OCT_2026[sede] != null && MES_VIGENTE === 10 && ANIO_VIGENTE === 2026 && !cerrado && proy > actual) {
       proy = actual + (proy - actual) * AJUSTE_ATEN_OCT_2026[sede];
     }
@@ -1262,36 +1265,39 @@ const CONSULTA_AGRUPACION = {
   "Fertility Check up Virtual": "Fertility Check up Virtual",
 };
 
-// Octubre 2026 del ranking de consultas desde vRepro (corte 12-oct-2026; 13-oct: incluye IP's y Obstetricia):
-// Terminadas 1-12 oct + citas Citado/Confirmada 13-31 oct, grupo Primera Vez
+// Octubre 2026 del ranking de consultas desde vRepro (corte 18-oct-2026; incluye IP's y Obstetricia):
+// Terminadas 1-18 oct + citas Citado/Confirmada 19-31 oct (+ Terminadas del 19-oct), grupo Primera Vez
 // (Anulada/No asiste excluidas). Reemplaza la columna de octubre (mes 10) de
 // la hoja ConsultasRankingLive, que es una tabla dinamica sobre RAW_* y no se
 // puede sobreescribir. Llave: "Delegacion|Concepto".
 const CONSULTAS_VREPRO_OCT_2026 = {
- "FERTILIDAD INTEGRAL Metepec|Consulta primera vez": 24,
- "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 1,
- "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 24,
- "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online": 17,
- "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Parejas": 11,
- "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez": 46,
- "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Mujeres": 10,
- "FERTILIDAD INTEGRAL Metepec|Check-up SOMP": 2,
- "FERTILIDAD INTEGRAL Guadalajara|Check up Integral": 9,
- "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Mujeres": 23,
- "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez online": 5,
- "FERTILIDAD INTEGRAL Guadalajara|Check up Ginecologico": 17,
- "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 3,
- "FERTILIDAD INTEGRAL Guadalajara|Consulta Obstetricia": 2,
- "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 4,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez": 54,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online": 27,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Mujeres": 26,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez": 25,
+ "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 23,
+ "FERTILIDAD INTEGRAL Guadalajara|Check up Ginecologico": 21,
+ "FERTILIDAD INTEGRAL Guadalajara|Check up Integral": 12,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez": 12,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Mujeres": 11,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Parejas": 10,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta de Primera Vez IP's": 7,
  "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Parejas": 7,
- "FERTILIDAD INTEGRAL Ciudad de México|Consulta de Primera Vez IP's": 5,
- "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez": 10,
- "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 1,
- "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 1,
+ "FERTILIDAD INTEGRAL Ciudad de México|Check up Ginecologico": 5,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 5,
+ "FERTILIDAD INTEGRAL Ciudad de México|Check-up SOMP": 4,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez online": 4,
  "FERTILIDAD INTEGRAL Ciudad de México|Check up Integral": 3,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 2,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta Obstetricia": 2,
+ "FERTILIDAD INTEGRAL Metepec|Check-up SOMP": 2,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online gratis": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta obstetrica materno fetal": 1,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez gratis": 1,
- "FERTILIDAD INTEGRAL Ciudad de México|Check-up SOMP": 3,
- "FERTILIDAD INTEGRAL Ciudad de México|Check up Ginecologico": 3
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 1,
+ "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 1,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 1,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 1,
 };
 function aplicarOverrideVRepro(rows) {
   if (ANIO_VIGENTE !== 2026) return rows;
