@@ -2240,11 +2240,26 @@ function buildHubspotMecanismo() {
   const conjuntos = MEC_ORDEN.filter(g => D.leads[g].slice(0, mes).some(v => v > 0)).map(g => ({
     label: g, data: D.leads[g].slice(0, mes), backgroundColor: MEC_COLOR[g], borderColor: "#FFFFFF", borderWidth: 1, borderRadius: 0, stack: "m",
   }));
+  const mecTotales = {
+    id: "mecTotales",
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      ctx.save();
+      ctx.font = "700 11px Calibri, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; ctx.fillStyle = COLORS.text;
+      for (let m = 0; m < mes; m++) {
+        let top = null;
+        chart.data.datasets.forEach((ds, k) => { if (ds.data[m]) top = chart.getDatasetMeta(k).data[m]; });
+        if (top) ctx.fillText(mecFmt(totL(m)), top.x, top.y - 4);
+      }
+      ctx.restore();
+    },
+  };
   const ch = new Chart(cv.getContext("2d"), {
-    type: "bar", data: { labels, datasets: conjuntos },
+    type: "bar", data: { labels, datasets: conjuntos }, plugins: [mecTotales],
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
+        stackedTotalLabels: false, // el plugin global del tablero suma solo los 2 primeros datasets; aquí se dibuja el total real (mecTotales)
         legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, font: { size: 11 } } },
         tooltip: { mode: "index", intersect: false, callbacks: {
           label: c => c.parsed.y ? ` ${c.dataset.label}: ${mecFmt(c.parsed.y)} (${mecPct(c.parsed.y, totL(c.dataIndex))})` : null,
