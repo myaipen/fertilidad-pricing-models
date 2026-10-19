@@ -40,7 +40,7 @@ window.DATA = {
     ingresos: { hist: [12.0, 12.0, 13.2, 12.5, 12.8, 12.1, 12.0, 16.1, 15.2], actual: 8.53, proy: 13.57, vsLM: -11, vsU3M: -6, nota: "OCTUBRE (corte 18-oct, 18 días de Real, vRepro): Real $8,533,679; Proyectado $13,567,933. GDL y Metepec: Real MTD + días hábiles restantes (ponderados: lun-vie 1, sáb 0.55, dom 0.07) × ritmo mediano feb-sep ($533K por día hábil equivalente), repartido a sedes y servicios con la mezcla jul-sep (backtest ene-sep: error medio ~0%, típico ±9%). CDMX queda fijada a mano en $11,333,342 (ajuste manual; el método daba $12.26M y el total habría sido $14.49M); el tope manual de Metepec ($0.30M) se retiró porque quedó por debajo de su Real MTD ($353K). Octubre 2025 cerró en $10.37M. Confianza media-alta: 18 días de Real (13.9 de 25.0 días hábiles equivalentes). El domingo 18-oct no tuvo cargos. Septiembre quedó CERRADO (Proyectado = Real = $15,216,602); agosto quedó en $16,106,074 tras re-clasificar por ConceptosHier." },
     atenciones: { hist: [2498, 2296, 2581, 2522, 2562, 2331, 2561, 3106, 3543], actual: 1701, proy: 3069, vsLM: -13, vsU3M: 0, nota: "OCTUBRE MTD al 18-oct: 1,701 líneas de cargo (suma CDMX+GDL+MTP). Proyección 3,069 (CDMX 2,264 + GDL 587 + MTP 218) = promedio de (Real ÷ share mediano de atenciones al día 18) y (Real + días hábiles equivalentes restantes × ritmo por día hábil de jul-sep). CDMX: atenciones proyectadas ajustadas manualmente junto con su ingreso (el método daba 2,242). Sin techo por ticket (el ticket ya no es estable: GDL cayó de ~$4.7K a $2.2K en septiembre)." },
     pacientes: { hist: [589, 613, 735, 773, 762, 732, 741, 1000, 1323], actual: 646, proy: 1007, vsLM: -24, vsU3M: -1, nota: "OCTUBRE MTD al 18-oct: 646 pacientes únicos (suma de sedes, dedup por Historia dentro de cada sede). Proyección = max(Real, Atenciones proy × ratio pacientes/atención promedio jul-sep): total 1,007 (CDMX 690 + GDL 243 + MTP 74; Atenciones proy × ratio pacientes/atención jul-sep)." },
-    consultas: { hist: [153, 154, 224, 208, 219, 262, 249, 309, 316], real: 154, agendado: 115, proy: 269, vsLM: -15, vsU3M: -8, nota: "OCTUBRE (corte 18-oct): real 154 (Terminada + Primera Vez, 1-18 oct, vRepro) + agendado 115 (citas de primera vez ya agendadas del 19 al 31 oct en vRepro, incluye las Terminadas/Confirmadas del 19-oct) = proy 269. Poca historia del mes: la cifra crece conforme se agenden nuevas citas." },
+    consultas: { hist: [153, 154, 224, 208, 219, 262, 249, 309, 316], real: 154, agendado: 147, proy: 301, vsLM: -5, vsU3M: 3, nota: "OCTUBRE (corte 18-oct): proyección 301 consultas (rango 285-320). Real 154 (Terminada + Primera Vez, 1-18 oct, vRepro) + 147 esperadas = agenda pendiente de 115 citas × show rate 84% (≈97) + citas nuevas por agendar (≈50). Piso (solo lo ya agendado) ≈ 251. Método: promedio del modelo Piso + incremental (velocidad de agenda calibrada a vRepro 10.2 citas/día × 13 días × decay 0.52 × show rate) y del blend run-rate + HubSpot (backtest Abr-Sep, error ~3.5% al corte día 18)." },
     noshow: { hist: [8.8, 6.2, 14.0, 15.7, 19.1, 14.8, 14.7, 15.3, 16.4], actual: 15.8, prom: 13.9, deltaPts: 1.9 },
   },
 
@@ -50,7 +50,7 @@ window.DATA = {
       ingresos: { hist: [10.2, 9.8, 10.3, 10.5, 10.2, 9.3, 10.0, 12.4, 13.3], actual: 7.34, proy: 11.33, vsLM: -15, vsU3M: -5, nota: "OCTUBRE MTD al 18-oct: Real $7,336,526; Proyectado $11,333,342 (ajuste manual: se mantiene el nivel fijado en el corte 11-oct; el método daba $12.26M). Septiembre cerrado en $13,328,714 (Proy = Real)." },
       atenciones: { hist: [2099, 1796, 1948, 2018, 1977, 1717, 1910, 2069, 2658], actual: 1268, proy: 2264, vsLM: -15, vsU3M: 2, nota: "1,268 líneas al 18-oct; proy 2,264 (ajuste manual; el método daba 2,242); sin techo por ticket." },
       pacientes: { hist: [455, 470, 530, 587, 566, 500, 506, 618, 931], actual: 459, proy: 690, vsLM: -26, vsU3M: 1, nota: "459 pacientes únicos al 18-oct; proy 690 = Atenciones proy × 0.3046 (ratio promedio jul-sep)." },
-      consultas: { hist: [112, 92, 133, 133, 127, 160, 135, 130, 141], real: 70, agendado: 69, proy: 139, vsLM: -1, vsU3M: 3, top_cat: "Consulta primera vez", top_n: 82 },
+      consultas: { hist: [112, 92, 133, 133, 127, 160, 135, 130, 141], real: 70, agendado: 67, proy: 137, vsLM: -3, vsU3M: 1, top_cat: "Consulta primera vez", top_n: 82 },
       noshow: { hist: [7.4, 7.9, 11.2, 14.2, 19.9, 10.2, 13.0, 11.0, 13.7], actual: 15.7, prom: 12.1, deltaPts: 3.6 },
     },
     GDL: {
@@ -58,7 +58,7 @@ window.DATA = {
       ingresos: { hist: [1.3, 1.5, 2.1, 1.5, 1.9, 2.4, 1.5, 2.8, 1.5], actual: 0.84, proy: 1.63, vsLM: 12, vsU3M: -14, nota: "OCTUBRE MTD al 18-oct: Real $844,142; Proyectado central $1,630,863. Septiembre cerrado en $1,456,406 (Proy = Real)." },
       atenciones: { hist: [261, 311, 420, 326, 416, 507, 428, 751, 660], actual: 311, proy: 587, vsLM: -11, vsU3M: -4, nota: "311 líneas al 18-oct; proy 587 = promedio de pacing (585) y ritmo jul-sep por día hábil (590); sin techo por ticket (agosto 751, septiembre 660)." },
       pacientes: { hist: [103, 98, 158, 136, 163, 195, 175, 287, 299], actual: 138, proy: 243, vsLM: -19, vsU3M: -4, nota: "138 pacientes únicos al 18-oct; proy 243 = Atenciones proy × 0.4147 (ratio promedio jul-sep)." },
-      consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133, 123], real: 63, agendado: 32, proy: 95, vsLM: -23, vsU3M: -17, top_cat: "Check-up SOP", top_n: 23 },
+      consultas: { hist: [33, 41, 75, 55, 79, 93, 87, 133, 123], real: 63, agendado: 53, proy: 116, vsLM: -6, vsU3M: 1, top_cat: "Check-up SOP", top_n: 23 },
       noshow: { hist: [13.2, 2.4, 15.7, 17.9, 16.8, 19.1, 17.1, 14.2, 15.8], actual: 13.7, prom: 14.7, deltaPts: -1.0 },
     },
     MTP: {
@@ -66,7 +66,7 @@ window.DATA = {
       ingresos: { hist: [0.5, 0.7, 0.8, 0.5, 0.6, 0.4, 0.5, 0.9, 0.4], actual: 0.35, proy: 0.6, vsLM: 40, vsU3M: -1, nota: "OCTUBRE MTD al 18-oct: Real $353,010; Proyectado central $603,728 (método central; se retiró el tope manual de $0.30M). Septiembre cerrado en $431,482 (Proy = Real). Sede chica: pocas líneas por día." },
       atenciones: { hist: [138, 189, 213, 178, 169, 107, 223, 286, 225], actual: 122, proy: 218, vsLM: -3, vsU3M: -11, nota: "122 líneas al 18-oct; proy 218 = promedio de pacing (204) y ritmo jul-sep por día hábil (233); sin techo por ticket." },
       pacientes: { hist: [31, 45, 47, 50, 33, 37, 60, 95, 93], actual: 49, proy: 74, vsLM: -20, vsU3M: -10, nota: "49 pacientes únicos al 18-oct; proy 74 = Atenciones proy (218) × 0.3382 (ratio promedio jul-sep)." },
-      consultas: { hist: [8, 21, 16, 20, 13, 9, 27, 46, 52], real: 21, agendado: 14, proy: 35, vsLM: -33, vsU3M: -16, top_cat: "Consulta primera vez", top_n: 30 },
+      consultas: { hist: [8, 21, 16, 20, 13, 9, 27, 46, 52], real: 21, agendado: 27, proy: 48, vsLM: -8, vsU3M: 15, top_cat: "Consulta primera vez", top_n: 30 },
       noshow: { hist: [11.1, 4.5, 27.3, 20.0, 23.5, 40.0, 15.6, 28.1, 24.6], actual: 22.2, prom: 21.6, deltaPts: 0.6 },
     },
   },
