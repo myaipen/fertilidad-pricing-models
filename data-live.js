@@ -1346,8 +1346,43 @@ const CONSULTAS_VREPRO_OCT_2026 = {
  "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 1,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta ginecológica": 1,
 };
+// Octubre 2026 del ranking de consultas, PROYECTADO por concepto (corte 19-oct): cada sede suma su proyección
+// (CDMX 135 + GDL 114 + MTP 47 = 296). Por concepto = (Terminadas 1-19 + agenda 20-31 × show rate de la sede)
+// escalado a la proyección de la sede (las citas nuevas esperadas se reparten con la mezcla del piso).
+// Se usa mientras consultasProyActiva(); si el corte cambia vuelve a Terminadas + agenda (CONSULTAS_VREPRO_OCT_2026).
+const CONSULTAS_OCT_PROYECTADO = {
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez": 53,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Mujeres": 29,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online": 23,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Parejas": 9,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta de Primera Vez IP's": 6,
+ "FERTILIDAD INTEGRAL Ciudad de México|Check up Ginecologico": 5,
+ "FERTILIDAD INTEGRAL Ciudad de México|Check-up SOMP": 4,
+ "FERTILIDAD INTEGRAL Ciudad de México|Check up Integral": 3,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 2,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online gratis": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 28,
+ "FERTILIDAD INTEGRAL Guadalajara|Check up Ginecologico": 26,
+ "FERTILIDAD INTEGRAL Guadalajara|Check up Integral": 14,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez": 14,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Mujeres": 13,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Parejas": 7,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta Obstetricia": 4,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez online": 4,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta obstetrica materno fetal": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez gratis": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta ginecológica": 1,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez": 32,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 7,
+ "FERTILIDAD INTEGRAL Metepec|Check-up SOMP": 3,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 2,
+ "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 2,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 1,
+};
 function aplicarOverrideVRepro(rows) {
   if (ANIO_VIGENTE !== 2026) return rows;
+  const OCT = (typeof consultasProyActiva === "function" && consultasProyActiva()) ? CONSULTAS_OCT_PROYECTADO : CONSULTAS_VREPRO_OCT_2026;
   const out = [];
   const vistos = new Set();
   for (const r of (rows || [])) {
@@ -1356,15 +1391,15 @@ function aplicarOverrideVRepro(rows) {
     const k = r[0] + "|" + r[1];
     const nr = r.slice();
     while (nr.length < 14) nr.push("");
-    nr[11] = CONSULTAS_VREPRO_OCT_2026[k] || "";
+    nr[11] = OCT[k] || "";
     vistos.add(k);
     out.push(nr);
   }
-  for (const k of Object.keys(CONSULTAS_VREPRO_OCT_2026)) {
+  for (const k of Object.keys(OCT)) {
     if (vistos.has(k)) continue;
     const [d, c] = k.split("|");
     const nr = [d, c]; while (nr.length < 14) nr.push("");
-    nr[11] = CONSULTAS_VREPRO_OCT_2026[k];
+    nr[11] = OCT[k];
     out.push(nr);
   }
   return out;
@@ -1411,6 +1446,7 @@ function buildConsultasRankingLive(rowsActual, rowsLY, mesVigente) {
       const serie = actual[code][concepto];
       const valor = serie[mesVigente - 1] || 0;
       const valorLM = mesVigente > 1 ? (serie[mesVigente - 2] || 0) : 0;
+      if (!valor && !valorLM) continue; // concepto sin consultas ni este mes ni el anterior: no se lista
       const nuevo = valorLM === 0;
       const serieLY = ly[code][concepto];
       const valorLY = serieLY ? (serieLY[mesVigente - 1] || 0) : 0;
@@ -2395,6 +2431,81 @@ function ajustarConsultasProyUI() {
 }
 window.ajustarConsultasProyUI = ajustarConsultasProyUI;
 
+// ---- Ranking de consultas: octubre = proyección, nota y clic en el nombre -> evolutivo mensual
+function serieRankingConsulta(nombre) {
+  const codes = currentScope === "total" ? SEDES : [currentScope];
+  const mk = rows => {
+    const p = parseConsultasRankingRows(rows); const out = Array(12).fill(0); let hay = false;
+    for (const c of codes) { const sr = p[c] && p[c][nombre]; if (sr) { hay = true; sr.forEach((v, i) => out[i] += v); } }
+    return hay ? out : null;
+  };
+  const r26 = _rawCache["ConsultasRankingLive"], r25 = _rawCache["ConsultasRankingLive2025"];
+  if (ANIO_VIGENTE === 2025) return { a: mk(r25 || []), ly: null };
+  return { a: mk(aplicarOverrideVRepro(r26 || [])), ly: mk(r25 || []) };
+}
+function abrirEvolutivoConsulta(nombre) {
+  const modal = document.getElementById("concept-modal");
+  const title = document.getElementById("concept-modal-title");
+  const body = document.getElementById("concept-modal-body");
+  if (!modal || !title || !body) return;
+  const { a, ly } = serieRankingConsulta(nombre);
+  const nM = MES_VIGENTE;
+  const proy = ANIO_VIGENTE === 2026 && consultasProyActiva();
+  title.textContent = "Consultas · " + nombre + (currentScope === "total" ? "" : " · " + currentScope);
+  if (!a) { body.innerHTML = '<div class="unavailable" style="height:auto; padding:20px;">No hay histórico mensual disponible para este concepto en esta sede.</div>'; modal.style.display = "flex"; return; }
+  const vals = a.slice(0, nM), cur = vals[nM - 1] || 0, lm = nM > 1 ? (vals[nM - 2] || 0) : 0;
+  const u3 = vals.slice(Math.max(0, nM - 4), nM - 1), u3avg = u3.length ? u3.reduce((x, y) => x + y, 0) / u3.length : 0;
+  const pct = (x, y) => y ? Math.round((x / y - 1) * 100) : null;
+  const chip = (p, nom) => p === null ? '<span style="color:var(--axis);font-weight:700;">Nuevo</span>' :
+    '<span style="color:' + (p >= 0 ? '#0F766E' : '#B45309') + ';font-weight:700;">' + (p >= 0 ? "▲ +" : "▼ ") + p + '% (' + (nom >= 0 ? "+" : "") + nom + ')</span>';
+  const lyv = ly ? (ly[nM - 1] || 0) : 0;
+  body.innerHTML = '<div style="font-size:12px;color:var(--axis);margin-bottom:8px;">' + MESES_12[nM - 1] + (proy ? " (proyección)" : "") + ': <b style="color:var(--text);">' + cur + '</b> · vs LM ' + chip(pct(cur, lm), cur - lm) +
+    (u3.length ? ' · vs U3M ' + chip(pct(cur, u3avg), Math.round(cur - u3avg)) : '') + (lyv ? ' · vs LY ' + chip(pct(cur, lyv), cur - lyv) : '') + '</div>' +
+    '<div style="height:260px;"><canvas id="rank-evol-canvas"></canvas></div>' +
+    '<div style="font-size:11px;color:var(--axis);margin-top:6px;">' + (proy ? 'Oct = proyección (terminadas + agenda × show rate + citas nuevas esperadas); ' : '') + 'meses anteriores = consultas terminadas.' + (ly ? ' Línea punteada = mismo mes de 2025.' : '') + '</div>';
+  modal.style.display = "flex";
+  const cv = document.getElementById("rank-evol-canvas");
+  if (typeof charts !== "undefined" && charts["rank-evol"]) { try { charts["rank-evol"].destroy(); } catch (_) {} }
+  const labels = MESES_12.slice(0, nM);
+  const datasets = [{ type: "bar", label: "2026", data: vals, backgroundColor: vals.map((_, i) => i === nM - 1 ? COLORS.blue : COLORS.gray), borderRadius: 4, maxBarThickness: 34, order: 2 }];
+  if (ly) datasets.push({ type: "line", label: "2025", data: ly.slice(0, nM), borderColor: COLORS.red, borderDash: [5, 4], backgroundColor: COLORS.red, pointRadius: 3, borderWidth: 1.5, fill: false, order: 1 });
+  const totLbl = { id: "rankEvolLbl", afterDatasetsDraw(c) {
+    const { ctx } = c; ctx.save(); ctx.font = "700 11px Calibri, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; ctx.fillStyle = "#1F2937";
+    c.getDatasetMeta(0).data.forEach((b, i) => ctx.fillText(String(c.data.datasets[0].data[i]), b.x, b.y - 4)); ctx.restore(); } };
+  charts["rank-evol"] = new Chart(cv.getContext("2d"), { data: { labels, datasets }, plugins: [totLbl],
+    options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } },
+      plugins: { legend: { display: !!ly, position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } },
+      scales: { y: { display: false, beginAtZero: true, grace: "20%" }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } } } });
+}
+window.abrirEvolutivoConsulta = abrirEvolutivoConsulta;
+function engancharRankingClick() {
+  const cv = document.getElementById("chart-ranking");
+  if (!cv || cv.__rankClick) return;
+  cv.__rankClick = true;
+  const idxAt = ev => {
+    const ch = typeof charts !== "undefined" && charts["chart-ranking"]; if (!ch || !ch.scales || !ch.scales.y) return -1;
+    const r = cv.getBoundingClientRect(), y = ev.clientY - r.top, ca = ch.chartArea;
+    if (y < ca.top || y > ca.bottom) return -1;
+    const i = Math.round(ch.scales.y.getValueForPixel(y));
+    return (i >= 0 && i < ch.data.labels.length) ? i : -1;
+  };
+  cv.addEventListener("mousemove", ev => { cv.style.cursor = idxAt(ev) >= 0 ? "pointer" : "default"; });
+  cv.addEventListener("click", ev => { const i = idxAt(ev); if (i >= 0) abrirEvolutivoConsulta(charts["chart-ranking"].data.labels[i]); });
+}
+function ajustarRankingUI() {
+  const cv = document.getElementById("chart-ranking"); if (!cv) return;
+  const panel = cv.closest(".panel"); if (!panel) return;
+  const ch = typeof charts !== "undefined" && charts["chart-ranking"];
+  const tot = ch ? ch.data.datasets[0].data.reduce((x, y) => x + (Number(y) || 0), 0) : 0;
+  const proy = ANIO_VIGENTE === 2026 && consultasProyActiva();
+  const t = panel.querySelector(".panel-title");
+  if (t && proy && !/proyecci/i.test(t.textContent)) t.textContent += " (proyección)";
+  let nota = document.getElementById("ranking-consultas-nota");
+  if (!nota) { nota = document.createElement("div"); nota.id = "ranking-consultas-nota"; nota.style.cssText = "font-size:11.5px; color:var(--axis); margin-top:6px;"; cv.closest(".chart-box").insertAdjacentElement("afterend", nota); }
+  nota.innerHTML = (proy ? "Suma del ranking = proyección del mes: <b style=\"color:var(--text)\">" + tot + "</b>. " : "Total del ranking: <b style=\"color:var(--text)\">" + tot + "</b>. ") +
+    "vs LM = mes vs mes anterior completo. Clic en un concepto para ver su evolutivo mensual.";
+}
+
 // Engancha renderAll (definida en index.html, que carga después): cada vez que el
 // tablero se redibuja, redibuja esta sección; si ya estaba dibujado, la pinta ya.
 (function engancharMecanismo() {
@@ -2407,11 +2518,12 @@ window.ajustarConsultasProyUI = ajustarConsultasProyUI;
         const r = orig.apply(this, arguments);
         try { buildHubspotMecanismo(); } catch (e) { console.warn("Sección mecanismo de conversión:", e); }
         try { ajustarConsultasProyUI(); } catch (e) { console.warn("Nota proyección consultas:", e); }
+        try { ajustarRankingUI(); engancharRankingClick(); } catch (e) { console.warn("Ranking consultas:", e); }
         return r;
       };
       nueva.__mec = true;
       window.renderAll = nueva;
-      try { if (document.getElementById("hubspot-charts") && document.getElementById("hubspot-charts").children.length) buildHubspotMecanismo(); ajustarConsultasProyUI(); } catch (e) { console.warn(e); }
+      try { if (document.getElementById("hubspot-charts") && document.getElementById("hubspot-charts").children.length) buildHubspotMecanismo(); ajustarConsultasProyUI(); ajustarRankingUI(); engancharRankingClick(); } catch (e) { console.warn(e); }
       clearInterval(t);
     } else if (intentos > 300) clearInterval(t);
   }, 100);
