@@ -2329,14 +2329,60 @@ function ajustarConsultasProyUI() {
   if (sub && sub.classList.contains("section-sub")) {
     sub.textContent = "Consultas terminadas (real) + agenda pendiente × show rate + citas nuevas esperadas para completar el mes";
   }
-  const ch = typeof charts !== "undefined" && charts["chart-consultas-stack"];
-  if (ch && ch.data && ch.data.datasets && ch.data.datasets[1] && ch.data.datasets[1].label === "Agendado") {
-    ch.data.datasets[1].label = "Agenda + nuevas citas esperadas";
-    ch.update("none");
-  }
   const sc = (typeof currentScope !== "undefined" && currentScope !== "total") ? currentScope : "total";
   const e = sc === "total" ? CONSULTAS_PROY.total : CONSULTAS_PROY.sedes[sc];
   if (!e) return;
+  const ch = typeof charts !== "undefined" && charts["chart-consultas-stack"];
+  if (ch && ch.data && ch.data.datasets && ch.data.datasets.length === 2 && ch.data.datasets[1].label === "Agendado") {
+    // Parte el segmento "Agendado" en dos colores: agenda ya agendada (× show rate) y citas nuevas esperadas.
+    const ds1 = ch.data.datasets[1], n = ds1.data.length, k = n - 1;
+    const agenTot = Number(ds1.data[k]) || 0;
+    let realMes = NaN;
+    try { realMes = Number(monthlySeries(sc, "consultas").real); } catch (_) {}
+    if (!isFinite(realMes)) realMes = e.base - agenTot;
+    const agenda = e.piso - realMes, nuevas = e.base - e.piso;
+    // Solo se parte si el segmento coincide con el modelo (real + agenda × show rate + nuevas = base); si no, se deja como estaba.
+    if (agenTot > 0 && agenda >= 0 && nuevas >= 0 && Math.abs(agenda + nuevas - agenTot) < 0.5) {
+      const mk = v => ds1.data.map((_, i) => i === k ? v : 0);
+      ds1.label = "Agendadas (× show rate " + CONSULTAS_PROY.showRate + "%)";
+      ds1.data = mk(agenda);
+      ds1.backgroundColor = COLORS.pink;
+      ch.data.datasets.push({
+        label: "Nuevas citas esperadas", data: mk(nuevas), backgroundColor: COLORS.teal,
+        borderRadius: 4, maxBarThickness: ds1.maxBarThickness || 34, stack: ds1.stack || "s",
+      });
+      const rawOpt = ch.config.options || (ch.config.options = {});
+      rawOpt.plugins = rawOpt.plugins || {};
+      rawOpt.plugins.stackedTotalLabels = false; // el plugin global suma solo 2 datasets
+      if (!window.__consTotReg && typeof Chart !== "undefined") {
+        window.__consTotReg = true;
+        Chart.register({
+          id: "consultasTotales3",
+          afterDatasetsDraw(c) {
+            if (!c.canvas || c.canvas.id !== "chart-consultas-stack" || c.data.datasets.length !== 3) return;
+            const { ctx } = c; ctx.save();
+            ctx.font = "700 11px Calibri, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; ctx.fillStyle = "#1F2937";
+            c.getDatasetMeta(0).data.forEach((bar, i) => {
+              const tot = c.data.datasets.reduce((a, d) => a + (Number(d.data[i]) || 0), 0);
+              if (!tot) return;
+              let top = bar;
+              for (let j = 2; j >= 0; j--) { if (Number(c.data.datasets[j].data[i])) { top = c.getDatasetMeta(j).data[i]; break; } }
+              ctx.fillText(String(Math.round(tot)), top.x, top.y - 4);
+            });
+            ctx.restore();
+          },
+        });
+      }
+      ch.update("none");
+      const cap = ch.canvas.closest(".panel") && ch.canvas.closest(".panel").querySelector(".chart-box + div");
+      if (cap && /Real MTD/.test(cap.textContent)) {
+        cap.innerHTML = 'Real MTD: <b style="color:var(--text)">' + Math.round(realMes) + '</b> · Agendadas × show rate: <b style="color:var(--text)">' + Math.round(agenda) +
+          '</b> · Nuevas citas esperadas: <b style="color:var(--text)">' + Math.round(nuevas) + '</b> · Proyección: <b style="color:var(--text)">' + Math.round(e.base) + '</b>';
+      }
+    } else {
+      ds1.label = "Agenda + nuevas citas esperadas"; ch.update("none");
+    }
+  }
   if (!nota) {
     nota = document.createElement("p");
     nota.id = "consultas-proy-nota";
