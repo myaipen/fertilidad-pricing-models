@@ -149,7 +149,14 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // HubSpot hasta 18-oct; el domingo 18-oct no tuvo cargos). Real MTD $8.53M. Metepec vuelve al
 // método central (el tope manual de $0.30M quedó por debajo del Real MTD). CDMX se mantiene
 // fijo en $11.33M / 2,264 atenciones (ver AJUSTE_ATEN_OCT_2026 abajo).
-let CORTE_REAL_DIA = 18;
+// ACTUALIZADO 20-oct-2026: corte sube de 18 a 19 (cargos y citas del 19-oct de vRepro;
+// HubSpot hasta 19-oct; médicos, consultas y subrogación al 19-oct). Real MTD $9.48M.
+// Segunda pasada 20-oct: cargos del 1 al 19 oct RE-LEÍDOS completos de vRepro (8 líneas eliminadas y
+// 14 con descuento/cambio de precio retroactivo, -$65K vs el corte anterior); HubSpot y citas sin cambio.
+// Proyección de Ingresos fijada a mano por sede en Base!F: CDMX $11.33M (sin cambio),
+// GDL $1.70M y MTP $0.50M (total $13.53M); Atenciones/Pacientes de GDL y MTP se escalan en
+// proporción (ver AJUSTE_ATEN_OCT_2026 abajo).
+let CORTE_REAL_DIA = 19;
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 
@@ -1111,11 +1118,12 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
     const hist = meses.map(n => m[n] || 0);
     const actual = m[MES_VIGENTE] || 0;
     let proy = proyectarPorTendencia(actual, hist, sede);
-    // AJUSTE MANUAL (19-oct-2026, corte 18-oct): octubre 2026. El remanente proyectado de
-    // Atenciones (proy - actual) de CDMX se escala para dejarla en 2,264 (y Pacientes,
-    // derivado por ratio, en 690), consistente con la proyección de Ingresos fijada a mano
-    // en Base!F ($11.33M). Metepec y GDL sin ajuste (método central).
-    const AJUSTE_ATEN_OCT_2026 = { CDMX: 1.0226 };
+    // AJUSTE MANUAL (20-oct-2026, corte 19-oct): octubre 2026. El remanente proyectado de
+    // Atenciones (proy - actual) se escala por sede para ir en línea con la proyección de
+    // Ingresos fijada a mano en Base!F: CDMX $11.33M -> 2,264 atenciones (Pacientes 690),
+    // GDL $1.70M -> 628 (Pacientes 260), MTP $0.50M -> 186 (Pacientes 63). Pacientes sale
+    // del ratio pacientes/atención de cada sede.
+    const AJUSTE_ATEN_OCT_2026 = { CDMX: 1.0, GDL: 1.1255, MTP: 0.4642 };
     if (esAtenciones && AJUSTE_ATEN_OCT_2026[sede] != null && MES_VIGENTE === 10 && ANIO_VIGENTE === 2026 && !cerrado && proy > actual) {
       proy = actual + (proy - actual) * AJUSTE_ATEN_OCT_2026[sede];
     }
@@ -1173,7 +1181,7 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
  */
 /*
   ============================================================================
-  PROYECCIÓN DE CONSULTAS (Primera Vez) — 19-oct-2026
+  PROYECCIÓN DE CONSULTAS (Primera Vez) — 20-oct-2026
   ============================================================================
   Antes: proy = Real + Agendado (toda la agenda pendiente contada como si fuera
   a asistir, y sin citas nuevas). Ahora, para el mes/corte de abajo, el
@@ -1191,13 +1199,13 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   ============================================================================
 */
 const CONSULTAS_PROY = {
-  anio: 2026, mes: 10, corte: 18, showRate: 84,
+  anio: 2026, mes: 10, corte: 19, showRate: 83,
   sedes: {
-    CDMX: { piso: 128, base: 137, min: 130, max: 146 },
-    GDL:  { piso: 91,  base: 116, min: 110, max: 123 },
-    MTP:  { piso: 32,  base: 48,  min: 45,  max: 51 },
+    CDMX: { piso: 126, base: 135, min: 128, max: 143 },
+    GDL:  { piso: 91,  base: 114, min: 108, max: 122 },
+    MTP:  { piso: 30,  base: 47,  min: 45,  max: 50 },
   },
-  total: { piso: 251, base: 301, min: 285, max: 320 },
+  total: { piso: 247, base: 296, min: 281, max: 315 },
 };
 function consultasProyActiva() {
   return ANIO_VIGENTE === CONSULTAS_PROY.anio && MES_VIGENTE === CONSULTAS_PROY.mes && CORTE_REAL_DIA === CONSULTAS_PROY.corte;
@@ -1303,39 +1311,40 @@ const CONSULTA_AGRUPACION = {
   "Fertility Check up Virtual": "Fertility Check up Virtual",
 };
 
-// Octubre 2026 del ranking de consultas desde vRepro (corte 18-oct-2026; incluye IP's y Obstetricia):
-// Terminadas 1-18 oct + citas Citado/Confirmada 19-31 oct (+ Terminadas del 19-oct), grupo Primera Vez
+// Octubre 2026 del ranking de consultas desde vRepro (corte 19-oct-2026; incluye IP's y Obstetricia):
+// Terminadas 1-19 oct + citas Citado/Confirmada 20-31 oct (+ Terminadas del 20-oct), grupo Primera Vez
 // (Anulada/No asiste excluidas). Reemplaza la columna de octubre (mes 10) de
 // la hoja ConsultasRankingLive, que es una tabla dinamica sobre RAW_* y no se
 // puede sobreescribir. Llave: "Delegacion|Concepto".
 const CONSULTAS_VREPRO_OCT_2026 = {
  "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez": 54,
- "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online": 27,
- "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Mujeres": 26,
- "FERTILIDAD INTEGRAL Metepec|Consulta primera vez": 25,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Mujeres": 28,
  "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 23,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online": 22,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez": 22,
  "FERTILIDAD INTEGRAL Guadalajara|Check up Ginecologico": 21,
- "FERTILIDAD INTEGRAL Guadalajara|Check up Integral": 12,
+ "FERTILIDAD INTEGRAL Guadalajara|Check up Integral": 13,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez": 12,
  "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Mujeres": 11,
- "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Parejas": 10,
- "FERTILIDAD INTEGRAL Ciudad de México|Consulta de Primera Vez IP's": 7,
- "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Parejas": 7,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Parejas": 9,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta de Primera Vez IP's": 6,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Parejas": 6,
  "FERTILIDAD INTEGRAL Ciudad de México|Check up Ginecologico": 5,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 5,
  "FERTILIDAD INTEGRAL Ciudad de México|Check-up SOMP": 4,
- "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez online": 4,
  "FERTILIDAD INTEGRAL Ciudad de México|Check up Integral": 3,
- "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 2,
- "FERTILIDAD INTEGRAL Guadalajara|Consulta Obstetricia": 2,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta Obstetricia": 3,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez online": 3,
  "FERTILIDAD INTEGRAL Metepec|Check-up SOMP": 2,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 2,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 1,
  "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online gratis": 1,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta obstetrica materno fetal": 1,
- "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez gratis": 1,
- "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 1,
  "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 1,
  "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 1,
- "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez gratis": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta ginecológica": 1,
 };
 function aplicarOverrideVRepro(rows) {
   if (ANIO_VIGENTE !== 2026) return rows;
@@ -2159,7 +2168,7 @@ window.syncMesesHistYActual = syncMesesHistYActual;
 
 /*
   ============================================================================
-  HUBSPOT — DEALS POR MECANISMO DE CONVERSIÓN (LT conversion) — 19-oct-2026
+  HUBSPOT — DEALS POR MECANISMO DE CONVERSIÓN (LT conversion) — 20-oct-2026
   ============================================================================
   Pedido de Jorge/Bru: desglose de deals (pipeline "Interesa2") por la propiedad
   lt_conversion_mechanism (Typeform, WhatsApp, LunaCal...). Hay un valor por
@@ -2173,7 +2182,7 @@ window.syncMesesHistYActual = syncMesesHistYActual;
   se espejan por fórmula (ARRAYFORMULA) al final de "HubspotSedeMensual" con
   Sede = nombre del mecanismo; buildHubspotSedeMensualMetric ignora toda fila
   cuyo Sede no sea CDMX/GDL/MTP, así que no afecta nada más. Si esa hoja aún no
-  trae esas filas (caché vieja), se usa MEC_RESPALDO (corte 18-oct).
+  trae esas filas (caché vieja), se usa MEC_RESPALDO (corte 19-oct).
   La sección se inyecta en el DOM antes de "Consultas: evolutivo y agenda" (no
   hace falta tocar index.html) y se redibuja en cada renderAll().
   ============================================================================
@@ -2184,7 +2193,7 @@ const MEC_COLOR = {
   "LunaCal": "#B45309", "Instagram DM": "#D46A93", "(Sin valor)": "#C9CDD3", "Otros": "#8B8F97",
 };
 const MEC_MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-const MEC_RESPALDO = [["WhatsApp ATOM",1,"Ene",178,77],["WhatsApp ATOM",2,"Feb",136,62],["WhatsApp ATOM",3,"Mar",94,51],["WhatsApp ATOM",4,"Abr",153,86],["WhatsApp ATOM",5,"May",738,119],["WhatsApp ATOM",6,"Jun",589,112],["WhatsApp ATOM",7,"Jul",462,131],["WhatsApp ATOM",8,"Ago",455,135],["WhatsApp ATOM",9,"Sep",563,105],["WhatsApp ATOM",10,"Oct",320,58],["WhatsApp ATOM bubble",1,"Ene",0,0],["WhatsApp ATOM bubble",2,"Feb",0,0],["WhatsApp ATOM bubble",3,"Mar",0,0],["WhatsApp ATOM bubble",4,"Abr",0,0],["WhatsApp ATOM bubble",5,"May",53,5],["WhatsApp ATOM bubble",6,"Jun",169,25],["WhatsApp ATOM bubble",7,"Jul",384,56],["WhatsApp ATOM bubble",8,"Ago",613,95],["WhatsApp ATOM bubble",9,"Sep",612,85],["WhatsApp ATOM bubble",10,"Oct",250,47],["Typeform",1,"Ene",492,31],["Typeform",2,"Feb",686,54],["Typeform",3,"Mar",668,83],["Typeform",4,"Abr",578,70],["Typeform",5,"May",457,66],["Typeform",6,"Jun",237,30],["Typeform",7,"Jul",234,44],["Typeform",8,"Ago",154,31],["Typeform",9,"Sep",87,21],["Typeform",10,"Oct",31,10],["Partial typeform",1,"Ene",0,0],["Partial typeform",2,"Feb",4,2],["Partial typeform",3,"Mar",14,8],["Partial typeform",4,"Abr",10,4],["Partial typeform",5,"May",255,23],["Partial typeform",6,"Jun",219,18],["Partial typeform",7,"Jul",240,28],["Partial typeform",8,"Ago",451,58],["Partial typeform",9,"Sep",535,56],["Partial typeform",10,"Oct",295,29],["LunaCal",1,"Ene",80,48],["LunaCal",2,"Feb",177,66],["LunaCal",3,"Mar",199,135],["LunaCal",4,"Abr",211,123],["LunaCal",5,"May",187,105],["LunaCal",6,"Jun",132,71],["LunaCal",7,"Jul",142,89],["LunaCal",8,"Ago",196,134],["LunaCal",9,"Sep",200,164],["LunaCal",10,"Oct",126,111],["Instagram DM",1,"Ene",0,0],["Instagram DM",2,"Feb",0,0],["Instagram DM",3,"Mar",0,0],["Instagram DM",4,"Abr",0,0],["Instagram DM",5,"May",0,0],["Instagram DM",6,"Jun",0,0],["Instagram DM",7,"Jul",0,0],["Instagram DM",8,"Ago",0,0],["Instagram DM",9,"Sep",61,1],["Instagram DM",10,"Oct",102,2],["(Sin valor)",1,"Ene",83,32],["(Sin valor)",2,"Feb",56,46],["(Sin valor)",3,"Mar",45,41],["(Sin valor)",4,"Abr",47,45],["(Sin valor)",5,"May",62,49],["(Sin valor)",6,"Jun",85,57],["(Sin valor)",7,"Jul",70,69],["(Sin valor)",8,"Ago",41,38],["(Sin valor)",9,"Sep",28,27],["(Sin valor)",10,"Oct",14,10],["Otros",1,"Ene",0,0],["Otros",2,"Feb",0,0],["Otros",3,"Mar",0,0],["Otros",4,"Abr",0,0],["Otros",5,"May",0,0],["Otros",6,"Jun",4,2],["Otros",7,"Jul",1,1],["Otros",8,"Ago",11,10],["Otros",9,"Sep",9,9],["Otros",10,"Oct",6,2]]; // [Mecanismo, MesNum, MesLabel, Leads, Citas] — corte 18-oct-2026
+const MEC_RESPALDO = [["WhatsApp ATOM",1,"Ene",178,77],["WhatsApp ATOM",2,"Feb",136,62],["WhatsApp ATOM",3,"Mar",94,51],["WhatsApp ATOM",4,"Abr",153,86],["WhatsApp ATOM",5,"May",738,119],["WhatsApp ATOM",6,"Jun",589,112],["WhatsApp ATOM",7,"Jul",462,131],["WhatsApp ATOM",8,"Ago",455,135],["WhatsApp ATOM",9,"Sep",563,105],["WhatsApp ATOM",10,"Oct",344,64],["WhatsApp ATOM bubble",1,"Ene",0,0],["WhatsApp ATOM bubble",2,"Feb",0,0],["WhatsApp ATOM bubble",3,"Mar",0,0],["WhatsApp ATOM bubble",4,"Abr",0,0],["WhatsApp ATOM bubble",5,"May",53,5],["WhatsApp ATOM bubble",6,"Jun",169,25],["WhatsApp ATOM bubble",7,"Jul",384,56],["WhatsApp ATOM bubble",8,"Ago",613,95],["WhatsApp ATOM bubble",9,"Sep",612,85],["WhatsApp ATOM bubble",10,"Oct",259,51],["Typeform",1,"Ene",492,31],["Typeform",2,"Feb",686,54],["Typeform",3,"Mar",668,83],["Typeform",4,"Abr",578,70],["Typeform",5,"May",457,66],["Typeform",6,"Jun",237,30],["Typeform",7,"Jul",234,44],["Typeform",8,"Ago",154,31],["Typeform",9,"Sep",87,21],["Typeform",10,"Oct",32,10],["Partial typeform",1,"Ene",0,0],["Partial typeform",2,"Feb",4,2],["Partial typeform",3,"Mar",14,8],["Partial typeform",4,"Abr",10,4],["Partial typeform",5,"May",255,23],["Partial typeform",6,"Jun",219,18],["Partial typeform",7,"Jul",240,28],["Partial typeform",8,"Ago",451,58],["Partial typeform",9,"Sep",535,56],["Partial typeform",10,"Oct",306,30],["LunaCal",1,"Ene",80,48],["LunaCal",2,"Feb",177,66],["LunaCal",3,"Mar",199,135],["LunaCal",4,"Abr",211,123],["LunaCal",5,"May",187,105],["LunaCal",6,"Jun",132,71],["LunaCal",7,"Jul",142,89],["LunaCal",8,"Ago",196,134],["LunaCal",9,"Sep",200,164],["LunaCal",10,"Oct",135,117],["Instagram DM",1,"Ene",0,0],["Instagram DM",2,"Feb",0,0],["Instagram DM",3,"Mar",0,0],["Instagram DM",4,"Abr",0,0],["Instagram DM",5,"May",0,0],["Instagram DM",6,"Jun",0,0],["Instagram DM",7,"Jul",0,0],["Instagram DM",8,"Ago",0,0],["Instagram DM",9,"Sep",61,1],["Instagram DM",10,"Oct",107,2],["(Sin valor)",1,"Ene",83,32],["(Sin valor)",2,"Feb",56,46],["(Sin valor)",3,"Mar",45,41],["(Sin valor)",4,"Abr",47,45],["(Sin valor)",5,"May",62,49],["(Sin valor)",6,"Jun",85,57],["(Sin valor)",7,"Jul",70,69],["(Sin valor)",8,"Ago",41,38],["(Sin valor)",9,"Sep",28,27],["(Sin valor)",10,"Oct",19,16],["Otros",1,"Ene",0,0],["Otros",2,"Feb",0,0],["Otros",3,"Mar",0,0],["Otros",4,"Abr",0,0],["Otros",5,"May",0,0],["Otros",6,"Jun",4,2],["Otros",7,"Jul",1,1],["Otros",8,"Ago",11,10],["Otros",9,"Sep",9,9],["Otros",10,"Oct",7,2]]; // [Mecanismo, MesNum, MesLabel, Leads, Citas] — corte 18-oct-2026
 
 function mecDatos() {
   const crudo = _rawCache["HubspotSedeMensual"];
@@ -2194,7 +2203,7 @@ function mecDatos() {
       if (r && MEC_ORDEN.indexOf(r[2]) !== -1) filas.push([r[2], Number(r[0]), r[1], num(r[3]), num(r[4])]);
     }
   }
-  const fuente = filas.length ? "Google Sheets" : "respaldo estático (18-oct)";
+  const fuente = filas.length ? "Google Sheets" : "respaldo estático (19-oct)";
   if (!filas.length) filas = MEC_RESPALDO;
   const leads = {}, citas = {};
   for (const g of MEC_ORDEN) { leads[g] = Array(12).fill(0); citas[g] = Array(12).fill(0); }
