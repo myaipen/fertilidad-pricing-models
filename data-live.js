@@ -2527,8 +2527,7 @@ function ajustarRankingUI() {
 // sección simplemente no aparece). Sede propia en la sección (no depende de
 // los filtros del tablero). Cohorte = mes de la primera consulta de primera
 // vez o check-up; tratamiento = primer ciclo FIV/captura, vitrificación,
-// transferencia (prep. endometrial/descongelación), IIU/coito programado u
-// ovodonación, posterior a la consulta. Pacientes con tratamiento previo a la
+// transferencia (prep. endometrial/descongelación) o IIU/coito programado, posterior a la consulta. Pacientes con tratamiento previo a la
 // consulta se excluyen. Embudo con ID de paciente (vRepro).
 // =====================================================================
 let CONV_SEDE = "Total";
@@ -2654,7 +2653,7 @@ function cvRender() {
 
   cont.innerHTML = `
     <div class="section-title">Conversión: consulta de primera vez / check-up → tratamiento</div>
-    <p class="section-sub">Cohorte = mes de la primera consulta de primera vez o check-up de fertilidad (2025 → ${mesCorte}) · tratamiento = primer ciclo FIV/captura, vitrificación, transferencia, IIU/coito programado u ovodonación · corte ${D.corte} · seguimiento ajustado por censura (solo cuenta consultas con la ventana completa)</p>
+    <p class="section-sub">Cohorte = mes de la primera consulta de primera vez o check-up de fertilidad (2025 → ${mesCorte}) · tratamiento = primer ciclo FIV/captura, vitrificación, transferencia, IIU/coito programado · corte ${D.corte} · seguimiento ajustado por censura (solo cuenta consultas con la ventana completa)</p>
     <div class="filter-group" id="cv-sedes" style="margin-bottom:6px;"><span class="filter-label">Sede</span>${btns}</div>
     ${kpis}
     <div class="grid-2" style="margin-top:14px;">
