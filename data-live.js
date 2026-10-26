@@ -2524,19 +2524,20 @@ function ajustarRankingUI() {
 // =====================================================================
 // Conversión: consulta de primera vez / check-up de fertilidad → tratamiento
 // Datos: data_conv.js (window.CONV_DATA, se regenera cada corte; si falta, la
-// sección simplemente no aparece). Sede propia en la sección (no depende de
-// los filtros del tablero). Cohorte = mes de la primera consulta de primera
-// vez o check-up; tratamiento = primer ciclo FIV/captura, vitrificación,
-// transferencia (prep. endometrial/descongelación) o IIU/coito programado, posterior a la consulta. Pacientes con tratamiento previo a la
-// consulta se excluyen. Embudo con ID de paciente (vRepro).
+// sección no aparece). Reacciona a los filtros globales del tablero: Sede,
+// Periodo, Mes vigente y Año. Cohorte = pacientes cuya primera consulta de
+// primera vez / check-up de fertilidad fue en ese mes. Tratamiento = primer
+// ciclo FIV/captura, vitrificación, transferencia (prep. endometrial/
+// descongelación) o IIU/coito programado posterior a la consulta; la donación
+// de óvulos cuenta cuando inicia el ciclo de FIV. Pacientes con tratamiento
+// previo a la consulta se excluyen.
 // =====================================================================
-let CONV_SEDE = "Total";
 let CONV_FALLO = false;
-const CV_SEDES = ["Total", "CDMX", "GDL", "MTP"];
 const CV_MES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 const cvF = n => (n == null || isNaN(n)) ? "—" : Math.round(n).toLocaleString("es-MX");
 const cvP = (n, d) => (n == null || isNaN(n)) ? "—" : Number(n).toFixed(d == null ? 1 : d) + "%";
-function cvMesEtq(i) { const y = 2025 + Math.floor(i / 12); return CV_MES[i % 12] + " " + String(y).slice(2); }
+const cvMesEtq = i => CV_MES[i % 12] + " " + String(2025 + Math.floor(i / 12)).slice(2);
+function cvMediana(a) { if (!a.length) return null; const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
 
 function cvModelo(S, D) {
   const coh = S.coh, cerr = D.meses.indexOf(D.cerrado), K = 12, pk = [];
@@ -2559,7 +2560,7 @@ function cvModelo(S, D) {
 }
 
 function buildConversion() {
-  const ancla = document.getElementById("consultas-section");
+  const ancla = document.getElementById("medicos-section");
   if (!ancla) return;
   if (!window.CONV_DATA) {
     if (CONV_FALLO || window.__convCargando) return;
@@ -2576,140 +2577,171 @@ function buildConversion() {
 window.buildConversion = buildConversion;
 
 function cvRender() {
-  const ancla = document.getElementById("consultas-section");
+  const ancla = document.getElementById("medicos-section");
   if (!ancla || typeof Chart === "undefined" || !window.CONV_DATA) return;
-  const D = window.CONV_DATA, S = D.scopes[CONV_SEDE], M = cvModelo(S, D);
+  const D = window.CONV_DATA;
+  const sede = (typeof currentScope !== "undefined" && currentScope !== "total") ? currentScope : "Total";
+  const sedeTxt = sede === "Total" ? "todas las sedes" : sede;
+  const S = D.scopes[sede], M = cvModelo(S, D);
+  const Y = ANIO_VIGENTE, MV = MES_VIGENTE, per = (typeof currentPeriod !== "undefined") ? currentPeriod : "mes";
+
+  // ---------- ventana de cohortes según Periodo / Mes / Año
+  const base = (Y - 2025) * 12;
+  let m1 = MV, m2 = MV, etqV;
+  if (per === "anio") { m1 = 1; etqV = "Ene–" + CV_MES[MV - 1] + " " + Y; }
+  else if (per === "trimestre") { const q = Math.floor((MV - 1) / 3); m1 = q * 3 + 1; m2 = q * 3 + 3; etqV = "T" + (q + 1) + " " + Y; }
+  else etqV = CV_MES[MV - 1] + " " + Y;
+  const i1 = base + m1 - 1, i2 = Math.min(base + m2 - 1, D.meses.length - 1);
+  const enV = i => i >= i1 && i <= i2;
+  const cohV = S.coh.filter((c, i) => enV(i));
+  const sum = (arr, f) => arr.reduce((a, c) => a + f(c), 0);
+  const N = sum(cohV, c => c[1]), td = sum(cohV, c => c[3]);
+  const n90 = sum(cohV, c => c[4]), x90 = sum(cohV, c => c[5]);
+  const dias = [].concat(...cohV.map(c => c[6])), med = cvMediana(dias), media = dias.length ? dias.reduce((a, b) => a + b, 0) / dias.length : null;
+  const madura = n90 >= 30;
+
+  // ---------- inicios reales vs esperados en la ventana
+  const realV = M.real.reduce((a, v, t) => a + (enV(t) && v != null ? v : 0), 0);
+  const espV = M.esp.reduce((a, v, t) => a + (enV(t) ? v : 0), 0);
+  const cierreIdx = D.meses.length - 1;
+  const diasMes = new Date(+D.corte.slice(0, 4), +D.corte.slice(5, 7), 0).getDate();
+  const espCorte = M.esp.reduce((a, v, t) => a + (enV(t) ? (t === cierreIdx ? v * D.dia / diasMes : v) : 0), 0);
+  const parcial = i2 >= cierreIdx;
+  const dif = espCorte ? (realV / espCorte - 1) * 100 : null;
+  const tk = (S.tk.Todos || [0, 0])[1];
+
   let cont = document.getElementById("conversion-section");
   if (!cont) {
     cont = document.createElement("div");
     cont.id = "conversion-section";
-    const sub = ancla.previousElementSibling, tit = sub && sub.previousElementSibling;
-    (tit || ancla).parentNode.insertBefore(cont, tit || ancla);
+    ancla.insertAdjacentElement("afterend", cont);
   }
-  const cierreIdx = D.meses.length - 1;                    // mes del corte (parcial)
-  const mesCorte = cvMesEtq(cierreIdx), diasMes = new Date(+D.corte.slice(0, 4), +D.corte.slice(5, 7), 0).getDate();
-  const frac = D.dia / diasMes;
-  const real = M.real[cierreIdx], espMes = M.esp[cierreIdx], espCorte = espMes * frac;
-  const dif = espCorte ? (real / espCorte - 1) * 100 : null;
-  const tk = (S.tk.Todos || [0, 0])[1];
-  const ev = S.ev, e90 = ev["90"], e180 = ev["180"];
 
-  // ---------- botones de sede
-  const btns = CV_SEDES.map(s => `<button class="tab-btn${s === CONV_SEDE ? " active" : ""}" data-cvsede="${s}">${s === "Total" ? "Compañía" : s}</button>`).join("");
-
-  // ---------- KPIs
+  // ---------- KPIs (según Sede + Periodo + Mes + Año)
   const kpi = (lab, big, sub) => `<div class="kpi-card"><div class="kpi-label">${lab}</div><div class="kpi-big">${big}</div><div class="kpi-sub">${sub}</div></div>`;
+  const ev = S.ev;
   const kpis = `<div class="kpi-row" style="margin-top:10px;">
-    ${kpi("Conversión a 90 días", cvP(e90[1]), "n = " + cvF(e90[0]) + " consultas con ≥90 d de seguimiento")}
-    ${kpi("Conversión a 180 días", cvP(e180[1]), "n = " + cvF(e180[0]) + " · acumulada a la fecha " + cvP(S.td))}
-    ${kpi("Mediana a tratamiento", cvF(S.med) + ' <span style="font-size:13px;font-weight:400;color:var(--axis);">días</span>', "media " + cvF(S.mean) + " d · P25–P75: " + cvF(S.p25) + "–" + cvF(S.p75) + " d")}
-    ${kpi("Primeros inicios " + mesCorte + " (al " + D.dia + ")", cvF(real) + ' <span style="font-size:13px;font-weight:400;color:var(--axis);">vs ' + cvF(espCorte) + " esperados</span>",
-      (dif == null ? "" : '<span class="' + (dif >= 0 ? "up" : "down") + '">' + (dif >= 0 ? "▲ +" : "▼ ") + dif.toFixed(0) + "%</span> · ") + "mes completo esperado ≈ " + cvF(espMes))}
-  </div>`;
+    ${kpi("Pacientes nuevos con consulta", cvF(N), "1ª consulta o check-up de fertilidad · " + etqV)}
+    ${kpi("Ya iniciaron tratamiento", cvF(td) + ' <span style="font-size:13px;font-weight:400;color:var(--axis);">' + cvP(N ? td / N * 100 : null) + "</span>", madura ? "acumulado al corte " + D.corte : "cohorte aún en maduración (consultas recientes)")}
+    ${kpi("Conversión a 90 días", cvP(n90 ? x90 / n90 * 100 : null), n90 ? "n = " + cvF(n90) + " con ≥90 d de seguimiento" : "aún sin 90 días de seguimiento")}
+    ${kpi("Días a iniciar tratamiento", med == null ? "—" : cvF(med) + ' <span style="font-size:13px;font-weight:400;color:var(--axis);">mediana</span>', media == null ? "sin conversiones todavía" : "promedio " + cvF(media) + " d · " + cvF(dias.length) + " pacientes")}
+  </div>
+  <div style="font-size:11.5px;color:var(--axis);margin-top:6px;">Referencia ${sedeTxt}, todas las cohortes ene-25 → corte: a 30 d <b style="color:var(--text)">${cvP(ev["30"][1])}</b> · 60 d <b style="color:var(--text)">${cvP(ev["60"][1])}</b> · 90 d <b style="color:var(--text)">${cvP(ev["90"][1])}</b> · 180 d <b style="color:var(--text)">${cvP(ev["180"][1])}</b> · mediana ${cvF(S.med)} d.</div>`;
 
-  // ---------- forward: Nov / Dic
+  // ---------- nota de pronóstico
   const eN = M.esp[cierreIdx + 1], eD = M.esp[cierreIdx + 2];
-  const fwd = `Pronóstico de primeros inicios: <b style="color:var(--text)">${cvF(eN)}</b> inicios en ${cvMesEtq(cierreIdx + 1)} y <b style="color:var(--text)">${cvF(eD)}</b> en ${cvMesEtq(cierreIdx + 2)} desde consultas ya recibidas${tk ? " (≈ $" + (eN * tk / 1e6).toFixed(1) + "M y $" + (eD * tk / 1e6).toFixed(1) + "M facturados en los primeros 30 d, a ticket promedio de $" + cvF(tk / 1000) + "K)" : ""}. No incluye consultas que lleguen después del corte.`;
+  const nota = `<b style="color:var(--text)">Cómo se calcula "esperado":</b> cada mes de consultas (cohorte) tiene una curva histórica de cuántos pacientes inician tratamiento 0, 1, 2… meses después (p. ej., ≈ ${cvP(M.pk[0] * 100)} el mismo mes, ${cvP(M.pk[1] * 100)} al mes siguiente, ${cvP(M.pk[2] * 100)} a los 2 meses). El esperado de cada mes suma lo que aportan las consultas de los meses anteriores. Para ${cvMesEtq(cierreIdx + 1)} y ${cvMesEtq(cierreIdx + 2)} (barras claras) usa solo consultas ya recibidas: ≈ <b style="color:var(--text)">${cvF(eN)}</b> y <b style="color:var(--text)">${cvF(eD)}</b> inicios${tk ? " (≈ $" + (eN * tk / 1e6).toFixed(1) + "M y $" + (eD * tk / 1e6).toFixed(1) + "M facturados en los primeros 30 d, ticket promedio $" + cvF(tk / 1000) + "K)" : ""}.`;
 
-  // ---------- heatmap cohorte × meses desde la consulta
+  // ---------- gráfica 1: % que inició tratamiento a ≤3 meses, por mes de consulta del año
+  const lab1 = [], dat1 = [], col1 = [], tip1 = [];
+  for (let m = 0; m < 12; m++) {
+    const i = base + m; if (i >= S.coh.length) break;
+    const c = S.coh[i]; if (i + 3 > M.cerr || !c[1]) continue;
+    const ini = c[2][0] + c[2][1] + c[2][2] + c[2][3];
+    lab1.push(CV_MES[m]); dat1.push(+(ini / c[1] * 100).toFixed(1)); tip1.push([c[1], ini]);
+    col1.push(enV(i) ? COLORS.teal : "#9CCFC9");
+  }
+  const ejemplo = lab1.length ? `Ej.: de las <b style="color:var(--text)">${cvF(tip1[0][0])}</b> pacientes nuevas de ${lab1[0]} ${Y}, <b style="color:var(--text)">${cvF(tip1[0][1])}</b> (${cvP(dat1[0])}) ya habían iniciado tratamiento tres meses después.` : "Aún no hay meses con 3 meses de seguimiento en este año.";
+
+  // ---------- heatmap solo del año seleccionado
   const KMAX = 9;
-  let th = "<th>Cohorte</th><th class=\"num\" style=\"text-align:right;\">Consultas</th>";
-  for (let k = 0; k <= KMAX; k++) th += `<th class="num" style="text-align:right;">M+${k}</th>`;
+  let th = '<th>Mes de consulta</th><th class="num" style="text-align:right;">Pacientes nuevos</th>';
+  for (let k = 0; k <= KMAX; k++) th += `<th class="num" style="text-align:right;">${k === 0 ? "Mismo mes" : "+" + k + (k === 1 ? " mes" : " meses")}</th>`;
   th += '<th class="num" style="text-align:right;">A la fecha</th>';
   let body = "";
-  S.coh.forEach((c, i) => {
-    const [m, N, cnt] = c; if (!N) return;
+  for (let m = 0; m < 12; m++) {
+    const i = base + m; if (i >= S.coh.length) break;
+    const c = S.coh[i], Nc = c[1]; if (!Nc) continue;
     let acum = 0, tds = "";
     for (let k = 0; k <= KMAX; k++) {
-      acum += cnt[k];
-      if (i + k > M.cerr) { tds += `<td class="num" style="color:#C9CDD3;">·</td>`; continue; }
-      const p = acum / N * 100, a = Math.min(p / 22, 1) * 0.75;
-      tds += `<td class="num" style="background:rgba(15,118,110,${a.toFixed(2)});${a > 0.45 ? "color:#fff;" : ""}">${p.toFixed(1)}</td>`;
+      acum += c[2][k];
+      if (i + k > M.cerr) { tds += '<td class="num" style="color:#C9CDD3;">·</td>'; continue; }
+      const p = acum / Nc * 100, a = Math.min(p / 22, 1) * 0.75;
+      tds += `<td class="num" style="background:rgba(15,118,110,${a.toFixed(2)});${a > 0.45 ? "color:#fff;" : ""}">${p.toFixed(1)}%</td>`;
     }
-    const tot = cnt.reduce((x, y) => x + y, 0);
-    const [y, mm] = m.split("-");
-    body += `<tr><td>${CV_MES[+mm - 1]} ${y.slice(2)}${i > M.cerr ? " <span style=\"color:var(--axis);font-size:11px;\">(en curso)</span>" : ""}</td><td class="num">${cvF(N)}</td>${tds}<td class="num" style="font-weight:700;">${(tot / N * 100).toFixed(1)}%</td></tr>`;
-  });
+    const tot = c[2].reduce((x, y) => x + y, 0), sel = enV(i);
+    body += `<tr${sel ? ' style="outline:2px solid var(--teal);outline-offset:-2px;"' : ""}><td style="font-weight:${sel ? 700 : 400};">${CV_MES[m]} ${Y}${i > M.cerr ? ' <span style="color:var(--axis);font-size:11px;">(en curso)</span>' : ""}</td><td class="num">${cvF(Nc)}</td>${tds}<td class="num" style="font-weight:700;">${cvP(tot / Nc * 100)}</td></tr>`;
+  }
 
-  // ---------- médicos
+  // ---------- médicos (ventana del periodo; si aún no hay 90 d de seguimiento, usa el año hasta el último mes maduro)
+  let ventM = enV, etqM = etqV, avisoM = "";
+  if (!madura) {
+    const ult = Math.max(...S.coh.map((c, i) => c[4] >= 20 ? i : -1).filter(i => i >= base && i < base + 12));
+    ventM = i => i >= base && i <= ult;
+    etqM = "Ene–" + (ult >= base ? CV_MES[ult - base] : "—") + " " + Y;
+    avisoM = `El periodo elegido (${etqV}) todavía no tiene 90 días de seguimiento; la tabla muestra las consultas de ${etqM}.`;
+  }
+  const por = {};
+  S.docm.forEach(r => {
+    if (!ventM(r[1])) return;
+    const o = por[r[0]] || (por[r[0]] = { n: 0, n90: 0, x90: 0, td: 0, ncv: 0, same: 0, sd: 0, cd: 0, rec: 0 });
+    o.n += r[2]; o.n90 += r[3]; o.x90 += r[4]; o.td += r[5]; o.ncv += r[6]; o.same += r[7]; o.sd += r[8]; o.cd += r[9];
+  });
+  const matC = {};
+  S.chg.forEach(x => { if (!ventM(x[2])) return; if (por[x[1]]) por[x[1]].rec++; const k = x[0] + "→" + x[1]; matC[k] = (matC[k] || 0) + 1; });
   const MINN = 50;
-  const docs = S.doc.slice().sort((a, b) => {
-    const la = a[2] < MINN, lb = b[2] < MINN; if (la !== lb) return la ? 1 : -1;
-    return (b[3] || 0) - (a[3] || 0);
+  const docs = Object.entries(por).filter(([, o]) => o.n >= 10).sort((a, b) => {
+    const la = a[1].n90 < MINN, lb = b[1].n90 < MINN; if (la !== lb) return la ? 1 : -1;
+    return (b[1].n90 ? b[1].x90 / b[1].n90 : 0) - (a[1].n90 ? a[1].x90 / a[1].n90 : 0);
   });
   let fd = "";
-  docs.forEach(r => {
-    const [nom, n, n90, c90, n180, c180, td, med, mean, ncv, same, rec] = r, bajo = n90 < MINN;
-    const est = bajo ? ' style="color:var(--axis);font-style:italic;"' : "";
+  docs.forEach(([nom, o]) => {
+    const bajo = o.n90 < MINN, est = bajo ? ' style="color:var(--axis);font-style:italic;"' : "";
     fd += `<tr${est}><td>${nom}${bajo ? ' <span title="Menos de ' + MINN + ' consultas con 90 días de seguimiento: lectura indicativa" style="font-size:10px;border:1px solid var(--border);border-radius:4px;padding:0 4px;">n bajo</span>' : ""}</td>
-      <td class="num">${cvF(n)}</td><td class="num" style="font-weight:700;">${cvP(c90)}<span style="font-weight:400;color:var(--axis);font-size:10.5px;"> (${cvF(n90)})</span></td>
-      <td class="num">${n180 >= 30 ? cvP(c180) : "—"}</td><td class="num">${cvP(td)}</td><td class="num">${cvF(med)}</td>
-      <td class="num">${ncv ? Math.round(same / ncv * 100) + "%" : "—"}<span style="color:var(--axis);font-size:10.5px;"> (${ncv})</span></td>
-      <td class="num">${cvF(ncv - same)}</td><td class="num">${cvF(rec)}</td></tr>`;
+      <td class="num">${cvF(o.n)}</td><td class="num" style="font-weight:700;">${o.n90 ? cvP(o.x90 / o.n90 * 100) : "—"}<span style="font-weight:400;color:var(--axis);font-size:10.5px;"> (${cvF(o.n90)})</span></td>
+      <td class="num">${cvP(o.n ? o.td / o.n * 100 : null)}</td><td class="num">${o.cd ? cvF(o.sd / o.cd) : "—"}</td>
+      <td class="num">${o.ncv ? Math.round(o.same / o.ncv * 100) + "%" : "—"}<span style="color:var(--axis);font-size:10.5px;"> (${o.ncv})</span></td>
+      <td class="num">${cvF(o.ncv - o.same)}</td><td class="num">${cvF(o.rec)}</td></tr>`;
   });
-  const chg = S.chg, pSame = chg[0] ? chg[1] / chg[0] * 100 : null;
-  let mat = "";
-  S.mat.slice(0, 8).forEach(x => { mat += `<tr><td>${x[0]}</td><td>→ ${x[1]}</td><td class="num">${x[2]}</td></tr>`; });
+  const totNcv = docs.reduce((a, [, o]) => a + o.ncv, 0), totSame = docs.reduce((a, [, o]) => a + o.same, 0);
+  const matRows = Object.entries(matC).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, n]) => { const [a, b] = k.split("→"); return `<tr><td>${a}</td><td>→ ${b}</td><td class="num">${n}</td></tr>`; }).join("");
 
   cont.innerHTML = `
     <div class="section-title">Conversión: consulta de primera vez / check-up → tratamiento</div>
-    <p class="section-sub">Cohorte = mes de la primera consulta de primera vez o check-up de fertilidad (2025 → ${mesCorte}) · tratamiento = primer ciclo FIV/captura, vitrificación, transferencia, IIU/coito programado · corte ${D.corte} · seguimiento ajustado por censura (solo cuenta consultas con la ventana completa)</p>
-    <div class="filter-group" id="cv-sedes" style="margin-bottom:6px;"><span class="filter-label">Sede</span>${btns}</div>
+    <p class="section-sub">Pacientes nuevos que tuvieron su primera consulta o check-up de fertilidad y cuántos inician tratamiento (FIV, captura, vitrificación, transferencia, IIU o coito programado; la donación cuenta cuando inicia el FIV) · ${sedeTxt} · reacciona a Sede, Periodo, Mes y Año · corte ${D.corte}</p>
     ${kpis}
     <div class="grid-2" style="margin-top:14px;">
-      <div class="panel"><div class="panel-title">Conversión acumulada por trimestre de cohorte (meses desde la consulta)</div>
-        <div class="chart-box tall"><canvas id="chart-conv-curva"></canvas></div></div>
-      <div class="panel"><div class="panel-title">Primeros inicios de tratamiento (pacientes con consulta de entrada): real vs esperado</div>
+      <div class="panel"><div class="panel-title">% de pacientes nuevas que inició tratamiento dentro de 3 meses — ${Y}</div>
+        <div class="chart-box tall"><canvas id="chart-conv-curva"></canvas></div>
+        <div style="font-size:11.5px;color:var(--axis);margin-top:6px;">Cada barra es un mes de consulta. Oscuro = periodo seleccionado. ${ejemplo}</div></div>
+      <div class="panel"><div class="panel-title">Primeros inicios de tratamiento por mes — ${Y}: real vs esperado${parcial ? " · " + etqV + ": <b>" + cvF(realV) + "</b> vs " + cvF(espCorte) + " esperados" + (dif == null ? "" : ' (<span class="' + (dif >= 0 ? "up" : "down") + '">' + (dif >= 0 ? "▲ +" : "▼ ") + dif.toFixed(0) + "%</span>)") : ""}</div>
         <div class="chart-box tall"><canvas id="chart-conv-fwd"></canvas></div>
-        <div style="font-size:11.5px;color:var(--axis);margin-top:6px;">${fwd}</div></div>
+        <div style="font-size:11.5px;color:var(--axis);margin-top:6px;">${nota}</div></div>
     </div>
-    <div class="panel" style="margin-top:16px;"><div class="panel-title">Cohorte × meses desde la consulta — % acumulado que ya inició tratamiento</div>
+    <div class="panel" style="margin-top:16px;"><div class="panel-title">Pacientes nuevas por mes de consulta — ${Y}: % acumulado que ya inició tratamiento</div>
       <div class="scroll-table" style="margin-top:6px;"><table><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table></div>
-      <div style="font-size:11px;color:var(--axis);margin-top:8px;font-style:italic;">M+0 = mismo mes de la consulta. "·" = ventana aún no observable. La fila del mes en curso solo muestra el total a la fecha.</div></div>
-    <div class="grid-2" style="margin-top:16px;">
-      <div class="panel"><div class="panel-title">Por médico de la consulta — ${CONV_SEDE === "Total" ? "compañía" : CONV_SEDE}</div>
-        <div class="scroll-table" style="margin-top:6px;"><table><thead><tr><th>Médico</th><th class="num" style="text-align:right;">Consultas</th><th class="num" style="text-align:right;">Conv. 90 d (n)</th><th class="num" style="text-align:right;">Conv. 180 d</th><th class="num" style="text-align:right;">A la fecha</th><th class="num" style="text-align:right;">Mediana d</th><th class="num" style="text-align:right;">Mismo médico (n)</th><th class="num" style="text-align:right;">Deriva</th><th class="num" style="text-align:right;">Recibe</th></tr></thead><tbody>${fd}</tbody></table></div>
-        <div style="font-size:11px;color:var(--axis);margin-top:8px;font-style:italic;">Se atribuye al médico que dio la consulta. "Mismo médico" = % de quienes iniciaron tratamiento con el mismo médico (en ${cvP(pSame, 0)} de los casos de la ${CONV_SEDE === "Total" ? "compañía" : "sede"}); "Deriva" = iniciaron con otro; "Recibe" = pacientes derivados que llegan a su agenda. n bajo = &lt; ${MINN} consultas con 90 d de seguimiento.</div></div>
-      <div class="panel"><div class="panel-title">Derivaciones más frecuentes (consulta → médico tratante)</div>
-        <table><thead><tr><th>Consulta con</th><th>Trata</th><th class="num" style="text-align:right;">Pacientes</th></tr></thead><tbody>${mat || '<tr><td colspan="3" style="color:var(--axis);">Sin derivaciones</td></tr>'}</tbody></table>
-        <div style="font-size:11px;color:var(--axis);margin-top:8px;font-style:italic;">Médico tratante = médico asignado en la historia durante las 3 semanas posteriores al inicio del tratamiento.</div></div>
-    </div>
-    <div style="font-size:11px;color:var(--axis);margin-top:8px;font-style:italic;">Pacientes con tratamiento previo a la consulta se excluyen; la historia previa a ene-2025 no está en la base, por lo que las cohortes ene–feb 2025 pueden incluir algunas pacientes ya conocidas. El esperado aplica la curva histórica de conversión por mes (cohortes cerradas hasta ${cvMesEtq(M.cerr)}) al volumen de consultas de cada mes; en meses pasados es un ajuste, no un pronóstico independiente. * Mes en curso, parcial al día ${D.dia}. Cuenta solo pacientes cuya consulta de primera vez/check-up está en la base (≈1/3 de quienes inician tratamiento; el resto ya era paciente, tuvo consulta previa a 2025 o entró directo a paquete), así que no es el total de inicios de la clínica. Los indicadores de este bloque son por compañía/sede, no varían con los filtros de arriba.</div>`;
+      <div style="font-size:11px;color:var(--axis);margin-top:8px;font-style:italic;">Cada fila = pacientes cuya primera consulta o check-up de fertilidad fue ese mes (cuenta una vez por paciente; excluye IP's, SOP/SOMP, ginecología y a quienes ya habían iniciado tratamiento antes, por eso no coincide 1:1 con la sección Consultas). "·" = ventana aún no observable. Recuadro = periodo seleccionado.</div></div>
+    <div class="panel" style="margin-top:16px;"><div class="panel-title">Por médico de la consulta — ${sedeTxt} · ${etqM}</div>
+      ${avisoM ? '<div style="font-size:11.5px;color:var(--amber);margin:2px 0 6px;">' + avisoM + "</div>" : ""}
+      <div class="scroll-table" style="margin-top:6px;"><table><thead><tr><th>Médico</th><th class="num" style="text-align:right;">Pacientes nuevos</th><th class="num" style="text-align:right;">Conv. 90 d (n)</th><th class="num" style="text-align:right;">Ya iniciaron</th><th class="num" style="text-align:right;">Días prom.</th><th class="num" style="text-align:right;">Mismo médico (n)</th><th class="num" style="text-align:right;">Deriva</th><th class="num" style="text-align:right;">Recibe</th></tr></thead><tbody>${fd || '<tr><td colspan="8" style="color:var(--axis);">Sin datos para este periodo</td></tr>'}</tbody></table></div>
+      <div style="font-size:11px;color:var(--axis);margin-top:8px;font-style:italic;">Se atribuye al médico que dio la consulta. "Mismo médico" = % que inició tratamiento con el mismo médico${totNcv ? " (" + Math.round(totSame / totNcv * 100) + "% en este periodo)" : ""}; "Deriva" = inició con otro médico; "Recibe" = pacientes derivados que llegan a su agenda. n bajo = menos de ${MINN} consultas con 90 d de seguimiento.</div></div>
+    <div class="panel" style="margin-top:16px;"><div class="panel-title">Derivaciones más frecuentes (consulta → médico tratante) — ${sedeTxt} · ${etqM}</div>
+      <table><thead><tr><th>Consulta con</th><th>Trata</th><th class="num" style="text-align:right;">Pacientes</th></tr></thead><tbody>${matRows || '<tr><td colspan="3" style="color:var(--axis);">Sin derivaciones en este periodo</td></tr>'}</tbody></table>
+      <div style="font-size:11px;color:var(--axis);margin-top:8px;font-style:italic;">Médico tratante = médico asignado en la historia durante las 3 semanas posteriores al inicio del tratamiento.</div></div>
+    <div style="font-size:11px;color:var(--axis);margin-top:8px;font-style:italic;">Primeros inicios = primer tratamiento de pacientes cuya consulta de entrada está en la base (≈1/3 de quienes inician tratamiento; el resto ya era paciente, tuvo consulta antes de 2025 o entró directo a paquete), no el total de inicios de la clínica. La historia previa a ene-2025 no está en la base. Del 6 al 25 de oct la consulta de entrada se toma de cargos (el detalle de citas llega hasta el 5-oct).${parcial ? " * Mes en curso, parcial al día " + D.dia + "." : ""}</div>`;
 
-  cont.querySelectorAll("[data-cvsede]").forEach(b => b.addEventListener("click", () => { CONV_SEDE = b.getAttribute("data-cvsede"); cvRender(); }));
-
-  // ---------- gráfica 1: curva acumulada por trimestre de cohorte
-  const grupos = [["T1-25", 0, 2], ["T2-25", 3, 5], ["T3-25", 6, 8], ["T4-25", 9, 11], ["T1-26", 12, 14], ["T2-26", 15, 17]];
-  const col = [COLORS.gray, COLORS.blue, COLORS.teal, COLORS.pink, COLORS.amber, COLORS.red];
-  const KC = 12, labels = Array.from({ length: KC + 1 }, (_, k) => "M+" + k);
-  const sets = grupos.map((g, gi) => {
-    const data = [];
-    for (let k = 0; k <= KC; k++) {
-      let N = 0, s = 0, ok = true;
-      for (let i = g[1]; i <= g[2]; i++) { if (i + k > M.cerr) { ok = false; break; } N += S.coh[i][1]; for (let j = 0; j <= k; j++) s += S.coh[i][2][j]; }
-      data.push(ok && N ? +(s / N * 100).toFixed(2) : null);
-    }
-    return { type: "line", label: g[0], data, borderColor: col[gi], backgroundColor: col[gi], borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, tension: 0.2, spanGaps: false };
-  });
+  // ---------- gráfica 1: barras simples
   let id = "chart-conv-curva";
   if (typeof destroyChart === "function") destroyChart(id);
   let cv = document.getElementById(id);
   if (cv) {
+    const ds = { type: "bar", label: "% que inició tratamiento ≤ 3 meses", data: dat1, backgroundColor: col1, borderRadius: 0 };
+    ds._fmt = v => v.toFixed(1) + "%";
     const ch = new Chart(cv.getContext("2d"), {
-      type: "line", data: { labels, datasets: sets },
-      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
-        plugins: { stackedTotalLabels: false, legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, font: { size: 11 } } },
-          tooltip: { callbacks: { label: c => c.parsed.y == null ? null : ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)}%` } } },
+      type: "bar", data: { labels: lab1, datasets: [ds] },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { stackedTotalLabels: false, legend: { display: false },
+          tooltip: { callbacks: { label: c => ` ${cvP(c.parsed.y)} · ${tip1[c.dataIndex][1]} de ${tip1[c.dataIndex][0]} pacientes` } } },
         scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: "#E5E5E2" }, ticks: { callback: v => v + "%" } } } },
     });
     if (typeof charts !== "undefined") charts[id] = ch;
   }
 
-  // ---------- gráfica 2: inicios real vs esperado (2026 + 2 meses de pronóstico)
-  const desde = 12, hasta = M.T + 2;
+  // ---------- gráfica 2: inicios real vs esperado del año
   const lab2 = [], dReal = [], dEsp = [], dFwd = [];
-  for (let t = desde; t < hasta; t++) {
-    lab2.push(cvMesEtq(t) + (t === cierreIdx ? "*" : ""));
+  for (let m = 0; m < 12; m++) {
+    const t = base + m; if (t >= M.T + 2) break;
+    lab2.push(CV_MES[m] + (t === cierreIdx ? "*" : ""));
     dReal.push(t < M.T ? M.real[t] : null);
     dFwd.push(t >= M.T ? +M.esp[t].toFixed(1) : null);
     dEsp.push(+M.esp[t].toFixed(1));
@@ -2722,7 +2754,7 @@ function cvRender() {
       data: { labels: lab2, datasets: [
         { type: "bar", label: "Inicios reales", data: dReal, backgroundColor: COLORS.teal, borderRadius: 0, order: 2 },
         { type: "bar", label: "Pronóstico (consultas ya recibidas)", data: dFwd, backgroundColor: "#9CCFC9", borderColor: COLORS.teal, borderWidth: 1, borderRadius: 0, order: 2 },
-        { type: "line", label: "Esperado por curva histórica", data: dEsp, borderColor: COLORS.amber, backgroundColor: COLORS.amber, borderWidth: 2, borderDash: [5, 4], pointRadius: 3, tension: 0.2, order: 1 },
+        { type: "line", label: "Esperado según consultas de meses anteriores", data: dEsp, borderColor: COLORS.amber, backgroundColor: COLORS.amber, borderWidth: 2, borderDash: [5, 4], pointRadius: 3, tension: 0.2, order: 1 },
       ] },
       options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
         plugins: { stackedTotalLabels: false, legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, font: { size: 11 } } },
