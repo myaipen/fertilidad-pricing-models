@@ -2457,12 +2457,41 @@ function serieRankingConsulta(nombre) {
   if (ANIO_VIGENTE === 2025) return { a: mk(r25 || []), ly: null };
   return { a: mk(aplicarOverrideVRepro(r26 || [])), ly: mk(r25 || []) };
 }
+// ---- Ingresos (cargos) por motivo de consulta: sirve para separar efecto precio de efecto volumen.
+// Motivo del ranking (citas) -> conceptos de cobro de "ConceptosMensual" (regex sobre el nombre sin acentos, en minúsculas).
+// Motivos sin concepto de cobro equivalente claro (IP's, gratis, materno fetal) no muestran ingresos.
+const MOTIVO_COBRO = [
+  ["check up ginecologico",          /^check ?up ginecolog/],
+  ["check up integral",              /^check ?up integral/],
+  ["fertility check up mujeres",     /^check ?up ?(fertilidad ?)?mujer/],
+  ["fertility check up hombres",     /^check ?up ?(fertilidad ?)?(hombre|masculino)/],
+  ["fertility check up parejas",     /^check ?up ?(fertilidad ?)?pareja/],
+  ["consulta primera vez",           /^consulta (de )?primera vez( presencial)?( cdmx| gdl| met)?$|^consulta presencial|^consulta 14% off/],
+  ["check-up somp",                  /^(consulta|cita) (de )?primera vez somp/],
+  ["check-up sop",                   /^(consulta|cita) (de )?primera vez sop/],
+  ["consulta primera vez online",    /^consulta (de )?primera vez (online|en linea)|^consulta online/],
+  ["consulta obstetricia",           /^consulta obstetric/],
+  ["consulta ginecologica",          /^consulta ginecolog/],
+];
+function _normTxt(t) { return String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim(); }
+function cobroDeMotivo(nombre) {
+  const rule = MOTIVO_COBRO.find(r => r[0] === _normTxt(nombre));
+  const cm = window.DATA && window.DATA.conceptosMensual && window.DATA.conceptosMensual[currentScope];
+  if (!rule || !cm) return null;
+  const ing = Array(12).fill(0), at = Array(12).fill(0), conceptos = [];
+  for (const [conc, ser] of Object.entries(cm)) {
+    if (!rule[1].test(_normTxt(conc))) continue;
+    conceptos.push(conc);
+    for (let i = 0; i < 12; i++) { ing[i] += Number(ser.ingresos[i]) || 0; at[i] += Number(ser.atenciones[i]) || 0; }
+  }
+  return conceptos.length ? { ing, at, conceptos } : null;
+}
 function abrirEvolutivoConsulta(nombre) {
   const modal = document.getElementById("concept-modal");
   const title = document.getElementById("concept-modal-title");
   const body = document.getElementById("concept-modal-body");
   if (!modal || !title || !body) return;
-  const { a, ly } = serieRankingConsulta(nombre);
+  const { a } = serieRankingConsulta(nombre);
   const nM = MES_VIGENTE;
   const proy = ANIO_VIGENTE === 2026 && consultasProyActiva();
   title.textContent = "Consultas · " + nombre + (currentScope === "total" ? "" : " · " + currentScope);
@@ -2472,24 +2501,53 @@ function abrirEvolutivoConsulta(nombre) {
   const pct = (x, y) => y ? Math.round((x / y - 1) * 100) : null;
   const chip = (p, nom) => p === null ? '<span style="color:var(--axis);font-weight:700;">Nuevo</span>' :
     '<span style="color:' + (p >= 0 ? '#0F766E' : '#B45309') + ';font-weight:700;">' + (p >= 0 ? "▲ +" : "▼ ") + p + '% (' + (nom >= 0 ? "+" : "") + nom + ')</span>';
-  const lyv = ly ? (ly[nM - 1] || 0) : 0;
+  const cobro = cobroDeMotivo(nombre);
+  const K = v => "$" + Math.round((v || 0) / 1000).toLocaleString("es-MX") + "K";
+  const P = v => "$" + Math.round(v || 0).toLocaleString("es-MX");
+  let ingHtml = "";
+  if (cobro) {
+    const i0 = cobro.ing[nM - 1], iL = nM > 1 ? cobro.ing[nM - 2] : 0, a0 = cobro.at[nM - 1], aL = nM > 1 ? cobro.at[nM - 2] : 0;
+    const t0 = a0 ? i0 / a0 : 0, tL = aL ? iL / aL : 0;
+    ingHtml = '<div style="font-size:12px;color:var(--axis);margin-bottom:8px;">Ingresos ' + MESES_12[nM - 1] + ' (real al ' + CORTE_REAL_DIA + '): <b style="color:var(--text);">' + K(i0) + '</b> vs ' + MESES_12[nM - 2] + ' ' + K(iL) +
+      ' · Cargos: <b style="color:var(--text);">' + a0 + '</b> vs ' + aL + ' · Ticket medio: <b style="color:var(--text);">' + P(t0) + '</b> vs ' + P(tL) + (tL ? ' ' + chip(pct(t0, tL), Math.round(t0 - tL)) : '') + '</div>';
+  }
   body.innerHTML = '<div style="font-size:12px;color:var(--axis);margin-bottom:8px;">' + MESES_12[nM - 1] + (proy ? " (proyección)" : "") + ': <b style="color:var(--text);">' + cur + '</b> · vs LM ' + chip(pct(cur, lm), cur - lm) +
-    (u3.length ? ' · vs U3M ' + chip(pct(cur, u3avg), Math.round(cur - u3avg)) : '') + (lyv ? ' · vs LY ' + chip(pct(cur, lyv), cur - lyv) : '') + '</div>' +
-    '<div style="height:260px;"><canvas id="rank-evol-canvas"></canvas></div>' +
-    '<div style="font-size:11px;color:var(--axis);margin-top:6px;">' + (proy ? 'Oct = proyección (terminadas + agenda × show rate + citas nuevas esperadas); ' : '') + 'meses anteriores = consultas terminadas.' + (ly ? ' Línea punteada = mismo mes de 2025.' : '') + '</div>';
+    (u3.length ? ' · vs U3M ' + chip(pct(cur, u3avg), Math.round(cur - u3avg)) : '') + '</div>' + ingHtml +
+    '<div style="height:280px;"><canvas id="rank-evol-canvas"></canvas></div>' +
+    '<div style="font-size:11px;color:var(--axis);margin-top:6px;">Barras: ' + (proy ? 'Oct = proyección (terminadas + agenda × show rate + citas nuevas esperadas); ' : '') + 'meses anteriores = consultas terminadas.' +
+    (cobro ? ' Línea: ingresos facturados en miles de pesos ($K, sin IVA) de los conceptos «' + cobro.conceptos.join('», «') + '»; ' + MESES_12[nM - 1] + ' es real al corte (no proyectado). Ticket medio = ingresos ÷ cargos: si sube con cargos estables es precio; si cae es más descuento/promo.'
+           : ' Este motivo no tiene un concepto de cobro equivalente claro, por eso no se muestra ingreso.') + '</div>';
   modal.style.display = "flex";
   const cv = document.getElementById("rank-evol-canvas");
   if (typeof charts !== "undefined" && charts["rank-evol"]) { try { charts["rank-evol"].destroy(); } catch (_) {} }
   const labels = MESES_12.slice(0, nM);
-  const datasets = [{ type: "bar", label: "2026", data: vals, backgroundColor: vals.map((_, i) => i === nM - 1 ? COLORS.blue : COLORS.gray), borderRadius: 4, maxBarThickness: 34, order: 2 }];
-  if (ly) datasets.push({ type: "line", label: "2025", data: ly.slice(0, nM), borderColor: COLORS.red, borderDash: [5, 4], backgroundColor: COLORS.red, pointRadius: 3, borderWidth: 1.5, fill: false, order: 1 });
-  const totLbl = { id: "rankEvolLbl", afterDatasetsDraw(c) {
+  const datasets = [{ type: "bar", label: "Consultas" + (proy ? " (" + MESES_12[nM - 1] + " = proyección)" : ""), data: vals, backgroundColor: vals.map((_, i) => i === nM - 1 ? COLORS.blue : COLORS.gray), borderRadius: 4, maxBarThickness: 34, order: 2, yAxisID: "y" }];
+  const maxBar = Math.max(1, ...vals);
+  let maxIng = 1;
+  if (cobro) {
+    const ingK = cobro.ing.slice(0, nM).map(v => Math.round(v / 100) / 10); // miles con 1 decimal
+    maxIng = Math.max(1, ...ingK);
+    datasets.push({ type: "line", label: "Ingresos ($ miles)", data: ingK, yAxisID: "y1", borderColor: COLORS.teal, backgroundColor: COLORS.teal, borderWidth: 2, pointRadius: 4, order: 1, fill: false, tension: 0,
+      pointBackgroundColor: ingK.map((_, i) => i === nM - 1 ? "#FFFFFF" : COLORS.teal), pointBorderColor: COLORS.teal, pointBorderWidth: 2,
+      segment: { borderDash: c => c.p1DataIndex === nM - 1 ? [4, 4] : undefined } });
+  }
+  const barLbl = { id: "rankEvolLbl", afterDatasetsDraw(c) {
     const { ctx } = c; ctx.save(); ctx.font = "700 11px Calibri, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; ctx.fillStyle = "#1F2937";
-    c.getDatasetMeta(0).data.forEach((b, i) => ctx.fillText(String(c.data.datasets[0].data[i]), b.x, b.y - 4)); ctx.restore(); } };
-  charts["rank-evol"] = new Chart(cv.getContext("2d"), { data: { labels, datasets }, plugins: [totLbl],
+    c.getDatasetMeta(0).data.forEach((b, i) => ctx.fillText(String(c.data.datasets[0].data[i]), b.x, b.y - 4));
+    if (c.data.datasets[1]) { ctx.fillStyle = COLORS.teal; c.getDatasetMeta(1).data.forEach((pt, i) => ctx.fillText("$" + Number(c.data.datasets[1].data[i]).toLocaleString("es-MX", { maximumFractionDigits: 1 }) + "K", pt.x, pt.y - 7)); }
+    ctx.restore(); } };
+  charts["rank-evol"] = new Chart(cv.getContext("2d"), { data: { labels, datasets }, plugins: [barLbl],
     options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } },
-      plugins: { legend: { display: !!ly, position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } },
-      scales: { y: { display: false, beginAtZero: true, grace: "20%" }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } } } });
+      plugins: { legend: { display: !!cobro, position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
+        tooltip: { callbacks: { label: c => {
+          if (c.dataset.yAxisID !== "y1") return c.dataset.label + ": " + c.parsed.y;
+          const at = cobro.at[c.dataIndex], ing = cobro.ing[c.dataIndex];
+          return "Ingresos: " + P(ing) + " · " + at + " cargos · ticket " + P(at ? ing / at : 0); } } } },
+      scales: {
+        // con ingresos: las barras ocupan la mitad de abajo y la línea la de arriba, para que no se encimen las etiquetas
+        y: { display: false, beginAtZero: true, max: cobro ? maxBar * 2.2 : undefined, grace: cobro ? 0 : "20%" },
+        y1: { display: false, position: "right", min: -maxIng * 1.15, max: maxIng * 1.15, grid: { drawOnChartArea: false } },
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } } } } });
 }
 window.abrirEvolutivoConsulta = abrirEvolutivoConsulta;
 function engancharRankingClick() {
