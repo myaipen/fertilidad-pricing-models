@@ -2761,7 +2761,7 @@ function cvRender() {
 
   cont.innerHTML = `
     <div class="section-title">Conversión: consulta de primera vez / check-up → tratamiento</div>
-    <p class="section-sub">Pacientes nuevos que tuvieron su primera consulta o check-up de fertilidad y cuántos inician tratamiento (FIV, captura, vitrificación, transferencia, IIU o coito programado; la donación cuenta cuando inicia el FIV) · ${sedeTxt} · reacciona a Sede, Periodo, Mes y Año · corte ${D.corte}</p>
+    <p class="section-sub">Pacientes nuevos que tuvieron su primera consulta o check-up de fertilidad y cuántos inician tratamiento (FIV, captura, vitrificación, transferencia, IIU o coito programado; la donación cuenta cuando inicia el FIV) · ${sedeTxt} · reacciona a Sede, Periodo, Mes y Año · corte ${D.corte}<br>No es el mismo conteo que «Consultas» de arriba: aquí son pacientes únicos nuevos (primera entrada de fertilidad en su historia) y se excluyen Check-up SOMP/SOP, Ginecológico, IP's, obstetricia y quien ya tenía entrada o tratamiento previo.</p>
     ${kpis}
     <div class="grid-2" style="margin-top:14px;">
       <div class="panel"><div class="panel-title">% de pacientes nuevas que inició tratamiento dentro de 3 meses — ${Y}</div>
