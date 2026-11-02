@@ -2458,6 +2458,14 @@ window.ajustarConsultasProyUI = ajustarConsultasProyUI;
 // ---- CIERRE DE MES (2-nov-2026): quita del texto de la página lo que habla de proyección/agenda cuando el
 // mes vigente ya está cerrado (index.html no se toca, así que se reescribe el texto tras cada renderAll).
 function ajustarCierreUI() {
+  // Color de las insignias de No show: rojo solo si es negativo (▼); ▲ en verde (Marite, 2-nov-2026)
+  for (const e of document.querySelectorAll("span.down, span.up")) {
+    if (e.children.length) continue;
+    const t = e.textContent.trim();
+    if (!/No show/i.test(t)) continue;
+    if (t.startsWith("▲")) { e.classList.remove("down"); e.classList.add("up"); }
+    else if (t.startsWith("▼")) { e.classList.remove("up"); e.classList.add("down"); }
+  }
   let cerrado = false;
   try { cerrado = ANIO_VIGENTE === 2026 && MES_VIGENTE === CORTE_MES && mesVigenteCerrado(MES_VIGENTE) && CORTE_REAL_DIA >= diasEnMes(MES_VIGENTE); } catch (_) {}
   if (!cerrado) return;
