@@ -2455,6 +2455,36 @@ function ajustarConsultasProyUI() {
 }
 window.ajustarConsultasProyUI = ajustarConsultasProyUI;
 
+// ---- CIERRE DE MES (2-nov-2026): quita del texto de la página lo que habla de proyección/agenda cuando el
+// mes vigente ya está cerrado (index.html no se toca, así que se reescribe el texto tras cada renderAll).
+function ajustarCierreUI() {
+  let cerrado = false;
+  try { cerrado = ANIO_VIGENTE === 2026 && MES_VIGENTE === CORTE_MES && mesVigenteCerrado(MES_VIGENTE) && CORTE_REAL_DIA >= diasEnMes(MES_VIGENTE); } catch (_) {}
+  if (!cerrado) return;
+  const REEMPLAZOS = [
+    [/ \+ proyecci[óo]n donde aplica/, " · mes cerrado, sin proyección"],
+    [/Consultas: evolutivo y agenda/, "Consultas: evolutivo"],
+    [/Consultas terminadas \(real\) \+ citas agendadas confirmadas para completar el mes/, "Consultas terminadas (real) del mes cerrado"],
+    [/Real MTD: <b[^>]*>(\d+)<\/b>[^<]*(<b[^>]*>[^<]*<\/b>[^<]*)*/, "Real del mes (cerrado): <b>$1</b>"],
+    [/Real MTD: (\d+) · Agendad[^·]*· Proyecci[óo]n: \d+/, "Real del mes (cerrado): $1"],
+    [/^Evolutivo con proyección$/, "Evolutivo del mes"],
+    [/Ingresos proyectados por servicio \(MDP\) del mes en curso/, "Ingresos por servicio (MDP) del mes vigente"],
+  ];
+  const hojas = [...document.querySelectorAll("body *")].filter(e => !["SCRIPT", "STYLE", "CANVAS", "SVG"].includes(e.tagName) && [...e.children].every(c => ["B", "SPAN", "I", "EM", "STRONG"].includes(c.tagName)));
+  for (const e of hojas) {
+    const h = e.innerHTML;
+    if (!h || h.length > 600) continue;
+    let nh = h;
+    for (const [re, rep] of REEMPLAZOS) nh = nh.replace(re, rep);
+    if (nh !== h) e.innerHTML = nh;
+  }
+  // Etiqueta "proy." junto a los KPI -> "cierre"
+  for (const e of document.querySelectorAll("body *")) {
+    if (e.children.length === 0 && e.textContent.trim() === "proy.") e.textContent = "cierre";
+  }
+}
+window.ajustarCierreUI = ajustarCierreUI;
+
 // ---- Ranking de consultas: octubre = proyección, nota y clic en el nombre -> evolutivo mensual
 function serieRankingConsulta(nombre) {
   const codes = currentScope === "total" ? SEDES : [currentScope];
@@ -2852,12 +2882,13 @@ window.cvRender = cvRender;
         try { buildHubspotMecanismo(); } catch (e) { console.warn("Sección mecanismo de conversión:", e); }
         try { buildConversion(); } catch (e) { console.warn("Sección conversión consulta→tratamiento:", e); }
         try { ajustarConsultasProyUI(); } catch (e) { console.warn("Nota proyección consultas:", e); }
+        try { ajustarCierreUI(); } catch (e) { console.warn("Texto de cierre de mes:", e); }
         try { ajustarRankingUI(); engancharRankingClick(); } catch (e) { console.warn("Ranking consultas:", e); }
         return r;
       };
       nueva.__mec = true;
       window.renderAll = nueva;
-      try { if (document.getElementById("hubspot-charts") && document.getElementById("hubspot-charts").children.length) { buildHubspotMecanismo(); buildConversion(); } ajustarConsultasProyUI(); ajustarRankingUI(); engancharRankingClick(); } catch (e) { console.warn(e); }
+      try { if (document.getElementById("hubspot-charts") && document.getElementById("hubspot-charts").children.length) { buildHubspotMecanismo(); buildConversion(); } ajustarConsultasProyUI(); ajustarCierreUI(); ajustarRankingUI(); engancharRankingClick(); } catch (e) { console.warn(e); }
       clearInterval(t);
     } else if (intentos > 300) clearInterval(t);
   }, 100);
