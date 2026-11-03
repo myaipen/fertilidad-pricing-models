@@ -175,8 +175,20 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // Atenciones/Pacientes = Real, Consultas sin agenda pendiente (CONSULTAS_PROY queda inactivo porque corte != 26).
 // mesVigenteCerrado() ahora también devuelve true cuando el corte llega al último día del mes (CORTE_MES/CORTE_REAL_DIA),
 // así el mes sale cerrado aunque el calendario aún no haya cambiado de mes.
-let CORTE_REAL_DIA = 31;
-const CORTE_MES = 10; // mes (1-12) al que corresponde CORTE_REAL_DIA
+// ACTUALIZADO 3-nov-2026: NUEVO MES, CORTE 2-nov-2026 (primera proyección de noviembre). Cargos de vRepro del 1 y 2 nov
+// (155 líneas, Real MTD $750,800: CDMX $570.2K, GDL $178.9K, MTP $1.7K); citas/consultas, HubSpot (Interesa2), médicos,
+// subrogación y mecanismos al 2-nov. Con solo 2 días (peso 1.07 de 23.55 días hábiles equivalentes) la confianza es BAJA.
+// PROYECCIÓN DE INGRESOS (Base!F, columna Proyectado): Real MTD + peso restante (22.48) x ritmo por día hábil equivalente
+// PONDERADO POR RECENCIA (decay 0.8/mes, ventana mar-oct) = $13.97M (CDMX $11.56M, GDL $1.82M, MTP $0.58M), repartido a sedes
+// con la mezcla ago-oct y a servicios con la mezcla ago-oct de cada sede. Rango: $12.79M (mediana mar-oct, el método anterior)
+// a $15.35M (ritmo U3M ago-oct). Se cambia de mediana a ponderado por recencia porque octubre se proyectó con mediana en
+// $13.3M y cerró en $16.47M (-19%): el nivel subió desde agosto y la mediana tarda en reflejarlo.
+// Atenciones/Pacientes: curvas SHARE_CURVE_* regeneradas al calendario de noviembre (ventana mar-oct, mediana puntual);
+// Atenciones = max(Real, promedio(Real/share al día 2, Real + peso restante x ritmo U3M)); Pacientes = Atenciones x ratio ago-oct.
+// Consultas: sin agenda leída para nov 3-30; proyección por RITMO (Real + peso restante x ritmo U3M por día hábil equivalente) = 299.
+// Oct queda cerrado (Real) en la columna de octubre del ranking; AJUSTE_ATEN_OCT_2026 solo aplica a octubre.
+let CORTE_REAL_DIA = 2;
+const CORTE_MES = 11; // mes (1-12) al que corresponde CORTE_REAL_DIA
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 
@@ -185,7 +197,7 @@ window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
 // loadLiveDataIntoDashboard() lo autodetecta al último mes con datos reales
 // apenas carga (ver detectarMesVigente), y cambiar el selector dispara un
 // re-render completo con el nuevo mes como "vigente" y el anterior como LM.
-let MES_VIGENTE = 10;
+let MES_VIGENTE = 11;
 
 // Año vigente — GLOBAL, selector único en la barra de filtros de arriba
 // (junto a Sede/Periodo/Mes Vigente en index.html). Afecta TODO el tablero:
@@ -982,22 +994,29 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // promedio(Real / share mediano al corte, Real + peso restante x ritmo U3M));
   // (3) RATIO_PACIENTES_POR_ATENCION = promedio mensual de jul-sep (el ratio
   // sube: sep CDMX 0.350, GDL 0.453, MTP 0.413 vs medianas 0.289/0.388/0.275).
+  // RECALIBRACIÓN 3-nov-2026 (corte 2-nov, NOVIEMBRE 2026): curvas regeneradas al calendario de noviembre (arranca domingo;
+  // sus primeros 2 días pesan 1.07 de 23.55). Misma metodología CENTRAL: eje = fracción acumulada de días hábiles ponderados
+  // (lun-vie=1, sáb=0.55, dom=0.07), mediana puntual de los 8 meses cerrados MAR-OCT 2026 re-mapeados a ese eje. Atenciones sale
+  // de los renglones diarios de Cargos (data_periods); Pacientes (solo respaldo: con Atenciones proyectada se deriva por ratio)
+  // se aproxima con los pacientes únicos por día acumulados. Share al día 2: Atenciones CDMX 0.0516, GDL 0.0474, MTP 0.0386.
+  // RATIO_PACIENTES_POR_ATENCION = promedio mensual ago-oct (CDMX .3095, GDL .4141, MTP .3613, total .3337).
+  // Las curvas son específicas de NOVIEMBRE 2026: hay que regenerarlas cada mes.
   const SHARE_CURVE_ATENCIONES = {
-    CDMX: [0.0448,0.0934,0.1189,0.1225,0.1596,0.1952,0.2334,0.284,0.3254,0.3454,0.3486,0.3897,0.4243,0.4648,0.5061,0.5471,0.5702,0.5728,0.6147,0.6471,0.6888,0.7274,0.7626,0.7801,0.7823,0.8219,0.8595,0.903,0.9315,0.9711,1],
-    GDL:  [0.038,0.0736,0.0875,0.0893,0.1284,0.1677,0.2113,0.2335,0.2894,0.3104,0.3131,0.3549,0.3881,0.4155,0.4603,0.5013,0.5292,0.5317,0.5614,0.5854,0.6153,0.6564,0.7224,0.7429,0.7449,0.7921,0.8367,0.8856,0.9313,0.9734,1],
-    MTP:  [0.0306,0.088,0.1105,0.1133,0.1362,0.1827,0.235,0.2912,0.3424,0.3692,0.3719,0.4041,0.4517,0.5084,0.5389,0.5752,0.5963,0.5984,0.619,0.6586,0.701,0.7322,0.7788,0.8021,0.8044,0.8387,0.869,0.903,0.9265,0.9727,1],
+    CDMX: [0.0033,0.0516,0.0966,0.1457,0.1837,0.2207,0.2463,0.2492,0.2987,0.3451,0.3896,0.4226,0.4705,0.4949,0.4975,0.5268,0.577,0.6212,0.6677,0.7093,0.7293,0.7318,0.7688,0.8077,0.846,0.8969,0.9259,0.947,0.9497,1,1],
+    GDL:  [0.0028,0.0474,0.0786,0.1148,0.1563,0.206,0.2326,0.2349,0.2668,0.3229,0.3547,0.3898,0.4302,0.4515,0.4543,0.5045,0.559,0.5907,0.6276,0.6541,0.6778,0.681,0.7249,0.7757,0.8208,0.871,0.919,0.9475,0.9511,1,1],
+    MTP:  [0.0011,0.0386,0.1129,0.1552,0.18,0.2518,0.2778,0.2836,0.3347,0.3835,0.4384,0.4647,0.4983,0.5275,0.5312,0.5688,0.6075,0.6204,0.6858,0.713,0.7342,0.7367,0.7917,0.8242,0.8629,0.8937,0.9242,0.9454,0.9484,1,1],
   };
   const SHARE_CURVE_PACIENTES = {
-    CDMX: [0.0692,0.1482,0.1908,0.1967,0.2596,0.3071,0.3392,0.3781,0.4165,0.4357,0.4382,0.4756,0.5031,0.5377,0.5687,0.6003,0.6311,0.6377,0.7015,0.724,0.7575,0.7831,0.8173,0.8381,0.8403,0.869,0.8892,0.9188,0.9471,0.978,1],
-    GDL:  [0.0587,0.0989,0.1148,0.1168,0.1614,0.2132,0.2525,0.2884,0.3221,0.3381,0.3407,0.3797,0.4204,0.4642,0.4802,0.5067,0.5331,0.5376,0.5803,0.6125,0.6505,0.7007,0.7702,0.7907,0.7919,0.8286,0.852,0.9086,0.9454,0.9744,1],
-    MTP:  [0.0782,0.1725,0.208,0.2126,0.2443,0.2732,0.3438,0.3839,0.4099,0.4237,0.4268,0.4605,0.5164,0.5771,0.598,0.6289,0.6435,0.6455,0.6688,0.7175,0.7459,0.7938,0.8419,0.8658,0.8672,0.8793,0.9317,0.9396,0.9703,0.9889,1],
+    CDMX: [0.0039,0.0598,0.1107,0.1593,0.1954,0.2319,0.2516,0.2542,0.2916,0.3323,0.3829,0.4178,0.4631,0.4825,0.4848,0.5149,0.5769,0.629,0.6694,0.7096,0.7331,0.7358,0.7696,0.8079,0.8547,0.8958,0.9274,0.947,0.9495,1,1],
+    GDL:  [0.003,0.0547,0.0847,0.1251,0.1662,0.2128,0.2379,0.2409,0.2839,0.3243,0.3598,0.3925,0.4325,0.4459,0.4476,0.4962,0.5518,0.5882,0.6256,0.6543,0.6793,0.683,0.7367,0.7739,0.8266,0.8833,0.929,0.9495,0.9515,1,1],
+    MTP:  [0.0015,0.0477,0.1071,0.1369,0.1746,0.2379,0.2662,0.2676,0.3168,0.357,0.3998,0.415,0.4535,0.4863,0.4905,0.5384,0.5793,0.6067,0.6632,0.6905,0.7118,0.7143,0.7796,0.8244,0.8647,0.8822,0.9182,0.9475,0.9492,1,1],
   };
   // RATIO_PACIENTES_POR_ATENCION conservador: en vez del promedio ponderado
   // de los 8 meses cerrados, se usa el MÍNIMO mensual observado (el mes con
   // menos pacientes únicos por cada renglón de Cargos) — un ratio más bajo
   // implica menos Pacientes proyectados para la misma cifra de Atenciones:
   //   CDMX min=0.2168 (ene), GDL min=0.3151 (feb), MTP min=0.1953 (may).
-  const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.3046, GDL: 0.4147, MTP: 0.3382, total: 0.3267 };
+  const RATIO_PACIENTES_POR_ATENCION = { CDMX: 0.3095, GDL: 0.4141, MTP: 0.3613, total: 0.3337 };
   // CAMBIO (14-sep-2026, 3ª pasada): Marite señaló que Atenciones (3,630 proy.,
   // +17% vs. agosto) Y Pacientes (heredado de Atenciones, +5% vs. agosto)
   // proyectaban POR ENCIMA de agosto en el mismo momento en que Ingresos
@@ -1222,13 +1241,15 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   ============================================================================
 */
 const CONSULTAS_PROY = {
-  anio: 2026, mes: 10, corte: 26, showRate: 82,
+  anio: 2026, mes: 11, corte: 2, showRate: 83, modelo: "ritmo",
+  // 3-nov-2026: sin agenda leída para nov 3-30 -> proyección por RITMO: Real + peso restante (22.48) x ritmo por día hábil
+  // equivalente de ago-oct (CDMX 5.5/día eq., GDL 4.5, MTP 1.6); piso = Real a la fecha; rango = base x 0.947 / x 1.063.
   sedes: {
-    CDMX: { piso: 143, base: 143, min: 135, max: 152 },
-    GDL:  { piso: 106, base: 112, min: 106, max: 119 },
-    MTP:  { piso: 27,  base: 27,  min: 26,  max: 29 },
+    CDMX: { piso: 11, base: 141, min: 134, max: 150 },
+    GDL:  { piso: 7,  base: 118, min: 112, max: 125 },
+    MTP:  { piso: 2,  base: 40,  min: 38,  max: 43 },
   },
-  total: { piso: 276, base: 282, min: 267, max: 300 },
+  total: { piso: 20, base: 299, min: 284, max: 318 },
 };
 function consultasProyActiva() {
   return ANIO_VIGENTE === CONSULTAS_PROY.anio && MES_VIGENTE === CONSULTAS_PROY.mes && CORTE_REAL_DIA === CONSULTAS_PROY.corte;
@@ -1404,9 +1425,57 @@ const CONSULTAS_OCT_PROYECTADO = {
  "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 1,
  "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 1,
 };
+// Noviembre 2026 del ranking de consultas (corte 2-nov-2026): Terminadas del grupo Primera Vez del 1 al 2 nov (CDMX 11, GDL 7, MTP 2 = 20).
+const CONSULTAS_VREPRO_NOV_2026 = {
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez": 7,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online": 2,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta de Primera Vez IP's": 1,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez": 4,
+ "FERTILIDAD INTEGRAL Guadalajara|Check up Integral": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Mujeres": 1,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez": 1,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online gratis": 1,
+};
+// Noviembre PROYECTADO por concepto (corte 2-nov): cada sede suma su proyección por ritmo (CDMX 141 + GDL 118 + MTP 40 = 299);
+// por concepto = Real a la fecha + remanente repartido con la mezcla de octubre cerrado. Se usa mientras consultasProyActiva().
+const CONSULTAS_NOV_PROYECTADO = {
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez": 45,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online": 33,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Mujeres": 24,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta de Primera Vez IP's": 12,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Parejas": 9,
+ "FERTILIDAD INTEGRAL Ciudad de México|Check up Ginecologico": 6,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online gratis": 3,
+ "FERTILIDAD INTEGRAL Ciudad de México|Check-up SOMP": 3,
+ "FERTILIDAD INTEGRAL Ciudad de México|Check up Integral": 3,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 2,
+ "FERTILIDAD INTEGRAL Ciudad de México|Asesoria catalogos": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 27,
+ "FERTILIDAD INTEGRAL Guadalajara|Check up Ginecologico": 26,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez": 19,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Mujeres": 13,
+ "FERTILIDAD INTEGRAL Guadalajara|Check up Integral": 12,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Parejas": 5,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta Obstetricia": 5,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta ginecológica": 5,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez online": 3,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta obstetrica materno fetal": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez gratis": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 1,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez": 27,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 5,
+ "FERTILIDAD INTEGRAL Metepec|Check-up SOMP": 3,
+ "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 2,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 1,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online gratis": 1,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 1,
+};
 function aplicarOverrideVRepro(rows) {
   if (ANIO_VIGENTE !== 2026) return rows;
-  const OCT = (typeof CORTE_REAL_DIA !== "undefined" && CORTE_REAL_DIA === CONSULTAS_PROY.corte) ? CONSULTAS_OCT_PROYECTADO : CONSULTAS_VREPRO_OCT_2026; // la columna de octubre siempre es la proyección del corte vigente, sin importar el mes que se esté viendo
+  const OCT = CONSULTAS_VREPRO_OCT_2026; // octubre CERRADO (real, corte 31-oct), sin importar el mes que se esté viendo
+  const NOV = consultasProyActiva() ? CONSULTAS_NOV_PROYECTADO : CONSULTAS_VREPRO_NOV_2026; // noviembre: proyección por ritmo mientras el corte vigente sea 2-nov
   const out = [];
   const vistos = new Set();
   for (const r of (rows || [])) {
@@ -1416,14 +1485,17 @@ function aplicarOverrideVRepro(rows) {
     const nr = r.slice();
     while (nr.length < 14) nr.push("");
     nr[11] = OCT[k] || "";
+    nr[12] = NOV[k] || "";
     vistos.add(k);
     out.push(nr);
   }
-  for (const k of Object.keys(OCT)) {
+  const todas = new Set([...Object.keys(OCT), ...Object.keys(NOV)]);
+  for (const k of todas) {
     if (vistos.has(k)) continue;
     const [d, c] = k.split("|");
     const nr = [d, c]; while (nr.length < 14) nr.push("");
-    nr[11] = OCT[k];
+    nr[11] = OCT[k] || "";
+    nr[12] = NOV[k] || "";
     out.push(nr);
   }
   return out;
@@ -2242,7 +2314,7 @@ window.syncMesesHistYActual = syncMesesHistYActual;
   se espejan por fórmula (ARRAYFORMULA) al final de "HubspotSedeMensual" con
   Sede = nombre del mecanismo; buildHubspotSedeMensualMetric ignora toda fila
   cuyo Sede no sea CDMX/GDL/MTP, así que no afecta nada más. Si esa hoja aún no
-  trae esas filas (caché vieja), se usa MEC_RESPALDO (cierre 31-oct).
+  trae esas filas (caché vieja), se usa MEC_RESPALDO (corte 2-nov).
   La sección se inyecta en el DOM antes de "Consultas: evolutivo y agenda" (no
   hace falta tocar index.html) y se redibuja en cada renderAll().
   ============================================================================
@@ -2253,7 +2325,7 @@ const MEC_COLOR = {
   "LunaCal": "#B45309", "Instagram DM": "#D46A93", "(Sin valor)": "#C9CDD3", "Otros": "#8B8F97",
 };
 const MEC_MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-const MEC_RESPALDO = [["WhatsApp ATOM",1,"Ene",178,77],["WhatsApp ATOM",2,"Feb",136,62],["WhatsApp ATOM",3,"Mar",94,51],["WhatsApp ATOM",4,"Abr",153,86],["WhatsApp ATOM",5,"May",738,119],["WhatsApp ATOM",6,"Jun",589,112],["WhatsApp ATOM",7,"Jul",462,131],["WhatsApp ATOM",8,"Ago",455,135],["WhatsApp ATOM",9,"Sep",563,105],["WhatsApp ATOM",10,"Oct",578,103],["WhatsApp ATOM bubble",1,"Ene",0,0],["WhatsApp ATOM bubble",2,"Feb",0,0],["WhatsApp ATOM bubble",3,"Mar",0,0],["WhatsApp ATOM bubble",4,"Abr",0,0],["WhatsApp ATOM bubble",5,"May",53,5],["WhatsApp ATOM bubble",6,"Jun",169,25],["WhatsApp ATOM bubble",7,"Jul",384,56],["WhatsApp ATOM bubble",8,"Ago",613,95],["WhatsApp ATOM bubble",9,"Sep",612,85],["WhatsApp ATOM bubble",10,"Oct",395,78],["Typeform",1,"Ene",492,31],["Typeform",2,"Feb",686,54],["Typeform",3,"Mar",668,83],["Typeform",4,"Abr",578,70],["Typeform",5,"May",457,66],["Typeform",6,"Jun",237,30],["Typeform",7,"Jul",234,44],["Typeform",8,"Ago",154,31],["Typeform",9,"Sep",87,21],["Typeform",10,"Oct",72,20],["Partial typeform",1,"Ene",0,0],["Partial typeform",2,"Feb",4,2],["Partial typeform",3,"Mar",14,8],["Partial typeform",4,"Abr",10,4],["Partial typeform",5,"May",255,23],["Partial typeform",6,"Jun",219,18],["Partial typeform",7,"Jul",240,28],["Partial typeform",8,"Ago",451,58],["Partial typeform",9,"Sep",535,56],["Partial typeform",10,"Oct",519,57],["LunaCal",1,"Ene",80,48],["LunaCal",2,"Feb",177,66],["LunaCal",3,"Mar",199,135],["LunaCal",4,"Abr",211,123],["LunaCal",5,"May",187,105],["LunaCal",6,"Jun",132,71],["LunaCal",7,"Jul",142,89],["LunaCal",8,"Ago",196,134],["LunaCal",9,"Sep",200,164],["LunaCal",10,"Oct",246,215],["Instagram DM",1,"Ene",0,0],["Instagram DM",2,"Feb",0,0],["Instagram DM",3,"Mar",0,0],["Instagram DM",4,"Abr",0,0],["Instagram DM",5,"May",0,0],["Instagram DM",6,"Jun",0,0],["Instagram DM",7,"Jul",0,0],["Instagram DM",8,"Ago",0,0],["Instagram DM",9,"Sep",61,1],["Instagram DM",10,"Oct",196,4],["(Sin valor)",1,"Ene",83,32],["(Sin valor)",2,"Feb",56,46],["(Sin valor)",3,"Mar",45,41],["(Sin valor)",4,"Abr",47,45],["(Sin valor)",5,"May",62,49],["(Sin valor)",6,"Jun",85,57],["(Sin valor)",7,"Jul",70,69],["(Sin valor)",8,"Ago",41,38],["(Sin valor)",9,"Sep",28,27],["(Sin valor)",10,"Oct",30,28],["Otros",1,"Ene",0,0],["Otros",2,"Feb",0,0],["Otros",3,"Mar",0,0],["Otros",4,"Abr",0,0],["Otros",5,"May",0,0],["Otros",6,"Jun",4,2],["Otros",7,"Jul",1,1],["Otros",8,"Ago",11,10],["Otros",9,"Sep",9,9],["Otros",10,"Oct",21,9]]; // [Mecanismo, MesNum, MesLabel, Leads, Citas] — corte 26-oct-2026
+const MEC_RESPALDO = [["WhatsApp ATOM",1,"Ene",178,77],["WhatsApp ATOM",2,"Feb",136,62],["WhatsApp ATOM",3,"Mar",94,51],["WhatsApp ATOM",4,"Abr",153,86],["WhatsApp ATOM",5,"May",738,119],["WhatsApp ATOM",6,"Jun",589,112],["WhatsApp ATOM",7,"Jul",462,131],["WhatsApp ATOM",8,"Ago",455,135],["WhatsApp ATOM",9,"Sep",563,105],["WhatsApp ATOM",10,"Oct",578,103],["WhatsApp ATOM",11,"Nov",33,5],["WhatsApp ATOM bubble",1,"Ene",0,0],["WhatsApp ATOM bubble",2,"Feb",0,0],["WhatsApp ATOM bubble",3,"Mar",0,0],["WhatsApp ATOM bubble",4,"Abr",0,0],["WhatsApp ATOM bubble",5,"May",53,5],["WhatsApp ATOM bubble",6,"Jun",169,25],["WhatsApp ATOM bubble",7,"Jul",384,56],["WhatsApp ATOM bubble",8,"Ago",613,95],["WhatsApp ATOM bubble",9,"Sep",612,85],["WhatsApp ATOM bubble",10,"Oct",395,78],["WhatsApp ATOM bubble",11,"Nov",12,1],["Typeform",1,"Ene",492,31],["Typeform",2,"Feb",686,54],["Typeform",3,"Mar",668,83],["Typeform",4,"Abr",578,70],["Typeform",5,"May",457,66],["Typeform",6,"Jun",237,30],["Typeform",7,"Jul",234,44],["Typeform",8,"Ago",154,31],["Typeform",9,"Sep",87,21],["Typeform",10,"Oct",72,20],["Typeform",11,"Nov",5,1],["Partial typeform",1,"Ene",0,0],["Partial typeform",2,"Feb",4,2],["Partial typeform",3,"Mar",14,8],["Partial typeform",4,"Abr",10,4],["Partial typeform",5,"May",255,23],["Partial typeform",6,"Jun",219,18],["Partial typeform",7,"Jul",240,28],["Partial typeform",8,"Ago",451,58],["Partial typeform",9,"Sep",535,56],["Partial typeform",10,"Oct",519,57],["Partial typeform",11,"Nov",19,2],["LunaCal",1,"Ene",80,48],["LunaCal",2,"Feb",177,66],["LunaCal",3,"Mar",199,135],["LunaCal",4,"Abr",211,123],["LunaCal",5,"May",187,105],["LunaCal",6,"Jun",132,71],["LunaCal",7,"Jul",142,89],["LunaCal",8,"Ago",196,134],["LunaCal",9,"Sep",200,164],["LunaCal",10,"Oct",246,215],["LunaCal",11,"Nov",17,15],["Instagram DM",1,"Ene",0,0],["Instagram DM",2,"Feb",0,0],["Instagram DM",3,"Mar",0,0],["Instagram DM",4,"Abr",0,0],["Instagram DM",5,"May",0,0],["Instagram DM",6,"Jun",0,0],["Instagram DM",7,"Jul",0,0],["Instagram DM",8,"Ago",0,0],["Instagram DM",9,"Sep",61,1],["Instagram DM",10,"Oct",196,4],["Instagram DM",11,"Nov",14,1],["(Sin valor)",1,"Ene",83,32],["(Sin valor)",2,"Feb",56,46],["(Sin valor)",3,"Mar",45,41],["(Sin valor)",4,"Abr",47,45],["(Sin valor)",5,"May",62,49],["(Sin valor)",6,"Jun",85,57],["(Sin valor)",7,"Jul",70,69],["(Sin valor)",8,"Ago",41,38],["(Sin valor)",9,"Sep",28,27],["(Sin valor)",10,"Oct",30,28],["(Sin valor)",11,"Nov",3,2],["Otros",1,"Ene",0,0],["Otros",2,"Feb",0,0],["Otros",3,"Mar",0,0],["Otros",4,"Abr",0,0],["Otros",5,"May",0,0],["Otros",6,"Jun",4,2],["Otros",7,"Jul",1,1],["Otros",8,"Ago",11,10],["Otros",9,"Sep",9,9],["Otros",10,"Oct",21,9],["Otros",11,"Nov",0,0]]; // [Mecanismo, MesNum, MesLabel, Leads, Citas] — corte 2-nov-2026 (nov parcial)
 
 function mecDatos() {
   const crudo = _rawCache["HubspotSedeMensual"];
@@ -2393,7 +2465,13 @@ function ajustarConsultasProyUI() {
   const e = sc === "total" ? CONSULTAS_PROY.total : CONSULTAS_PROY.sedes[sc];
   if (!e) return;
   const ch = typeof charts !== "undefined" && charts["chart-consultas-stack"];
-  if (ch && ch.data && ch.data.datasets && ch.data.datasets.length === 2 && ch.data.datasets[1].label === "Agendado") {
+  const modeloRitmo = CONSULTAS_PROY.modelo === "ritmo";
+  if (modeloRitmo && sub && sub.classList.contains("section-sub")) {
+    sub.textContent = "Consultas terminadas (real) + resto del mes proyectado por ritmo de días hábiles (sin agenda leída)";
+  }
+  if (modeloRitmo && ch && ch.data && ch.data.datasets && ch.data.datasets.length === 2 && ch.data.datasets[1].label === "Agendado") {
+    ch.data.datasets[1].label = "Resto del mes (ritmo)"; ch.update("none");
+  } else if (ch && ch.data && ch.data.datasets && ch.data.datasets.length === 2 && ch.data.datasets[1].label === "Agendado") {
     // Parte el segmento "Agendado" en dos colores: agenda ya agendada (× show rate) y citas nuevas esperadas.
     const ds1 = ch.data.datasets[1], n = ds1.data.length, k = n - 1;
     const agenTot = Number(ds1.data[k]) || 0;
@@ -2450,8 +2528,11 @@ function ajustarConsultasProyUI() {
     nota.style.cssText = "margin:10px 0 0;";
     cont.parentNode.insertBefore(nota, cont.nextSibling);
   }
-  nota.innerHTML = "<b>Proyección " + MESES_12[CONSULTAS_PROY.mes - 1] + " (" + (sc === "total" ? "total" : sc) + "): " + e.base + " consultas</b> · rango " + e.min + "–" + e.max +
-    " · piso " + e.piso + " (real + agenda pendiente × show rate " + CONSULTAS_PROY.showRate + "%). Corte " + CONSULTAS_PROY.corte + "-oct. Promedio del modelo piso + incremental y del blend run-rate/HubSpot; no incluye consultas fuera del grupo Primera Vez.";
+  nota.innerHTML = modeloRitmo
+    ? "<b>Proyección " + MESES_12[CONSULTAS_PROY.mes - 1] + " (" + (sc === "total" ? "total" : sc) + "): " + e.base + " consultas</b> · rango " + e.min + "–" + e.max +
+      " · real al " + CONSULTAS_PROY.corte + "-" + MESES_12[CONSULTAS_PROY.mes - 1].toLowerCase() + ": " + e.piso + ". Primera proyección por ritmo (real + días hábiles equivalentes restantes × ritmo ago-oct); aún sin agenda leída. No incluye consultas fuera del grupo Primera Vez."
+    : "<b>Proyección " + MESES_12[CONSULTAS_PROY.mes - 1] + " (" + (sc === "total" ? "total" : sc) + "): " + e.base + " consultas</b> · rango " + e.min + "–" + e.max +
+      " · piso " + e.piso + " (real + agenda pendiente × show rate " + CONSULTAS_PROY.showRate + "%). Corte " + CONSULTAS_PROY.corte + "-" + MESES_12[CONSULTAS_PROY.mes - 1].toLowerCase() + ". Promedio del modelo piso + incremental y del blend run-rate/HubSpot; no incluye consultas fuera del grupo Primera Vez.";
 }
 window.ajustarConsultasProyUI = ajustarConsultasProyUI;
 
