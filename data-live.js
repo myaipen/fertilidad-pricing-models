@@ -177,11 +177,11 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // así el mes sale cerrado aunque el calendario aún no haya cambiado de mes.
 // ACTUALIZADO 3-nov-2026: NUEVO MES, CORTE 2-nov-2026 (primera proyección de noviembre). Cargos de vRepro del 1 y 2 nov
 // (155 líneas, Real MTD $750,800: CDMX $570.2K, GDL $178.9K, MTP $1.7K); citas/consultas, HubSpot (Interesa2), médicos,
-// subrogación y mecanismos al 2-nov. Con solo 2 días (peso 1.07 de 23.55 días hábiles equivalentes) la confianza es BAJA.
-// PROYECCIÓN DE INGRESOS (Base!F, columna Proyectado): Real MTD + peso restante (22.48) x ritmo por día hábil equivalente
-// PONDERADO POR RECENCIA (decay 0.8/mes, ventana mar-oct) = $13.97M (CDMX $11.56M, GDL $1.82M, MTP $0.58M), repartido a sedes
-// con la mezcla ago-oct y a servicios con la mezcla ago-oct de cada sede. Rango: $12.79M (mediana mar-oct, el método anterior)
-// a $15.35M (ritmo U3M ago-oct). Se cambia de mediana a ponderado por recencia porque octubre se proyectó con mediana en
+// subrogación y mecanismos al 2-nov. Con solo 2 días (peso 1.07 de 23.25 días hábiles equivalentes (el lun 16-nov, feriado, pesa 0.7)) la confianza es BAJA.
+// PROYECCIÓN DE INGRESOS (Base!F, columna Proyectado): Real MTD + peso restante (22.18) x ritmo por día hábil equivalente
+// PONDERADO POR RECENCIA (decay 0.8/mes, ventana mar-oct) = $13.95M (CDMX $11.55M, GDL $1.82M, MTP $0.58M), repartido a sedes
+// con la mezcla ago-oct y a servicios con la mezcla ago-oct de cada sede. Rango: $12.93M (mediana mar-oct, el método anterior)
+// a $15.33M (ritmo U3M ago-oct). FERIADOS: pesoDiasMes() ya pondera feriados 2026 (FERIADOS_PESO: 2-feb .9, 16-mar .5, 2-abr .85, 3-abr .6, 1-may .3, 16-sep .1 y lun 16-nov .7, calibrados con los cargos diarios), tanto en el peso restante de noviembre como en los ritmos históricos. Se cambia de mediana a ponderado por recencia porque octubre se proyectó con mediana en
 // $13.3M y cerró en $16.47M (-19%): el nivel subió desde agosto y la mediana tarda en reflejarlo.
 // Atenciones/Pacientes: curvas SHARE_CURVE_* regeneradas al calendario de noviembre (ventana mar-oct, mediana puntual);
 // Atenciones = max(Real, promedio(Real/share al día 2, Real + peso restante x ritmo U3M)); Pacientes = Atenciones x ratio ago-oct.
@@ -771,11 +771,17 @@ function anioDeFila(anioRaw) {
 // días): lun-vie = 1, sábado = 0.55, domingo = 0.07. Se usa para comparar meses
 // con calendarios distintos (octubre 2026 arranca jueves: sus primeros 4 días
 // pesan 2.62 de 25.03). Pesos estimados de los cargos diarios feb-sep 2026.
+const FERIADOS_PESO = { // feriados 2026 con su peso (fracción de un día hábil), calibrados con los cargos diarios (día hábil prom. $0.555M)
+  "2026-02-02": 0.9, "2026-03-16": 0.5, "2026-04-02": 0.85, "2026-04-03": 0.6, "2026-05-01": 0.3, "2026-09-16": 0.1,
+  "2026-11-16": 0.7, // lun 16-nov-2026 (Revolución): promedio de los feriados de lunes observados (2-feb y 16-mar)
+};
 function pesoDiasMes(anio, mes, hastaDia) {
   const dim = new Date(anio, mes, 0).getDate();
   const fin = hastaDia == null ? dim : Math.min(Math.max(hastaDia, 0), dim);
   let p = 0;
   for (let d = 1; d <= fin; d++) {
+    const fer = FERIADOS_PESO[anio + "-" + String(mes).padStart(2, "0") + "-" + String(d).padStart(2, "0")];
+    if (fer != null) { p += fer; continue; }
     const w = new Date(anio, mes - 1, d).getDay(); // 0 = domingo, 6 = sábado
     p += w === 0 ? 0.07 : (w === 6 ? 0.55 : 1);
   }
@@ -995,21 +1001,21 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   // (3) RATIO_PACIENTES_POR_ATENCION = promedio mensual de jul-sep (el ratio
   // sube: sep CDMX 0.350, GDL 0.453, MTP 0.413 vs medianas 0.289/0.388/0.275).
   // RECALIBRACIÓN 3-nov-2026 (corte 2-nov, NOVIEMBRE 2026): curvas regeneradas al calendario de noviembre (arranca domingo;
-  // sus primeros 2 días pesan 1.07 de 23.55). Misma metodología CENTRAL: eje = fracción acumulada de días hábiles ponderados
-  // (lun-vie=1, sáb=0.55, dom=0.07), mediana puntual de los 8 meses cerrados MAR-OCT 2026 re-mapeados a ese eje. Atenciones sale
+  // sus primeros 2 días pesan 1.07 de 23.25; lun 16-nov feriado = 0.7). Misma metodología CENTRAL: eje = fracción acumulada de días hábiles ponderados
+  // (lun-vie=1, sáb=0.55, dom=0.07, feriados ponderados), mediana puntual de los 8 meses cerrados MAR-OCT 2026 re-mapeados a ese eje. Atenciones sale
   // de los renglones diarios de Cargos (data_periods); Pacientes (solo respaldo: con Atenciones proyectada se deriva por ratio)
-  // se aproxima con los pacientes únicos por día acumulados. Share al día 2: Atenciones CDMX 0.0516, GDL 0.0474, MTP 0.0386.
+  // se aproxima con los pacientes únicos por día acumulados. Share al día 2: Atenciones CDMX 0.0594, GDL 0.0479, MTP 0.0392.
   // RATIO_PACIENTES_POR_ATENCION = promedio mensual ago-oct (CDMX .3095, GDL .4141, MTP .3613, total .3337).
   // Las curvas son específicas de NOVIEMBRE 2026: hay que regenerarlas cada mes.
   const SHARE_CURVE_ATENCIONES = {
-    CDMX: [0.0033,0.0516,0.0966,0.1457,0.1837,0.2207,0.2463,0.2492,0.2987,0.3451,0.3896,0.4226,0.4705,0.4949,0.4975,0.5268,0.577,0.6212,0.6677,0.7093,0.7293,0.7318,0.7688,0.8077,0.846,0.8969,0.9259,0.947,0.9497,1,1],
-    GDL:  [0.0028,0.0474,0.0786,0.1148,0.1563,0.206,0.2326,0.2349,0.2668,0.3229,0.3547,0.3898,0.4302,0.4515,0.4543,0.5045,0.559,0.5907,0.6276,0.6541,0.6778,0.681,0.7249,0.7757,0.8208,0.871,0.919,0.9475,0.9511,1,1],
-    MTP:  [0.0011,0.0386,0.1129,0.1552,0.18,0.2518,0.2778,0.2836,0.3347,0.3835,0.4384,0.4647,0.4983,0.5275,0.5312,0.5688,0.6075,0.6204,0.6858,0.713,0.7342,0.7367,0.7917,0.8242,0.8629,0.8937,0.9242,0.9454,0.9484,1,1],
+    CDMX: [0.0036,0.0594,0.1062,0.1535,0.1962,0.231,0.2617,0.2656,0.3104,0.3493,0.4008,0.4313,0.4677,0.495,0.4973,0.5286,0.5853,0.6226,0.6694,0.7057,0.7263,0.7288,0.768,0.8067,0.8463,0.8967,0.9259,0.9469,0.9496,1,1],
+    GDL:  [0.0028,0.0479,0.0809,0.1284,0.1647,0.2042,0.2334,0.2357,0.2886,0.334,0.3589,0.3991,0.4423,0.459,0.4623,0.4981,0.5573,0.5913,0.6296,0.657,0.6814,0.6846,0.7203,0.7742,0.8208,0.8714,0.919,0.9474,0.951,1,1],
+    MTP:  [0.0011,0.0392,0.1126,0.1575,0.191,0.2667,0.2952,0.2979,0.3418,0.3836,0.4385,0.4731,0.5095,0.5383,0.5414,0.5739,0.61,0.6246,0.6873,0.7136,0.7356,0.7381,0.7909,0.8262,0.8652,0.8936,0.9247,0.9467,0.9487,1,1],
   };
   const SHARE_CURVE_PACIENTES = {
-    CDMX: [0.0039,0.0598,0.1107,0.1593,0.1954,0.2319,0.2516,0.2542,0.2916,0.3323,0.3829,0.4178,0.4631,0.4825,0.4848,0.5149,0.5769,0.629,0.6694,0.7096,0.7331,0.7358,0.7696,0.8079,0.8547,0.8958,0.9274,0.947,0.9495,1,1],
-    GDL:  [0.003,0.0547,0.0847,0.1251,0.1662,0.2128,0.2379,0.2409,0.2839,0.3243,0.3598,0.3925,0.4325,0.4459,0.4476,0.4962,0.5518,0.5882,0.6256,0.6543,0.6793,0.683,0.7367,0.7739,0.8266,0.8833,0.929,0.9495,0.9515,1,1],
-    MTP:  [0.0015,0.0477,0.1071,0.1369,0.1746,0.2379,0.2662,0.2676,0.3168,0.357,0.3998,0.415,0.4535,0.4863,0.4905,0.5384,0.5793,0.6067,0.6632,0.6905,0.7118,0.7143,0.7796,0.8244,0.8647,0.8822,0.9182,0.9475,0.9492,1,1],
+    CDMX: [0.004,0.0656,0.1144,0.1674,0.2067,0.239,0.263,0.2661,0.3058,0.346,0.3912,0.4284,0.4663,0.4811,0.4833,0.5118,0.5869,0.6257,0.6671,0.7068,0.7298,0.7325,0.7687,0.808,0.853,0.8961,0.9281,0.9475,0.9499,1,1],
+    GDL:  [0.003,0.0553,0.0868,0.1338,0.1684,0.2139,0.2384,0.2414,0.2849,0.319,0.362,0.3942,0.4339,0.4598,0.4641,0.4963,0.5535,0.589,0.6265,0.6554,0.68,0.6837,0.7344,0.7743,0.827,0.8842,0.9287,0.9499,0.9519,1,1],
+    MTP:  [0.0015,0.0485,0.1073,0.1372,0.1826,0.2487,0.2746,0.278,0.3254,0.3657,0.407,0.4244,0.4671,0.5001,0.5043,0.5359,0.5805,0.609,0.6621,0.6904,0.7125,0.715,0.7784,0.826,0.8652,0.8825,0.9195,0.9477,0.9495,1,1],
   };
   // RATIO_PACIENTES_POR_ATENCION conservador: en vez del promedio ponderado
   // de los 8 meses cerrados, se usa el MÍNIMO mensual observado (el mes con
@@ -1242,7 +1248,7 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
 */
 const CONSULTAS_PROY = {
   anio: 2026, mes: 11, corte: 2, showRate: 83, modelo: "ritmo",
-  // 3-nov-2026: sin agenda leída para nov 3-30 -> proyección por RITMO: Real + peso restante (22.48) x ritmo por día hábil
+  // 3-nov-2026: sin agenda leída para nov 3-30 -> proyección por RITMO: Real + peso restante (22.18) x ritmo por día hábil
   // equivalente de ago-oct (CDMX 5.5/día eq., GDL 4.5, MTP 1.6); piso = Real a la fecha; rango = base x 0.947 / x 1.063.
   sedes: {
     CDMX: { piso: 11, base: 141, min: 134, max: 150 },
@@ -1447,9 +1453,9 @@ const CONSULTAS_NOV_PROYECTADO = {
  "FERTILIDAD INTEGRAL Ciudad de México|Consulta de Primera Vez IP's": 12,
  "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Parejas": 9,
  "FERTILIDAD INTEGRAL Ciudad de México|Check up Ginecologico": 6,
- "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online gratis": 3,
- "FERTILIDAD INTEGRAL Ciudad de México|Check-up SOMP": 3,
  "FERTILIDAD INTEGRAL Ciudad de México|Check up Integral": 3,
+ "FERTILIDAD INTEGRAL Ciudad de México|Check-up SOMP": 3,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online gratis": 3,
  "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 2,
  "FERTILIDAD INTEGRAL Ciudad de México|Asesoria catalogos": 1,
  "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 27,
@@ -1457,20 +1463,20 @@ const CONSULTAS_NOV_PROYECTADO = {
  "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez": 19,
  "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Mujeres": 13,
  "FERTILIDAD INTEGRAL Guadalajara|Check up Integral": 12,
- "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Parejas": 5,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta Obstetricia": 5,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Parejas": 5,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta ginecológica": 5,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez online": 3,
- "FERTILIDAD INTEGRAL Guadalajara|Consulta obstetrica materno fetal": 1,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez gratis": 1,
  "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta obstetrica materno fetal": 1,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez": 27,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 5,
  "FERTILIDAD INTEGRAL Metepec|Check-up SOMP": 3,
- "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 2,
- "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 1,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 2,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online gratis": 1,
- "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 1,
+ "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 1,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 1,
 };
 function aplicarOverrideVRepro(rows) {
   if (ANIO_VIGENTE !== 2026) return rows;
@@ -2743,7 +2749,7 @@ function cvModelo(S, D) {
     let r = 0, e = 0;
     coh.forEach((c, i) => {
       const k = t - i;
-      if (k >= 0 && k <= 21 && t < T) r += c[2][k];
+      if (k >= 0 && k < c[2].length && t < T) r += c[2][k];
       if (k >= 0 && k <= K) e += c[1] * pk[k];
     });
     real.push(t < T ? r : null); esp.push(e);
@@ -2910,7 +2916,7 @@ function cvRender() {
     <div class="panel" style="margin-top:16px;"><div class="panel-title">Derivaciones más frecuentes (consulta → médico tratante) — ${sedeTxt} · ${etqM}</div>
       <table><thead><tr><th>Consulta con</th><th>Trata</th><th class="num" style="text-align:right;">Pacientes</th></tr></thead><tbody>${matRows || '<tr><td colspan="3" style="color:var(--axis);">Sin derivaciones en este periodo</td></tr>'}</tbody></table>
       <div style="font-size:11px;color:var(--axis);margin-top:8px;font-style:italic;">Médico tratante = médico asignado en la historia durante las 3 semanas posteriores al inicio del tratamiento.</div></div>
-    <div style="font-size:11px;color:var(--axis);margin-top:8px;font-style:italic;">Primeros inicios = primer tratamiento de pacientes cuya consulta de entrada está en la base (≈1/3 de quienes inician tratamiento; el resto ya era paciente, tuvo consulta antes de 2025 o entró directo a paquete), no el total de inicios de la clínica. La historia previa a ene-2025 no está en la base. Del 6 al 25 de oct la consulta de entrada se toma de cargos (el detalle de citas llega hasta el 5-oct).${parcial ? " * Mes en curso, parcial al día " + D.dia + "." : ""}</div>`;
+    <div style="font-size:11px;color:var(--axis);margin-top:8px;font-style:italic;">Primeros inicios = primer tratamiento de pacientes cuya consulta de entrada está en la base (≈1/3 de quienes inician tratamiento; el resto ya era paciente, tuvo consulta antes de 2025 o entró directo a paquete), no el total de inicios de la clínica. La historia previa a ene-2025 no está en la base. Consultas de entrada: agenda hasta el 31-oct y vRepro el 2-nov; inicios de tratamiento: cargos hasta el 2-nov (reconstrucción nov-2026: pueden variar ±1–3 pacientes por cohorte vs. cortes anteriores).${parcial ? " * Mes en curso, parcial al día " + D.dia + "." : ""}</div>`;
 
   // ---------- gráfica 1: barras simples
   let id = "chart-conv-curva";
