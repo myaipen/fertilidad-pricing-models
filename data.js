@@ -54,10 +54,10 @@ window.DATA = {
         16.5
       ],
       "actual": 0.75,
-      "proy": 13.97,
+      "proy": 13.95,
       "vsLM": -15,
       "vsU3M": -12,
-      "nota": "NOVIEMBRE AL CORTE DEL 2-NOV (1.07 de 23.55 días ponderados; Real = $750,800: CDMX $570,217, Guadalajara $178,859 y Metepec $1,724). Proyección central $13.97M (rango $12.79M–$15.35M): -15% vs octubre ($16.47M) y -12% vs el promedio ago-oct. Método: ritmo por día hábil ponderado (lun–vie 1, sáb 0.55, dom 0.07) con peso por recencia; confianza baja con solo 2 días de datos. Riesgo de feriado lun 16-nov ≈ -$0.3M."
+      "nota": "NOVIEMBRE AL CORTE DEL 2-NOV (1.07 de 23.25 días ponderados; Real = $750,800: CDMX $570,217, Guadalajara $178,859 y Metepec $1,724). Proyección central $13.95M (rango $12.93M–$15.33M): -15% vs octubre ($16.47M) y -12% vs el promedio ago-oct. Método: ritmo por día hábil ponderado (lun–vie 1, sáb 0.55, dom 0.07, feriados según su efecto observado; lun 16-nov = 0.7) con peso por recencia; confianza baja con solo 2 días de datos. Ya incluye el feriado del lun 16-nov (peso 0.7 de un día hábil, ≈ -$0.18M)."
     },
     "atenciones": {
       "hist": [
@@ -73,10 +73,10 @@ window.DATA = {
         3147
       ],
       "actual": 155,
-      "proy": 3112,
-      "vsLM": -1,
-      "vsU3M": -5,
-      "nota": "Real al 2-nov: 155 líneas de cargo (CDMX 123, GDL 28, MTP 4). Proyección 3,112 (curva de ritmo por sede): -1% vs octubre (3,147). Ingreso por atención proyectado ~$4.5K vs ~$5.2K en octubre (menos peso de subrogación)."
+      "proy": 2952,
+      "vsLM": -6,
+      "vsU3M": -10,
+      "nota": "Real al 2-nov: 155 líneas de cargo (CDMX 123, GDL 28, MTP 4). Proyección 2,952 (curva de ritmo por sede): -6% vs octubre (3,147). Ingreso por atención proyectado ~$4.7K vs ~$5.2K en octubre (menos peso de subrogación)."
     },
     "pacientes": {
       "hist": [
@@ -92,10 +92,10 @@ window.DATA = {
         962
       ],
       "actual": 73,
-      "proy": 1036,
-      "vsLM": 8,
-      "vsU3M": -5,
-      "nota": "Real al 2-nov: 73 pacientes únicos (CDMX 55, GDL 15, MTP 3). Proyección 1,036 = atenciones proyectadas × razón pacientes/atención por sede (CDMX 0.31, GDL 0.41, MTP 0.36): +8% vs octubre (962)."
+      "proy": 985,
+      "vsLM": 2,
+      "vsU3M": -10,
+      "nota": "Real al 2-nov: 73 pacientes únicos (CDMX 55, GDL 15, MTP 3). Proyección 985 = atenciones proyectadas × razón pacientes/atención por sede (CDMX 0.31, GDL 0.41, MTP 0.36): +2% vs octubre (962)."
     },
     "consultas": {
       "hist": [
@@ -152,10 +152,10 @@ window.DATA = {
           13.8
         ],
         "actual": 0.57,
-        "proy": 11.56,
+        "proy": 11.55,
         "vsLM": -16,
         "vsU3M": -12,
-        "nota": "Real al 2-nov $570,217; proyección $11.56M (-16% vs octubre, $13.80M)."
+        "nota": "Real al 2-nov $570,217; proyección $11.55M (-16% vs octubre, $13.80M)."
       },
       "atenciones": {
         "hist": [
@@ -171,9 +171,9 @@ window.DATA = {
           2394
         ],
         "actual": 123,
-        "proy": 2340,
-        "vsLM": -2,
-        "vsU3M": -1
+        "proy": 2184,
+        "vsLM": -9,
+        "vsU3M": -8
       },
       "pacientes": {
         "hist": [
@@ -189,9 +189,9 @@ window.DATA = {
           669
         ],
         "actual": 55,
-        "proy": 724,
-        "vsLM": 8,
-        "vsU3M": -2
+        "proy": 676,
+        "vsLM": 1,
+        "vsU3M": -9
       },
       "consultas": {
         "hist": [
@@ -267,8 +267,8 @@ window.DATA = {
           555
         ],
         "actual": 28,
-        "proy": 610,
-        "vsLM": 10,
+        "proy": 607,
+        "vsLM": 9,
         "vsU3M": -7
       },
       "pacientes": {
@@ -285,8 +285,8 @@ window.DATA = {
           226
         ],
         "actual": 15,
-        "proy": 253,
-        "vsLM": 12,
+        "proy": 251,
+        "vsLM": 11,
         "vsU3M": -7
       },
       "consultas": {
@@ -347,7 +347,7 @@ window.DATA = {
         "proy": 0.58,
         "vsLM": -13,
         "vsU3M": -12,
-        "nota": "Real al 2-nov $1,724; proyección $583K (-13% vs octubre, $666K). Sede chica: pocas líneas por día."
+        "nota": "Real al 2-nov $1,724; proyección $582K (-13% vs octubre, $666K). Sede chica: pocas líneas por día."
       },
       "atenciones": {
         "hist": [
@@ -363,9 +363,9 @@ window.DATA = {
           198
         ],
         "actual": 4,
-        "proy": 162,
-        "vsLM": -18,
-        "vsU3M": -31
+        "proy": 161,
+        "vsLM": -19,
+        "vsU3M": -32
       },
       "pacientes": {
         "hist": [
@@ -381,9 +381,9 @@ window.DATA = {
           67
         ],
         "actual": 3,
-        "proy": 59,
-        "vsLM": -12,
-        "vsU3M": -31
+        "proy": 58,
+        "vsLM": -13,
+        "vsU3M": -32
       },
       "consultas": {
         "hist": [
@@ -436,12 +436,12 @@ window.DATA = {
       {
         "nombre": "Congelación de Gametos",
         "valor": 2.91,
-        "vsLM": -12,
+        "vsLM": -13,
         "vsU3M": -12
       },
       {
         "nombre": "Farmacia",
-        "valor": 2.77,
+        "valor": 2.76,
         "vsLM": -22,
         "vsU3M": -12
       },
@@ -491,32 +491,32 @@ window.DATA = {
     "CDMX": [
       {
         "nombre": "Tratamientos FIV/ICSI",
-        "valor": 3.41,
-        "vsLM": -7,
+        "valor": 3.4,
+        "vsLM": -8,
         "vsU3M": -12
       },
       {
         "nombre": "Congelación de Gametos",
-        "valor": 2.34,
+        "valor": 2.33,
         "vsLM": -14,
         "vsU3M": -12
       },
       {
         "nombre": "Farmacia",
-        "valor": 2.28,
+        "valor": 2.27,
         "vsLM": -21,
         "vsU3M": -12
       },
       {
         "nombre": "Laboratorio",
-        "valor": 1.83,
+        "valor": 1.82,
         "vsLM": -24,
         "vsU3M": -12
       },
       {
         "nombre": "Subrogación",
         "valor": 1.15,
-        "vsLM": -27,
+        "vsLM": -28,
         "vsU3M": -12
       },
       {
@@ -560,13 +560,13 @@ window.DATA = {
       {
         "nombre": "Tratamientos FIV/ICSI",
         "valor": 0.45,
-        "vsLM": 8,
+        "vsLM": 7,
         "vsU3M": -12
       },
       {
         "nombre": "Laboratorio",
         "valor": 0.31,
-        "vsLM": 12,
+        "vsLM": 11,
         "vsU3M": -12
       },
       {
@@ -578,7 +578,7 @@ window.DATA = {
       {
         "nombre": "Consultas",
         "valor": 0.18,
-        "vsLM": -4,
+        "vsLM": -5,
         "vsU3M": -12
       },
       {
@@ -602,7 +602,7 @@ window.DATA = {
       {
         "nombre": "Subrogación",
         "valor": 0.01,
-        "vsLM": 587,
+        "vsLM": 586,
         "vsU3M": -12
       },
       {
@@ -615,7 +615,7 @@ window.DATA = {
     "MTP": [
       {
         "nombre": "Tratamientos FIV/ICSI",
-        "valor": 0.2,
+        "valor": 0.19,
         "vsLM": -46,
         "vsU3M": -12
       },
@@ -666,25 +666,25 @@ window.DATA = {
   },
   "highlights": {
     "total": [
-      "Noviembre arranca con $0.75M de Real al corte del 2-nov (1.07 de 23.55 días ponderados). Proyección central $13.97M, rango $12.79M (mediana mar–oct) a $15.35M (ritmo U3M): -15% vs octubre ($16.47M) y -12% vs el promedio ago-oct. CDMX aporta 83% ($11.56M), Guadalajara 13% ($1.82M) y Metepec 4% ($0.58M).",
+      "Noviembre arranca con $0.75M de Real al corte del 2-nov (1.07 de 23.25 días ponderados). Proyección central $13.95M, rango $12.93M (mediana mar–oct) a $15.33M (ritmo U3M): -15% vs octubre ($16.47M) y -12% vs el promedio ago-oct. CDMX aporta 83% ($11.55M), Guadalajara 13% ($1.82M) y Metepec 4% ($0.58M).",
       "Solo hay dos días de datos: el domingo 1-nov facturó $61.8K (únicamente Guadalajara: captura y vitrificación de ovocitos, sedación y Ovodonors) y el lunes 2-nov $0.69M (CDMX $0.57M, 152 atenciones, 71 pacientes), por encima del ritmo central de ~$588K por día ponderado. La confianza de la proyección es baja y se recalibra con cada corte.",
-      "Método: ritmo por día hábil ponderado (lun–vie 1, sáb 0.55, dom 0.07) con peso por recencia (decaimiento 0.8). Se cambió de la mediana mar–oct porque subproyectó octubre ~19% (el ritmo de ago–oct, $620–668K por día ponderado, está muy arriba de la mediana, $535K). La mezcla por servicio usa la distribución U3M de cada sede.",
-      "Por servicio (proyectado): Tratamientos FIV/ICSI $4.05M, Congelación de Gametos $2.91M, Farmacia $2.77M, Laboratorio $2.24M y Subrogación $1.15M (-27% vs octubre, que tuvo paquetes grandes de subrogación); al corte solo hay 1 valoración de subrogación en CDMX ($862).",
-      "Atenciones proyectadas 3,112 (-1% vs octubre) y Pacientes 1,036 (+8%): el ingreso por atención baja a ~$4.5K (vs ~$5.2K en octubre) por menos subrogación. Consultas de primera vez: 20 al corte y 299 proyectadas por ritmo (+8% vs octubre, 278); No Show al corte 16.7%.",
+      "Método: ritmo por día hábil ponderado (lun–vie 1, sáb 0.55, dom 0.07, feriados según su efecto observado; lun 16-nov = 0.7) con peso por recencia (decaimiento 0.8). Se cambió de la mediana mar–oct porque subproyectó octubre ~19% (el ritmo de ago–oct, $645–668K por día ponderado, está muy arriba de la mediana, $549K). La mezcla por servicio usa la distribución U3M de cada sede.",
+      "Por servicio (proyectado): Tratamientos FIV/ICSI $4.05M, Congelación de Gametos $2.91M, Farmacia $2.76M, Laboratorio $2.24M y Subrogación $1.15M (-27% vs octubre, que tuvo paquetes grandes de subrogación); al corte solo hay 1 valoración de subrogación en CDMX ($862).",
+      "Atenciones proyectadas 2,952 (-6% vs octubre) y Pacientes 985 (+2%): el ingreso por atención baja a ~$4.7K (vs ~$5.2K en octubre) por menos subrogación. Consultas de primera vez: 20 al corte y 299 proyectadas por ritmo (+8% vs octubre, 278); No Show al corte 16.7%.",
       "HubSpot (Interesa2) al 2-nov: 103 leads y 27 citas agendadas (26% de conversión, muestra muy chica). Cohorte de octubre: M0 22% y M1 aún 0%; las cohortes de agosto y septiembre siguen madurando.",
-      "Nota de datos: 4 líneas de cargo sin médico asignado. Clasificación provisional pendiente de tu revisión en ConceptosHier: Ovodonors semen en fresco (Tratamientos/Donación) y Subsecuente Ginecología (Consultas). La vista por médico YTD y la tabla de Conversión (corte 26-oct) no se actualizaron en este corte; el feriado del lun 16-nov puede restar ~$0.3M."
+      "Nota de datos: 4 líneas de cargo sin médico asignado. Se agregaron a ConceptosHier 13 conceptos que faltaban (donantes Ovodonors, semen congelado Genevity/Laffer, Subsecuente Ginecología/SOMP, etc.), con clasificación provisional por confirmar. La vista por médico YTD se actualiza en el siguiente corte."
     ],
     "CDMX": [
-      "CDMX lleva $0.57M al 2-nov (todo del lunes 2-nov) y proyecta $11.56M (-16% vs octubre, -12% vs U3M): FIV/ICSI $3.41M, Congelación $2.34M, Farmacia $2.28M, Laboratorio $1.83M y Subrogación $1.15M.",
-      "123 atenciones y 55 pacientes al corte; proyección 2,340 atenciones (-2%) y 724 pacientes (+8% vs octubre). No Show de primera vez al corte 15.4%."
+      "CDMX lleva $0.57M al 2-nov (todo del lunes 2-nov) y proyecta $11.55M (-16% vs octubre, -12% vs U3M): FIV/ICSI $3.40M, Congelación $2.33M, Farmacia $2.27M, Laboratorio $1.82M y Subrogación $1.15M.",
+      "123 atenciones y 55 pacientes al corte; proyección 2,184 atenciones (-9%) y 676 pacientes (+1% vs octubre). No Show de primera vez al corte 15.4%."
     ],
     "GDL": [
       "GDL lleva $0.18M al 2-nov (domingo 1-nov $61.8K + lunes 2-nov $117.0K) y proyecta $1.82M (-9% vs octubre): Congelación $0.50M, FIV/ICSI $0.45M, Laboratorio $0.31M y Farmacia $0.30M.",
-      "28 atenciones y 15 pacientes al corte; proyección 610 atenciones (+10%) y 253 pacientes (+12%). 7 consultas de primera vez al corte, No Show 12.5%."
+      "28 atenciones y 15 pacientes al corte; proyección 607 atenciones (+9%) y 251 pacientes (+11%). 7 consultas de primera vez al corte, No Show 12.5%."
     ],
     "MTP": [
-      "Metepec solo registra $1.7K al 2-nov (1 línea de Laboratorio); la proyección de $583K (-13% vs octubre) viene del ritmo U3M, no del Real, así que tiene la mayor incertidumbre de la red.",
-      "4 atenciones y 3 pacientes al corte; proyección 162 atenciones y 59 pacientes. 2 consultas de primera vez al corte y No Show 33.3% (1 inasistencia sobre 3 citas)."
+      "Metepec solo registra $1.7K al 2-nov (1 línea de Laboratorio); la proyección de $582K (-13% vs octubre) viene del ritmo U3M, no del Real, así que tiene la mayor incertidumbre de la red.",
+      "4 atenciones y 3 pacientes al corte; proyección 161 atenciones y 58 pacientes. 2 consultas de primera vez al corte y No Show 33.3% (1 inasistencia sobre 3 citas)."
     ]
   },
   "consultas_ranking": {
@@ -696,13 +696,8 @@ window.DATA = {
       },
       {
         "nombre": "Fertility Check up Mujeres",
-        "valor": 38,
-        "vsLM": -5
-      },
-      {
-        "nombre": "Check up Ginecologico",
-        "valor": 34,
-        "vsLM": 3
+        "valor": 39,
+        "vsLM": -3
       },
       {
         "nombre": "Check-up SOP",
@@ -710,14 +705,19 @@ window.DATA = {
         "vsLM": 10
       },
       {
-        "nombre": "Fertility Check up Parejas",
-        "valor": 15,
-        "vsLM": -6
+        "nombre": "Check up Ginecologico",
+        "valor": 33,
+        "vsLM": 0
       },
       {
         "nombre": "Check up Integral",
         "valor": 15,
         "vsLM": 7
+      },
+      {
+        "nombre": "Fertility Check up Parejas",
+        "valor": 15,
+        "vsLM": -6
       },
       {
         "nombre": "Consulta de Primera Vez IP's",
@@ -777,12 +777,12 @@ window.DATA = {
         "vsLM": -14
       },
       {
-        "nombre": "Check-up SOP",
+        "nombre": "Check up Integral",
         "valor": 3,
         "vsLM": 0
       },
       {
-        "nombre": "Check up Integral",
+        "nombre": "Check-up SOP",
         "valor": 3,
         "vsLM": 0
       },
@@ -824,12 +824,12 @@ window.DATA = {
         "vsLM": 9
       },
       {
-        "nombre": "Fertility Check up Parejas",
+        "nombre": "Consulta Obstetricia",
         "valor": 5,
         "vsLM": 0
       },
       {
-        "nombre": "Consulta Obstetricia",
+        "nombre": "Fertility Check up Parejas",
         "valor": 5,
         "vsLM": 0
       },
@@ -839,12 +839,12 @@ window.DATA = {
         "vsLM": 0
       },
       {
-        "nombre": "Consulta obstetrica materno fetal",
+        "nombre": "Fertility Check up Hombres",
         "valor": 1,
         "vsLM": 0
       },
       {
-        "nombre": "Fertility Check up Hombres",
+        "nombre": "Consulta obstetrica materno fetal",
         "valor": 1,
         "vsLM": 0
       }
@@ -861,17 +861,17 @@ window.DATA = {
         "vsLM": 50
       },
       {
-        "nombre": "Check up Ginecologico",
+        "nombre": "Fertility Check up Mujeres",
         "valor": 2,
         "vsLM": 100
       },
       {
-        "nombre": "Fertility Check up Parejas",
+        "nombre": "Check up Ginecologico",
         "valor": 1,
         "vsLM": 0
       },
       {
-        "nombre": "Fertility Check up Mujeres",
+        "nombre": "Fertility Check up Parejas",
         "valor": 1,
         "vsLM": 0
       }
