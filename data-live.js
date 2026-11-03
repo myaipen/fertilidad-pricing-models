@@ -2988,3 +2988,75 @@ window.cvRender = cvRender;
     } else if (intentos > 300) clearInterval(t);
   }, 100);
 })();
+
+// ===== Highlights redactados de meses CERRADOS (ACTUALIZADO 3-nov-2026) =====
+// index.html solo muestra los Highlights de data.js cuando el mes elegido es el del corte
+// (hoy Nov); para cualquier otro mes arma unos automáticos (buildHighlightsAuto). Aquí se
+// guardan los de octubre redactados a mano (cifras de cargos, Total Venta pre-IVA, al 31-oct;
+// pueden diferir ligeramente del "Real" de Base). Clave = número de mes. Para agregar otro mes
+// cerrado basta añadir una entrada con las mismas 4 llaves (total, CDMX, GDL, MTP).
+window.HIGHLIGHTS_MES_MANUAL = {
+  10: {
+    total: [
+      "Octubre cierra en $16.47M: +6% vs septiembre ($15.53M), +2% vs agosto ($16.11M) y el mes más alto de mar–oct. CDMX aporta 84% ($13.80M), Guadalajara 12% ($2.00M) y Metepec 4% ($0.67M); 960 pacientes con cargo.",
+      "Casos más altos: Padilla García $547.8K (paquete Fresh Egg Donor Surrogacy, 12-oct), Chalita Rapp $421.9K (incluye PGT-A por $162.9K, 29-oct), Álvarez $297.0K (Surrogacy Fresh Egg, 23-oct), Rosano Monjaras $288.5K, Bustos Jiménez $246.0K y Rodríguez Montero (GDL) $243.8K (Ovodonors óvulos congelados, 30-oct). El top 10 suma $2.89M (17.5% del mes): no hay dependencia de un solo caso.",
+      "Subrogación aporta $1.55M (~9% del mes): 2 paquetes Fresh Egg Donor Surrogacy ($841K) y 2 All Inclusive Surrogacy CDMX ($181K c/u). También 5 ventas de FIV con 3 Transferencias en CDMX ($120.7K c/u, $603K). Varios tickets grandes cayeron entre el 29 y el 31-oct, así que parte del cierre es de fin de mes."
+    ],
+    CDMX: [
+      "CDMX cierra en $13.80M: +1% vs septiembre ($13.64M) y +11% vs agosto ($12.43M). Concentra 9 de los 10 casos más altos del mes.",
+      "Motores: paquetes de subrogación (Padilla $544K, Álvarez $297K, 2 All Inclusive de $181K), 5 FIV con 3 Transferencias ($603K) y PGT-A de Chalita Rapp ($163K)."
+    ],
+    GDL: [
+      "GDL cierra en $2.00M: +38% vs septiembre ($1.46M), pero -28% vs agosto ($2.78M).",
+      "El mayor caso es Rodríguez Montero con $243.8K (Ovodonors óvulos congelados, 30-oct), 12% de la sede, registrado el penúltimo día del mes."
+    ],
+    MTP: [
+      "Metepec cierra en $666K: +54% vs septiembre ($431K), pero -26% vs agosto ($897K).",
+      "El alza es FIV con 3 Transferencias: 4 ventas en octubre ($298.9K: Martínez Guzmán $81.9K, Gutiérrez del Río $81.9K, Nava Nava $69.6K, León Olivares $65.5K) vs 1 en septiembre ($69.6K); explica +$229K de los +$235K.",
+      "Farmacia sube $60K ($218K vs $158K) arrastrada por esas mismas pacientes y aparecen 2 FET ($59.8K). Hubo 41 pacientes con cargo vs 57 en septiembre: más ticket, menos volumen.",
+      "Mes concentrado, no tendencia consolidada: el top 5 es 81% del ingreso (66% en septiembre) y la venta del 31-oct (León Olivares, $65.5K) entró el último día."
+    ]
+  }
+};
+(function engancharHighlightsMeses() {
+  let intentos = 0;
+  const t = setInterval(function () {
+    intentos++;
+    const f = window.buildHighlightsAuto, s = window.buildServicios;
+    if (typeof f === "function" && typeof s === "function") {
+      if (!f.__hlm) {
+        const nf = function (scope) {
+          try {
+            const m = typeof window.getMesVigente === "function" ? window.getMesVigente() : null;
+            const man = window.HIGHLIGHTS_MES_MANUAL && window.HIGHLIGHTS_MES_MANUAL[m];
+            if (man && man[scope]) return man[scope];
+          } catch (e) { console.warn("Highlights por mes:", e); }
+          return f.apply(this, arguments);
+        };
+        nf.__hlm = true;
+        window.buildHighlightsAuto = nf;
+      }
+      if (!s.__hlm) {
+        const ns = function () {
+          const r = s.apply(this, arguments);
+          try {
+            const m = typeof window.getMesVigente === "function" ? window.getMesVigente() : null;
+            if (window.HIGHLIGHTS_MES_MANUAL && window.HIGHLIGHTS_MES_MANUAL[m]) {
+              const sec = document.getElementById("servicios-section");
+              if (sec) sec.querySelectorAll("div").forEach(function (d) {
+                if (d.children.length === 0 && /^Highlights autom/.test(d.textContent)) {
+                  d.textContent = "Highlights redactados a mano para el cierre de " + (typeof nombreMesLargo === "function" ? nombreMesLargo(m) : "este mes") + " (cargos al 31-oct).";
+                }
+              });
+            }
+          } catch (e) { console.warn("Nota highlights:", e); }
+          return r;
+        };
+        ns.__hlm = true;
+        window.buildServicios = ns;
+      }
+      try { if (typeof window.renderAll === "function") window.renderAll(); } catch (e) { console.warn(e); }
+      clearInterval(t);
+    } else if (intentos > 300) clearInterval(t);
+  }, 100);
+})();
