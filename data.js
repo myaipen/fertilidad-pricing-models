@@ -22,7 +22,7 @@
 // ACTUALIZADO 3-nov-2026: CORTE 2-NOV-2026 (noviembre, 2 días de Real: 1 y 2 nov). Octubre ya cerrado e incluido en "hist".
 // Este archivo es el RESPALDO ESTÁTICO si el fetch en vivo (data-live.js) falla. Proyección central de ingresos = Base!F del Sheet
 // (ritmo por día hábil ponderado con peso por recencia); Atenciones/Pacientes por curva de ritmo por sede; Consultas por ritmo (sin agenda).
-// Highlights manuales. Conversión (data_conv.js) permanece en el corte del 26-oct.
+// Highlights manuales. Conversión (data_conv.js) actualizada al corte del 2-nov (cohortes cerradas hasta oct-2026).
 window.DATA = {
   "corte": "2-nov-2026",
   "meses_hist": [
