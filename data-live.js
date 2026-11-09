@@ -175,6 +175,13 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // Atenciones/Pacientes = Real, Consultas sin agenda pendiente (CONSULTAS_PROY queda inactivo porque corte != 26).
 // mesVigenteCerrado() ahora también devuelve true cuando el corte llega al último día del mes (CORTE_MES/CORTE_REAL_DIA),
 // así el mes sale cerrado aunque el calendario aún no haya cambiado de mes.
+// ACTUALIZADO 9-nov-2026: CORTE 8-nov-2026 (noviembre, 5.69 de 23.25 días hábiles equivalentes). Cargos de vRepro del 1 al 8 nov
+// (845 líneas, Real MTD $4,447,737: CDMX $3.60M, GDL $0.81M, MTP $0.04M; el archivo de Cargos del Drive llega al 31-oct).
+// Proyección central de ingresos = Base!F: Real + peso restante (17.56) x ritmo ponderado por recencia ($595K por día hábil equivalente)
+// = $14.90M (CDMX $12.33M, GDL $1.95M, MTP $0.62M). Rango $14.09M (mediana mar-oct) a $15.99M (ritmo U3M). Cruce: conservadora por curva
+// de avance máxima $14.2M; pacing con curva mediana $17.4M. Atenciones 3,230 / Pacientes 1,079 por curva SHARE_CURVE_* (día 8) y ratio.
+// CONSULTAS (primera vez), No Show, HubSpot y ranking de consultas NO se refrescaron: siguen al corte 2-nov (CONSULTAS_PROY.corte = 2;
+// consultasProyActiva() ya no exige que coincida con CORTE_REAL_DIA).
 // ACTUALIZADO 3-nov-2026: NUEVO MES, CORTE 2-nov-2026 (primera proyección de noviembre). Cargos de vRepro del 1 y 2 nov
 // (155 líneas, Real MTD $750,800: CDMX $570.2K, GDL $178.9K, MTP $1.7K); citas/consultas, HubSpot (Interesa2), médicos,
 // subrogación y mecanismos al 2-nov. Con solo 2 días (peso 1.07 de 23.25 días hábiles equivalentes (el lun 16-nov, feriado, pesa 0.7)) la confianza es BAJA.
@@ -187,7 +194,8 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // Atenciones = max(Real, promedio(Real/share al día 2, Real + peso restante x ritmo U3M)); Pacientes = Atenciones x ratio ago-oct.
 // Consultas: sin agenda leída para nov 3-30; proyección por RITMO (Real + peso restante x ritmo U3M por día hábil equivalente) = 299.
 // Oct queda cerrado (Real) en la columna de octubre del ranking; AJUSTE_ATEN_OCT_2026 solo aplica a octubre.
-let CORTE_REAL_DIA = 2;
+let CORTE_REAL_DIA = 8;
+const CORTE_HUBSPOT_DIA = 2; // HubSpot/mecanismos siguen al corte 2-nov (no refrescados al 8-nov)
 const CORTE_MES = 11; // mes (1-12) al que corresponde CORTE_REAL_DIA
 window.getCorteRealDia = () => CORTE_REAL_DIA;
 window.mesVigenteEstaCerrado = () => mesVigenteCerrado(MES_VIGENTE);
@@ -1258,7 +1266,7 @@ const CONSULTAS_PROY = {
   total: { piso: 20, base: 299, min: 284, max: 318 },
 };
 function consultasProyActiva() {
-  return ANIO_VIGENTE === CONSULTAS_PROY.anio && MES_VIGENTE === CONSULTAS_PROY.mes && CORTE_REAL_DIA === CONSULTAS_PROY.corte;
+  return ANIO_VIGENTE === CONSULTAS_PROY.anio && MES_VIGENTE === CONSULTAS_PROY.mes; // 9-nov-2026: ya no exige CORTE_REAL_DIA === corte (consultas siguen al 2-nov)
 }
 function consultasAgendadoEsperado(sede, realVig, agendadoSheet) {
   if (!consultasProyActiva()) return agendadoSheet;
@@ -2363,8 +2371,8 @@ function buildHubspotMecanismo() {
   const D = mecDatos();
   if (!D.ult) return;
   const mes = D.ult, i = mes - 1, ant = i - 1;
-  const parcial = (mes === MES_VIGENTE && typeof CORTE_REAL_DIA === "number" && CORTE_REAL_DIA < diasEnMes(MES_VIGENTE));
-  const etqMes = MEC_MESES[i] + (parcial ? " (al " + CORTE_REAL_DIA + ")" : "");
+  const parcial = (mes === MES_VIGENTE && typeof CORTE_HUBSPOT_DIA === "number" && CORTE_HUBSPOT_DIA < diasEnMes(MES_VIGENTE));
+  const etqMes = MEC_MESES[i] + (parcial ? " (al " + CORTE_HUBSPOT_DIA + ")" : "");
   const totL = m => MEC_ORDEN.reduce((s, g) => s + D.leads[g][m], 0);
   const totC = m => MEC_ORDEN.reduce((s, g) => s + D.citas[g][m], 0);
 
@@ -2414,7 +2422,7 @@ function buildHubspotMecanismo() {
     </div>
     <div class="panel" style="margin-top:16px;"><div class="panel-title">Deals creados por mecanismo y mes — ${ANIO_VIGENTE}</div>
       <div class="scroll-table" style="margin-top:6px;"><table><thead><tr><th>Mecanismo</th>${cab}<th class="num" style="text-align:right;">Total</th></tr></thead><tbody>${cuerpo}</tbody></table></div>
-      <div style="font-size:11px; color:var(--axis); margin-top:8px; font-style:italic;">${parcial ? "* Mes en curso, parcial al día " + CORTE_REAL_DIA + ". " : ""}"Otros" = llamada, aircall, referido, lead ads facebook, instagram, whatsapp, correo y otros valores sueltos. Fuente: ${D.fuente}. Puede diferir en pocos deals de la hoja "Hubspot" porque HubSpot cambia después del corte.</div></div>`;
+      <div style="font-size:11px; color:var(--axis); margin-top:8px; font-style:italic;">${parcial ? "* Mes en curso, parcial al día " + CORTE_HUBSPOT_DIA + ". " : ""}"Otros" = llamada, aircall, referido, lead ads facebook, instagram, whatsapp, correo y otros valores sueltos. Fuente: ${D.fuente}. Puede diferir en pocos deals de la hoja "Hubspot" porque HubSpot cambia después del corte.</div></div>`;
 
   // --- gráfica apilada
   const id = "chart-mecanismo";
@@ -2998,12 +3006,12 @@ window.cvRender = cvRender;
 window.HIGHLIGHTS_MES_MANUAL = {
   10: {
     total: [
-      "Octubre cierra en $16.47M: +6% vs septiembre ($15.53M), +2% vs agosto ($16.11M) y el mes más alto de mar–oct. CDMX aporta 84% ($13.80M), Guadalajara 12% ($2.00M) y Metepec 4% ($0.67M); 960 pacientes con cargo.",
+      "Octubre cierra en $16.47M: +8% vs septiembre ($15.22M), +2% vs agosto ($16.11M) y el mes más alto de mar–oct. CDMX aporta 84% ($13.80M), Guadalajara 12% ($2.00M) y Metepec 4% ($0.67M); 960 pacientes con cargo.",
       "Casos más altos: Padilla García $547.8K (paquete Fresh Egg Donor Surrogacy, 12-oct), Chalita Rapp $421.9K (incluye PGT-A por $162.9K, 29-oct), Álvarez $297.0K (Surrogacy Fresh Egg, 23-oct), Rosano Monjaras $288.5K, Bustos Jiménez $246.0K y Rodríguez Montero (GDL) $243.8K (Ovodonors óvulos congelados, 30-oct). El top 10 suma $2.89M (17.5% del mes): no hay dependencia de un solo caso.",
       "Subrogación aporta $1.55M (~9% del mes): 2 paquetes Fresh Egg Donor Surrogacy ($841K) y 2 All Inclusive Surrogacy CDMX ($181K c/u). También 5 ventas de FIV con 3 Transferencias en CDMX ($120.7K c/u, $603K). Varios tickets grandes cayeron entre el 29 y el 31-oct, así que parte del cierre es de fin de mes."
     ],
     CDMX: [
-      "CDMX cierra en $13.80M: +1% vs septiembre ($13.64M) y +11% vs agosto ($12.43M). Concentra 9 de los 10 casos más altos del mes.",
+      "CDMX cierra en $13.80M: +4% vs septiembre ($13.33M) y +11% vs agosto ($12.43M). Concentra 9 de los 10 casos más altos del mes.",
       "Motores: paquetes de subrogación (Padilla $544K, Álvarez $297K, 2 All Inclusive de $181K), 5 FIV con 3 Transferencias ($603K) y PGT-A de Chalita Rapp ($163K)."
     ],
     GDL: [

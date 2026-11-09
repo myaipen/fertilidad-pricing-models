@@ -19,12 +19,13 @@
   ============================================================================
 */
 
-// ACTUALIZADO 3-nov-2026: CORTE 2-NOV-2026 (noviembre, 2 días de Real: 1 y 2 nov). Octubre ya cerrado e incluido en "hist".
+// ACTUALIZADO 9-nov-2026: CORTE 8-NOV-2026 (noviembre, 8 días de Real: 1 al 8 nov). Octubre ya cerrado e incluido en "hist".
 // Este archivo es el RESPALDO ESTÁTICO si el fetch en vivo (data-live.js) falla. Proyección central de ingresos = Base!F del Sheet
 // (ritmo por día hábil ponderado con peso por recencia); Atenciones/Pacientes por curva de ritmo por sede; Consultas por ritmo (sin agenda).
-// Highlights manuales. Conversión (data_conv.js) actualizada al corte del 2-nov (cohortes cerradas hasta oct-2026).
+// Highlights manuales. Ingresos, Atenciones, Pacientes, Servicios y Subrogación al 8-nov (cargos de vRepro; el Drive de Cargos llega al 31-oct).
+// Consultas (primera vez), No Show, HubSpot y ranking de consultas permanecen en el corte del 2-nov (pendientes de refrescar). Conversión (data_conv.js) sin cambios (corte 2-nov).
 window.DATA = {
-  "corte": "2-nov-2026",
+  "corte": "8-nov-2026",
   "meses_hist": [
     "Ene",
     "Feb",
@@ -53,11 +54,11 @@ window.DATA = {
         15.2,
         16.5
       ],
-      "actual": 0.75,
-      "proy": 13.95,
-      "vsLM": -15,
-      "vsU3M": -12,
-      "nota": "NOVIEMBRE AL CORTE DEL 2-NOV (1.07 de 23.25 días ponderados; Real = $750,800: CDMX $570,217, Guadalajara $178,859 y Metepec $1,724). Proyección central $13.95M (rango $12.93M–$15.33M): -15% vs octubre ($16.47M) y -12% vs el promedio ago-oct. Método: ritmo por día hábil ponderado (lun–vie 1, sáb 0.55, dom 0.07, feriados según su efecto observado; lun 16-nov = 0.7) con peso por recencia; confianza baja con solo 2 días de datos. Ya incluye el feriado del lun 16-nov (peso 0.7 de un día hábil, ≈ -$0.18M)."
+      "actual": 4.45,
+      "proy": 14.9,
+      "vsLM": -10,
+      "vsU3M": -6,
+      "nota": "NOVIEMBRE AL CORTE DEL 8-NOV (5.69 de 23.25 días ponderados; Real = $4,447,737: CDMX $3,599,411, Guadalajara $806,660 y Metepec $41,666). Proyección central $14.90M (rango $14.09M–$15.99M): -10% vs octubre ($16.47M) y -6% vs el promedio ago-oct. Método: ritmo por día hábil ponderado (lun–vie 1, sáb 0.55, dom 0.07, feriados según su efecto observado; lun 16-nov = 0.7) con peso por recencia. El Real corre arriba del ritmo central ($782K vs $595K por día ponderado): la curva histórica de avance sugiere hasta $17.4M y la versión conservadora (máximo histórico de avance) $14.2M; se mantiene la central. Incluye el feriado del lun 16-nov (≈ -$0.18M)."
     },
     "atenciones": {
       "hist": [
@@ -72,11 +73,11 @@ window.DATA = {
         3543,
         3147
       ],
-      "actual": 155,
-      "proy": 2952,
-      "vsLM": -6,
-      "vsU3M": -10,
-      "nota": "Real al 2-nov: 155 líneas de cargo (CDMX 123, GDL 28, MTP 4). Proyección 2,952 (curva de ritmo por sede): -6% vs octubre (3,147). Ingreso por atención proyectado ~$4.7K vs ~$5.2K en octubre (menos peso de subrogación)."
+      "actual": 845,
+      "proy": 3230,
+      "vsLM": 3,
+      "vsU3M": -1,
+      "nota": "Real al 8-nov: 845 líneas de cargo (CDMX 646, GDL 164, MTP 35). Proyección 3,230 (curva de ritmo por sede): +3% vs octubre (3,147). Ingreso por atención proyectado ~$4.6K vs ~$5.2K en octubre (menos peso de subrogación y de paquetes grandes)."
     },
     "pacientes": {
       "hist": [
@@ -91,11 +92,11 @@ window.DATA = {
         1323,
         962
       ],
-      "actual": 73,
-      "proy": 985,
-      "vsLM": 2,
-      "vsU3M": -10,
-      "nota": "Real al 2-nov: 73 pacientes únicos (CDMX 55, GDL 15, MTP 3). Proyección 985 = atenciones proyectadas × razón pacientes/atención por sede (CDMX 0.31, GDL 0.41, MTP 0.36): +2% vs octubre (962)."
+      "actual": 437,
+      "proy": 1079,
+      "vsLM": 12,
+      "vsU3M": -1,
+      "nota": "Real al 8-nov: 437 pacientes únicos (CDMX 328, GDL 83, MTP 26; suma por sede). Proyección 1,079 = atenciones proyectadas × razón pacientes/atención por sede (CDMX 0.31, GDL 0.41, MTP 0.36): +12% vs octubre (962)."
     },
     "consultas": {
       "hist": [
@@ -115,7 +116,7 @@ window.DATA = {
       "proy": 299,
       "vsLM": 8,
       "vsU3M": -2,
-      "nota": "Real al 2-nov: 20 consultas de primera vez terminadas (CDMX 11, GDL 7, MTP 2; el 1-nov, domingo, sin consultas). Proyección 299 por ritmo (shows ~83% de lo agendado; rango 284–318): +8% vs octubre (278). Sin lectura de agenda: es ritmo, no agenda. No Show al corte 16.7% (4 inasistencias sobre 24 citas del 2-nov)."
+      "nota": "Consultas y No Show siguen al corte del 2-nov (no se refrescaron al 8-nov): 20 consultas de primera vez terminadas (CDMX 11, GDL 7, MTP 2) y proyección 299 por ritmo (rango 284–318). No Show 16.7% (4 inasistencias sobre 24 citas del 2-nov). Pendiente de refrescar con la agenda de vRepro."
     },
     "noshow": {
       "hist": [
@@ -151,11 +152,11 @@ window.DATA = {
           13.3,
           13.8
         ],
-        "actual": 0.57,
-        "proy": 11.55,
-        "vsLM": -16,
-        "vsU3M": -12,
-        "nota": "Real al 2-nov $570,217; proyección $11.55M (-16% vs octubre, $13.80M)."
+        "actual": 3.6,
+        "proy": 12.33,
+        "vsLM": -11,
+        "vsU3M": -6,
+        "nota": "Real al 8-nov $3.60M; proyección $12.33M (-11% vs octubre, $13.80M)."
       },
       "atenciones": {
         "hist": [
@@ -170,10 +171,10 @@ window.DATA = {
           2658,
           2394
         ],
-        "actual": 123,
-        "proy": 2184,
-        "vsLM": -9,
-        "vsU3M": -8
+        "actual": 646,
+        "proy": 2400,
+        "vsLM": 0,
+        "vsU3M": 1
       },
       "pacientes": {
         "hist": [
@@ -188,10 +189,10 @@ window.DATA = {
           931,
           669
         ],
-        "actual": 55,
-        "proy": 676,
-        "vsLM": 1,
-        "vsU3M": -9
+        "actual": 328,
+        "proy": 743,
+        "vsLM": 11,
+        "vsU3M": 0
       },
       "consultas": {
         "hist": [
@@ -247,11 +248,11 @@ window.DATA = {
           1.5,
           2.0
         ],
-        "actual": 0.18,
-        "proy": 1.82,
-        "vsLM": -9,
-        "vsU3M": -12,
-        "nota": "Real al 2-nov $178,859 (incluye el domingo 1-nov: $61.8K); proyección $1.82M (-9% vs octubre, $2.00M)."
+        "actual": 0.81,
+        "proy": 1.95,
+        "vsLM": -3,
+        "vsU3M": -6,
+        "nota": "Real al 8-nov $0.81M; proyección $1.95M (-3% vs octubre, $2.00M)."
       },
       "atenciones": {
         "hist": [
@@ -266,10 +267,10 @@ window.DATA = {
           660,
           555
         ],
-        "actual": 28,
-        "proy": 607,
-        "vsLM": 9,
-        "vsU3M": -7
+        "actual": 164,
+        "proy": 668,
+        "vsLM": 20,
+        "vsU3M": 2
       },
       "pacientes": {
         "hist": [
@@ -284,10 +285,10 @@ window.DATA = {
           299,
           226
         ],
-        "actual": 15,
-        "proy": 251,
-        "vsLM": 11,
-        "vsU3M": -7
+        "actual": 83,
+        "proy": 277,
+        "vsLM": 23,
+        "vsU3M": 2
       },
       "consultas": {
         "hist": [
@@ -343,11 +344,11 @@ window.DATA = {
           0.4,
           0.7
         ],
-        "actual": 0.002,
-        "proy": 0.58,
-        "vsLM": -13,
-        "vsU3M": -12,
-        "nota": "Real al 2-nov $1,724; proyección $582K (-13% vs octubre, $666K). Sede chica: pocas líneas por día."
+        "actual": 0.042,
+        "proy": 0.62,
+        "vsLM": -7,
+        "vsU3M": -6,
+        "nota": "Real al 8-nov $41.7K (35 líneas de cargo); proyección $622K (-7% vs octubre, $666K). Sede chica: el Real va ~25% abajo de su ritmo U3M."
       },
       "atenciones": {
         "hist": [
@@ -362,10 +363,10 @@ window.DATA = {
           225,
           198
         ],
-        "actual": 4,
-        "proy": 161,
-        "vsLM": -19,
-        "vsU3M": -32
+        "actual": 35,
+        "proy": 162,
+        "vsLM": -18,
+        "vsU3M": -31
       },
       "pacientes": {
         "hist": [
@@ -380,10 +381,10 @@ window.DATA = {
           93,
           67
         ],
-        "actual": 3,
-        "proy": 58,
-        "vsLM": -13,
-        "vsU3M": -32
+        "actual": 26,
+        "proy": 59,
+        "vsLM": -12,
+        "vsU3M": -31
       },
       "consultas": {
         "hist": [
@@ -429,262 +430,262 @@ window.DATA = {
     "total": [
       {
         "nombre": "Tratamientos FIV/ICSI",
-        "valor": 4.05,
-        "vsLM": -9,
-        "vsU3M": -12
+        "valor": 4.32,
+        "vsLM": -3,
+        "vsU3M": -6
       },
       {
         "nombre": "Congelación de Gametos",
-        "valor": 2.91,
-        "vsLM": -13,
-        "vsU3M": -12
+        "valor": 3.1,
+        "vsLM": -7,
+        "vsU3M": -6
       },
       {
         "nombre": "Farmacia",
-        "valor": 2.76,
-        "vsLM": -22,
-        "vsU3M": -12
+        "valor": 2.95,
+        "vsLM": -16,
+        "vsU3M": -6
       },
       {
         "nombre": "Laboratorio",
-        "valor": 2.24,
-        "vsLM": -19,
-        "vsU3M": -12
+        "valor": 2.39,
+        "vsLM": -13,
+        "vsU3M": -6
       },
       {
         "nombre": "Subrogación",
-        "valor": 1.15,
-        "vsLM": -27,
-        "vsU3M": -12
+        "valor": 1.23,
+        "vsLM": -22,
+        "vsU3M": -6
       },
       {
         "nombre": "Consultas",
-        "valor": 0.39,
-        "vsLM": 2,
-        "vsU3M": -12
+        "valor": 0.42,
+        "vsLM": 9,
+        "vsU3M": -6
       },
       {
         "nombre": "Procedimientos / Quirúrgicos",
-        "valor": 0.33,
-        "vsLM": 7,
-        "vsU3M": -12
+        "valor": 0.35,
+        "vsLM": 14,
+        "vsU3M": -6
       },
       {
         "nombre": "Imágenes",
         "valor": 0.08,
-        "vsLM": 17,
-        "vsU3M": -12
+        "vsLM": 25,
+        "vsU3M": -6
       },
       {
         "nombre": "Wellness",
         "valor": 0.04,
-        "vsLM": -37,
-        "vsU3M": -12
+        "vsLM": -32,
+        "vsU3M": -6
       },
       {
         "nombre": "Otros",
         "valor": 0.01,
-        "vsLM": 0,
-        "vsU3M": -12
+        "vsLM": 7,
+        "vsU3M": -6
       }
     ],
     "CDMX": [
       {
         "nombre": "Tratamientos FIV/ICSI",
-        "valor": 3.4,
-        "vsLM": -8,
-        "vsU3M": -12
+        "valor": 3.63,
+        "vsLM": -1,
+        "vsU3M": -6
       },
       {
         "nombre": "Congelación de Gametos",
-        "valor": 2.33,
-        "vsLM": -14,
-        "vsU3M": -12
+        "valor": 2.49,
+        "vsLM": -8,
+        "vsU3M": -6
       },
       {
         "nombre": "Farmacia",
-        "valor": 2.27,
-        "vsLM": -21,
-        "vsU3M": -12
+        "valor": 2.43,
+        "vsLM": -16,
+        "vsU3M": -6
       },
       {
         "nombre": "Laboratorio",
-        "valor": 1.82,
-        "vsLM": -24,
-        "vsU3M": -12
+        "valor": 1.95,
+        "vsLM": -19,
+        "vsU3M": -6
       },
       {
         "nombre": "Subrogación",
-        "valor": 1.15,
-        "vsLM": -28,
-        "vsU3M": -12
+        "valor": 1.22,
+        "vsLM": -23,
+        "vsU3M": -6
       },
       {
         "nombre": "Procedimientos / Quirúrgicos",
-        "valor": 0.27,
-        "vsLM": 10,
-        "vsU3M": -12
+        "valor": 0.29,
+        "vsLM": 17,
+        "vsU3M": -6
       },
       {
         "nombre": "Consultas",
-        "valor": 0.19,
-        "vsLM": 6,
-        "vsU3M": -12
+        "valor": 0.21,
+        "vsLM": 13,
+        "vsU3M": -6
       },
       {
         "nombre": "Imágenes",
-        "valor": 0.06,
-        "vsLM": 25,
-        "vsU3M": -12
+        "valor": 0.07,
+        "vsLM": 33,
+        "vsU3M": -6
       },
       {
         "nombre": "Wellness",
         "valor": 0.03,
-        "vsLM": -37,
-        "vsU3M": -12
+        "vsLM": -33,
+        "vsU3M": -6
       },
       {
         "nombre": "Otros",
         "valor": 0.01,
-        "vsLM": 118,
-        "vsU3M": -12
+        "vsLM": 132,
+        "vsU3M": -6
       }
     ],
     "GDL": [
       {
         "nombre": "Congelación de Gametos",
-        "valor": 0.5,
-        "vsLM": -15,
-        "vsU3M": -12
+        "valor": 0.54,
+        "vsLM": -9,
+        "vsU3M": -6
       },
       {
         "nombre": "Tratamientos FIV/ICSI",
-        "valor": 0.45,
-        "vsLM": 7,
-        "vsU3M": -12
+        "valor": 0.48,
+        "vsLM": 15,
+        "vsU3M": -6
       },
       {
         "nombre": "Laboratorio",
-        "valor": 0.31,
-        "vsLM": 11,
-        "vsU3M": -12
+        "valor": 0.33,
+        "vsLM": 19,
+        "vsU3M": -6
       },
       {
         "nombre": "Farmacia",
-        "valor": 0.3,
-        "vsLM": -30,
-        "vsU3M": -12
+        "valor": 0.32,
+        "vsLM": -25,
+        "vsU3M": -6
       },
       {
         "nombre": "Consultas",
-        "valor": 0.18,
-        "vsLM": -5,
-        "vsU3M": -12
+        "valor": 0.2,
+        "vsLM": 2,
+        "vsU3M": -6
       },
       {
         "nombre": "Procedimientos / Quirúrgicos",
         "valor": 0.05,
-        "vsLM": -19,
-        "vsU3M": -12
+        "vsLM": -13,
+        "vsU3M": -6
       },
       {
         "nombre": "Imágenes",
         "valor": 0.01,
-        "vsLM": -33,
-        "vsU3M": -12
+        "vsLM": -28,
+        "vsU3M": -6
       },
       {
         "nombre": "Wellness",
         "valor": 0.01,
-        "vsLM": -35,
-        "vsU3M": -12
+        "vsLM": -31,
+        "vsU3M": -6
       },
       {
         "nombre": "Subrogación",
         "valor": 0.01,
-        "vsLM": 586,
-        "vsU3M": -12
+        "vsLM": 633,
+        "vsU3M": -6
       },
       {
         "nombre": "Otros",
         "valor": 0.0,
-        "vsLM": -71,
-        "vsU3M": -12
+        "vsLM": -69,
+        "vsU3M": -6
       }
     ],
     "MTP": [
       {
         "nombre": "Tratamientos FIV/ICSI",
-        "valor": 0.19,
-        "vsLM": -46,
-        "vsU3M": -12
+        "valor": 0.21,
+        "vsLM": -42,
+        "vsU3M": -6
       },
       {
         "nombre": "Farmacia",
-        "valor": 0.19,
-        "vsLM": -14,
-        "vsU3M": -12
+        "valor": 0.2,
+        "vsLM": -8,
+        "vsU3M": -6
       },
       {
         "nombre": "Laboratorio",
-        "valor": 0.1,
-        "vsLM": 66,
-        "vsU3M": -12
+        "valor": 0.11,
+        "vsLM": 77,
+        "vsU3M": -6
       },
       {
         "nombre": "Congelación de Gametos",
         "valor": 0.07,
-        "vsLM": 329,
-        "vsU3M": -12
+        "vsLM": 358,
+        "vsU3M": -6
       },
       {
         "nombre": "Consultas",
         "valor": 0.02,
-        "vsLM": 53,
-        "vsU3M": -12
+        "vsLM": 63,
+        "vsU3M": -6
       },
       {
         "nombre": "Procedimientos / Quirúrgicos",
         "valor": 0.01,
         "vsLM": null,
-        "vsU3M": -12,
+        "vsU3M": -6,
         "nuevo": true
       },
       {
         "nombre": "Imágenes",
-        "valor": 0.0,
-        "vsLM": 270,
-        "vsU3M": -12
+        "valor": 0.01,
+        "vsLM": 295,
+        "vsU3M": -6
       },
       {
         "nombre": "Wellness",
         "valor": 0.0,
-        "vsLM": -24,
-        "vsU3M": -12
+        "vsLM": -19,
+        "vsU3M": -6
       }
     ]
   },
   "highlights": {
     "total": [
-      "Noviembre arranca con $0.75M de Real al corte del 2-nov (1.07 de 23.25 días ponderados). Proyección central $13.95M, rango $12.93M (mediana mar–oct) a $15.33M (ritmo U3M): -15% vs octubre ($16.47M) y -12% vs el promedio ago-oct. CDMX aporta 83% ($11.55M), Guadalajara 13% ($1.82M) y Metepec 4% ($0.58M).",
-      "Solo hay dos días de datos: el domingo 1-nov facturó $61.8K (únicamente Guadalajara: captura y vitrificación de ovocitos, sedación y Ovodonors) y el lunes 2-nov $0.69M (CDMX $0.57M, 152 atenciones, 71 pacientes), por encima del ritmo central de ~$588K por día ponderado. La confianza de la proyección es baja y se recalibra con cada corte.",
-      "Método: ritmo por día hábil ponderado (lun–vie 1, sáb 0.55, dom 0.07, feriados según su efecto observado; lun 16-nov = 0.7) con peso por recencia (decaimiento 0.8). Se cambió de la mediana mar–oct porque subproyectó octubre ~19% (el ritmo de ago–oct, $645–668K por día ponderado, está muy arriba de la mediana, $549K). La mezcla por servicio usa la distribución U3M de cada sede.",
-      "Por servicio (proyectado): Tratamientos FIV/ICSI $4.05M, Congelación de Gametos $2.91M, Farmacia $2.76M, Laboratorio $2.24M y Subrogación $1.15M (-27% vs octubre, que tuvo paquetes grandes de subrogación); al corte solo hay 1 valoración de subrogación en CDMX ($862).",
-      "Atenciones proyectadas 2,952 (-6% vs octubre) y Pacientes 985 (+2%): el ingreso por atención baja a ~$4.7K (vs ~$5.2K en octubre) por menos subrogación. Consultas de primera vez: 20 al corte y 299 proyectadas por ritmo (+8% vs octubre, 278); No Show al corte 16.7%.",
-      "HubSpot (Interesa2) al 2-nov: 103 leads y 27 citas agendadas (26% de conversión, muestra muy chica). Cohorte de octubre: M0 22% y M1 aún 0%; las cohortes de agosto y septiembre siguen madurando.",
-      "Nota de datos: 4 líneas de cargo sin médico asignado. Se agregaron a ConceptosHier 13 conceptos que faltaban (donantes Ovodonors, semen congelado Genevity/Laffer, Subsecuente Ginecología/SOMP, etc.), con clasificación provisional por confirmar. La vista por médico YTD se actualiza en el siguiente corte."
+      "Noviembre al corte del 8-nov: Real $4.45M (5.69 de 23.25 días ponderados). Proyección central $14.90M, rango $14.09M (mediana mar–oct) a $15.99M (ritmo U3M): -10% vs octubre ($16.47M) y -6% vs el promedio ago-oct. CDMX aporta 83% ($12.33M), Guadalajara 13% ($1.95M) y Metepec 4% ($0.62M). Subió $0.95M vs el corte del 2-nov ($13.95M).",
+      "La semana del 2 al 8 de noviembre cerró en $4.39M: lun 2 $0.69M, mar 3 $0.76M, mié 4 $0.54M, jue 5 $0.91M, vie 6 $0.76M, sáb 7 $0.69M (incluye un PGT-A de 15 embriones por $194K en CDMX y dos paquetes FIV de Guadalajara) y dom 8 $0.04M. El Real corre ~31% arriba del ritmo central por día ponderado ($782K vs $595K); parte son paquetes grandes de una sola vez, por eso no se extrapola.",
+      "Cruce de métodos al 8-nov: central $14.90M (cifra oficial), conservadora por curva de avance máxima $14.2M, y pacing con la curva mediana $17.4M. El rango de escenarios del Sheet es $14.09M–$15.99M; el potencial al alza depende de que no se repita la caída de octubre en las últimas semanas del mes.",
+      "Método: ritmo por día hábil ponderado (lun–vie 1, sáb 0.55, dom 0.07, feriados según su efecto observado; lun 16-nov = 0.7) con peso por recencia (decaimiento 0.8). La mezcla por servicio usa la distribución ago–oct de cada sede.",
+      "Por servicio (proyectado): Tratamientos FIV/ICSI $4.32M, Congelación de Gametos $3.10M, Farmacia $2.95M, Laboratorio $2.39M, Subrogación $1.23M (Subrogación -22% vs octubre, que tuvo paquetes grandes; al corte hay 1 paquete Essentials en CDMX por $105K y 3 valoraciones).",
+      "Atenciones proyectadas 3,230 (+3% vs octubre) y Pacientes 1,079 (+12%): el ingreso por atención baja a ~$4.6K (vs ~$5.2K en octubre). Consultas de primera vez, No Show y HubSpot siguen al corte del 2-nov (pendientes de refrescar al 8-nov).",
+      "Nota de datos: el archivo de Cargos del Drive llega al 31-oct; noviembre sale de vRepro (cargos del 1 al 8 nov, 845 líneas). Clasificación provisional por confirmar en ConceptosHier: Laffer semen congelado y traslado (Tratamientos), 4 pruebas de laboratorio nuevas (Laboratorio), Evaluación Integral de Subrogada GDL (Subrogación) y Ultrasonido - Seguimiento (Imágenes). La vista por médico YTD se actualiza en el siguiente corte."
     ],
     "CDMX": [
-      "CDMX lleva $0.57M al 2-nov (todo del lunes 2-nov) y proyecta $11.55M (-16% vs octubre, -12% vs U3M): FIV/ICSI $3.40M, Congelación $2.33M, Farmacia $2.27M, Laboratorio $1.82M y Subrogación $1.15M.",
-      "123 atenciones y 55 pacientes al corte; proyección 2,184 atenciones (-9%) y 676 pacientes (+1% vs octubre). No Show de primera vez al corte 15.4%."
+      "CDMX lleva $3.60M al 8-nov y proyecta $12.33M (-11% vs octubre, -7% vs U3M): Tratamientos FIV/ICSI $3.63M, Congelación de Gametos $2.49M, Farmacia $2.43M, Laboratorio $1.95M, Subrogación $1.22M.",
+      "646 atenciones y 328 pacientes al corte; proyección 2,400 atenciones (+0% vs octubre) y 743 pacientes (+11% vs octubre). Consultas y No Show al corte del 2-nov (No Show 15.4%)."
     ],
     "GDL": [
-      "GDL lleva $0.18M al 2-nov (domingo 1-nov $61.8K + lunes 2-nov $117.0K) y proyecta $1.82M (-9% vs octubre): Congelación $0.50M, FIV/ICSI $0.45M, Laboratorio $0.31M y Farmacia $0.30M.",
-      "28 atenciones y 15 pacientes al corte; proyección 607 atenciones (+9%) y 251 pacientes (+11%). 7 consultas de primera vez al corte, No Show 12.5%."
+      "GDL lleva $0.81M al 8-nov y proyecta $1.95M (-3% vs octubre): Congelación de Gametos $0.54M, Tratamientos FIV/ICSI $0.48M, Laboratorio $0.33M, Farmacia $0.32M. Incluye el sábado 7-nov con dos paquetes FIV de 3 transferencias y la captura/vitrificación del 7 y 8-nov.",
+      "164 atenciones y 83 pacientes al corte; proyección 668 atenciones y 277 pacientes. Consultas (7 al 2-nov) y No Show 12.5% al corte del 2-nov."
     ],
     "MTP": [
-      "Metepec solo registra $1.7K al 2-nov (1 línea de Laboratorio); la proyección de $582K (-13% vs octubre) viene del ritmo U3M, no del Real, así que tiene la mayor incertidumbre de la red.",
-      "4 atenciones y 3 pacientes al corte; proyección 161 atenciones y 58 pacientes. 2 consultas de primera vez al corte y No Show 33.3% (1 inasistencia sobre 3 citas)."
+      "Metepec lleva $41.7K al 8-nov (35 líneas: Farmacia $8.4K, Laboratorio $14.4K, Consultas $9.0K, Congelación $6.0K); la proyección de $622K (-7% vs octubre) viene del ritmo U3M, así que tiene la mayor incertidumbre de la red y hoy va abajo de ese ritmo.",
+      "35 atenciones y 26 pacientes al corte; proyección 162 atenciones y 59 pacientes. Consultas (2) y No Show 33.3% al corte del 2-nov."
     ]
   },
   "consultas_ranking": {
@@ -1094,7 +1095,7 @@ window.DATA = {
           3,
           92,
           15,
-          1
+          3
         ],
         "Programa Activo": [
           0,
@@ -1107,26 +1108,26 @@ window.DATA = {
           7,
           4,
           10,
-          0
+          1
         ]
       },
       "actual": {
         "Valoración": {
-          "pacientes": 1,
-          "ingreso": 862.07,
-          "ticket": 862.07
+          "pacientes": 3,
+          "ingreso": 4267.23,
+          "ticket": 1422.41
         },
         "Programa Activo": {
-          "pacientes": 0,
-          "ingreso": 0,
-          "ticket": 0
+          "pacientes": 1,
+          "ingreso": 105172.41,
+          "ticket": 105172.41
         }
       },
       "totalPacientesYTD": {
-        "Valoración": 153,
-        "Programa Activo": 30
+        "Valoración": 155,
+        "Programa Activo": 31
       },
-      "ingresoYTD": 5688547.63
+      "ingresoYTD": 5797125.2
     },
     "CDMX": {
       "labels": [
@@ -1154,7 +1155,7 @@ window.DATA = {
           3,
           91,
           15,
-          1
+          3
         ],
         "Programa Activo": [
           0,
@@ -1167,26 +1168,26 @@ window.DATA = {
           7,
           4,
           10,
-          0
+          1
         ]
       },
       "actual": {
         "Valoración": {
-          "pacientes": 1,
-          "ingreso": 862.07,
-          "ticket": 862.07
+          "pacientes": 3,
+          "ingreso": 4267.23,
+          "ticket": 1422.41
         },
         "Programa Activo": {
-          "pacientes": 0,
-          "ingreso": 0,
-          "ticket": 0
+          "pacientes": 1,
+          "ingreso": 105172.41,
+          "ticket": 105172.41
         }
       },
       "totalPacientesYTD": {
-        "Valoración": 152,
-        "Programa Activo": 29
+        "Valoración": 154,
+        "Programa Activo": 30
       },
-      "ingresoYTD": 5652340.74
+      "ingresoYTD": 5760918.31
     },
     "GDL": {
       "labels": [
