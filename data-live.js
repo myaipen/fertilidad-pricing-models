@@ -177,10 +177,12 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // así el mes sale cerrado aunque el calendario aún no haya cambiado de mes.
 // ACTUALIZADO 10-nov-2026: CORTE 9-nov-2026 (noviembre, 6.69 de 23.25 días hábiles equivalentes). Cargos de vRepro del 1 al 9 nov
 // (983 líneas, Real MTD $6,473,676: CDMX $5.48M, GDL $0.87M, MTP $0.13M). Proyección de ingresos = Base!F por sede (reescrita el 10-nov con el método elegido por backtest abr-oct al corte día 9).
-// MÉTODO: Real + días ponderados restantes x [40% ritmo de los primeros 9 días + 60% ritmo promedio ago-oct] (shrinkage k=10: peso = días_transcurridos/(días_transcurridos+10)).
-// Backtest (MAPE del total): mezcla k=5-10 6.3%-7.3%, ritmo ago-oct 9.7%, curva mediana 11.9%, curva conservadora de máximo histórico 14.9% (sesgo -15%). SUBROGACIÓN (CDMX) aparte: paquetes del Real ($1.54M) no se
-// extrapolan; el resto del mes usa su promedio ago-oct (+$0.88M). Pesos de puente/feriado (CDMX sáb 14 .40, lun 16 .7; GDL sáb 14 .25, lun 16 .1). METEPEC: agenda de la Dra. bloqueada del 16 al 20-nov
-// (4.7 días ponderados sin ritmo). Proyección $17.95M (CDMX $15.05M, GDL $2.48M, MTP $0.42M; rango $17.03M-$18.35M). Antes: $15.35M (intermedia con piso conservador).
+// MÉTODO (corregido el 10-nov): Real + días ponderados restantes x ritmo base + cola de mantenimientos + subrogación restante. Ritmo base = 40% ritmo de los primeros 9 días + 60% ritmo promedio ago-oct
+// (shrinkage k=10: peso = días_transcurridos/(días_transcurridos+10)), SIN los almacenamientos/renovaciones de gametos (cobrados al inicio del mes: $0.98M al día 9, ~$1.1M al mes, cola ~$0.35M) y SIN subrogación.
+// Antes ($17.95M) se contaban dos veces. Backtest del método base (MAPE del total): mezcla k=5-10 6.3%-7.3%, ritmo ago-oct 9.7%, curva mediana 11.9%, curva conservadora de máximo histórico 14.9% (sesgo -15%); el ajuste por mantenimientos no está backtesteado.
+// SUBROGACIÓN (CDMX) aparte: Real $1.54M + 50% del promedio ago-oct por los días restantes (+$0.44M; al 100% serían +$0.88M). Pesos de puente/feriado (CDMX sáb 14 .40, lun 16 .7; GDL sáb 14 .25, lun 16 .1). METEPEC: agenda de la Dra. bloqueada del 16 al 20-nov
+// (4.7 días ponderados sin ritmo). Proyección $16.46M (CDMX $13.66M, GDL $2.38M, MTP $0.41M; rango $16.02M-$16.90M). Antes: $17.95M (sin separar mantenimientos) y $15.35M (intermedia con piso conservador).
+// Atenciones 3,049 (CDMX 2,292, GDL 592, MTP 165) y Pacientes 1,014 con el mismo criterio (sin líneas de almacenamiento: 163 de las 983 del Real).
 // CONSULTAS (primera vez), No Show y ranking de consultas al corte 9-nov (10-nov-2026); HubSpot también al 9-nov.
 // ACTUALIZADO 9-nov-2026: CORTE 8-nov-2026 (noviembre, 5.69 de 23.25 días hábiles equivalentes). Cargos de vRepro del 1 al 8 nov
 // (845 líneas, Real MTD $4,447,737: CDMX $3.60M, GDL $0.81M, MTP $0.04M; el archivo de Cargos del Drive llega al 31-oct).
@@ -1142,7 +1144,7 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
     // 7.5% y sin sesgo; la curva de máximo histórico + techo por ticket máximo daba sub-proyección). Metepec ya descuenta el bloqueo de agenda 16-20-nov.
     // Con el ingreso de subrogación aparte, el ticket sin subrogación es ~$5.2K (igual que octubre), así que el techo por ticket máximo ya no aplica este mes.
     // Pacientes = Atenciones x razón pacientes/atención (arriba). Se ignora si cambia el corte o el mes.
-    const ATEN_PROY_NOV26_CORTE9 = { CDMX: 2440, GDL: 609, MTP: 165 };
+    const ATEN_PROY_NOV26_CORTE9 = { CDMX: 2292, GDL: 592, MTP: 165 };
     if (esAtenciones && anio === 2026 && MES_VIGENTE === 11 && CORTE_REAL_DIA === 9 && ATEN_PROY_NOV26_CORTE9[sede]) {
       return Math.max(actual, ATEN_PROY_NOV26_CORTE9[sede]);
     }
