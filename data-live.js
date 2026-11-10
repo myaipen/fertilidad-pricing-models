@@ -176,10 +176,10 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // mesVigenteCerrado() ahora también devuelve true cuando el corte llega al último día del mes (CORTE_MES/CORTE_REAL_DIA),
 // así el mes sale cerrado aunque el calendario aún no haya cambiado de mes.
 // ACTUALIZADO 10-nov-2026: CORTE 9-nov-2026 (noviembre, 6.69 de 23.25 días hábiles equivalentes). Cargos de vRepro del 1 al 9 nov
-// (983 líneas, Real MTD $6,473,677: CDMX $5.48M, GDL $0.87M, MTP $0.13M). Proyección central de ingresos = Base!F por sede: Real de la sede + peso restante
-// x ritmo ponderado por recencia ($595K por día hábil equivalente repartido con la mezcla ago-oct). METEPEC: agenda de la Dra. bloqueada del
+// (983 líneas, Real MTD $6,473,677: CDMX $5.48M, GDL $0.87M, MTP $0.13M). Proyección de ingresos = Base!F por sede. CDMX y GDL (10-nov): Real + días ponderados restantes x promedio entre el ritmo central
+// ($595K por día hábil equivalente repartido con la mezcla ago-oct) y un piso conservador (P25 mar-oct: CDMX $420K, GDL $62K), con pesos de puente/feriado (CDMX sáb 14 .40, lun 16 .7; GDL sáb 14 .25, lun 16 .1). METEPEC: agenda de la Dra. bloqueada del
 // 16 al 20-nov (4.7 días ponderados sin ritmo) -> Base!F de MTP ya lo incluye; para Atenciones/Pacientes ver BLOQUEO_AGENDA en proyectarPorTendencia.
-// Central $16.21M (rango $15.46M–$17.23M); sin el bloqueo habría sido $16.33M. Cruce: curva mediana $22.3M, conservadora $19.5M (no se usan: el Real trae paquetes de subrogación del 9-nov).
+// Proyección intermedia $15.35M (conservadora $14.63M; central $16.07M); sin el bloqueo habría sido $15.47M. Cruce: curva mediana $22.3M, conservadora $19.5M (no se usan: el Real trae paquetes de subrogación del 9-nov).
 // CONSULTAS (primera vez), No Show, HubSpot y ranking de consultas siguen al corte 2-nov.
 // ACTUALIZADO 9-nov-2026: CORTE 8-nov-2026 (noviembre, 5.69 de 23.25 días hábiles equivalentes). Cargos de vRepro del 1 al 8 nov
 // (845 líneas, Real MTD $4,447,737: CDMX $3.60M, GDL $0.81M, MTP $0.04M; el archivo de Cargos del Drive llega al 31-oct).
