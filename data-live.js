@@ -1173,6 +1173,12 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
         proyBase = (proyBase + (actual + restante * tasa)) / 2;
       }
     }
+    // AJUSTE ESCENARIO INTERMEDIO (10-nov-2026): el ingreso restante de noviembre de CDMX y GDL se proyecta con ritmo intermedio entre central y
+    // conservador (Base!F). Para mantener el ticket por atención, las atenciones restantes de esas sedes se escalan por el mismo factor.
+    const AJUSTE_REMANENTE_NOV26 = { CDMX: 0.9178, GDL: 0.8515 };
+    if (esAtenciones && anio === 2026 && MES_VIGENTE === 11 && AJUSTE_REMANENTE_NOV26[sede]) {
+      proyBase = actual + Math.max(0, proyBase - actual) * AJUSTE_REMANENTE_NOV26[sede];
+    }
     if (esAtenciones && SEDES_CON_TECHO_TICKET[sede] && ingresosProyPesos && ingresosProyPesos[sede] > 0 && RATIO_TICKET_PROMEDIO_ATENCION[sede] > 0) {
       const techoPorTicket = ingresosProyPesos[sede] / RATIO_TICKET_PROMEDIO_ATENCION[sede];
       return Math.max(actual, Math.min(proyBase, techoPorTicket));
