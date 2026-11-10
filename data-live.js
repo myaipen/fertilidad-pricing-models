@@ -1825,6 +1825,36 @@ function buildHubspotCohortes(rows) {
   });
 }
 
+// 10-nov-2026: detalle por sede para que Cohortes y Mecanismos de conversión respondan al filtro de Sede.
+// Filas extra al final de "HubspotSedeMensual" (fila 340+; Sede = etiqueta):
+//   "COH|<SEDE>"  → [MesNum, MesLabel, tag, Leads, M0, M1, M2+]   (cohorte por mes de creación del deal)
+//   "MECL|<SEDE>" → [MesNum, MesLabel, tag, 8 columnas en el orden de MEC_ORDEN]  (deals creados por mecanismo)
+//   "MECC|<SEDE>" → igual, pero citas agendadas por mecanismo (mes de Fecha_CitaAgendada_Int2)
+// buildHubspotSedeMensualMetric y mecDatos ignoran estas filas (su Sede no es CDMX/GDL/MTP ni un mecanismo).
+function buildHubspotSedeDetalle(rows) {
+  const out = { coh: {}, mecL: {}, mecC: {} };
+  const MEC = ["WhatsApp ATOM", "WhatsApp ATOM bubble", "Typeform", "Partial typeform", "LunaCal", "Instagram DM", "(Sin valor)", "Otros"];
+  const MESL = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  for (const r of (rows || [])) {
+    const tag = String(r && r[2] || "");
+    const m = tag.match(/^(COH|MECL|MECC)\|(CDMX|GDL|MTP)$/);
+    if (!m) continue;
+    const kind = m[1], sede = m[2], mes = Number(r[0]);
+    if (!(mes >= 1 && mes <= 12)) continue;
+    if (kind === "COH") {
+      const leads = num(r[3]), m0 = pct(num(r[4]), leads), m1 = pct(num(r[5]), leads), m2 = pct(num(r[6]), leads);
+      const arr = out.coh[sede] = out.coh[sede] || [];
+      arr[mes - 1] = { mes: `${MESL[mes - 1]}-26`, leads, m0, m1, m2, sin: Math.max(0, 100 - m0 - m1 - m2) };
+    } else {
+      const dst = kind === "MECL" ? out.mecL : out.mecC;
+      const o = dst[sede] = dst[sede] || {};
+      MEC.forEach((g, k) => { (o[g] = o[g] || Array(12).fill(0))[mes - 1] = num(r[3 + k]); });
+    }
+  }
+  for (const sede of Object.keys(out.coh)) out.coh[sede] = out.coh[sede].filter(Boolean);
+  return out;
+}
+
 async function fetchLiveHubspot() {
   const [hsRows, sedeRows, cohortRows] = await Promise.all([
     fetchSheetJson("Hubspot"),
@@ -1836,6 +1866,7 @@ async function fetchLiveHubspot() {
     ...base,
     conversion_por_sede: buildHubspotSedeMensualMetric(sedeRows),
     cohortes: buildHubspotCohortes(cohortRows),
+    sede_detalle: (() => { const d = buildHubspotSedeDetalle(sedeRows); return Object.keys(d.coh).length ? d : (window.DATA.hubspot || {}).sede_detalle; })(),
   };
 }
 
@@ -2400,7 +2431,29 @@ const MEC_COLOR = {
 const MEC_MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 const MEC_RESPALDO = [["WhatsApp ATOM",1,"Ene",178,77],["WhatsApp ATOM",2,"Feb",136,62],["WhatsApp ATOM",3,"Mar",94,51],["WhatsApp ATOM",4,"Abr",153,86],["WhatsApp ATOM",5,"May",738,119],["WhatsApp ATOM",6,"Jun",589,112],["WhatsApp ATOM",7,"Jul",462,131],["WhatsApp ATOM",8,"Ago",455,135],["WhatsApp ATOM",9,"Sep",563,105],["WhatsApp ATOM",10,"Oct",578,103],["WhatsApp ATOM",11,"Nov",33,5],["WhatsApp ATOM bubble",1,"Ene",0,0],["WhatsApp ATOM bubble",2,"Feb",0,0],["WhatsApp ATOM bubble",3,"Mar",0,0],["WhatsApp ATOM bubble",4,"Abr",0,0],["WhatsApp ATOM bubble",5,"May",53,5],["WhatsApp ATOM bubble",6,"Jun",169,25],["WhatsApp ATOM bubble",7,"Jul",384,56],["WhatsApp ATOM bubble",8,"Ago",613,95],["WhatsApp ATOM bubble",9,"Sep",612,85],["WhatsApp ATOM bubble",10,"Oct",395,78],["WhatsApp ATOM bubble",11,"Nov",12,1],["Typeform",1,"Ene",492,31],["Typeform",2,"Feb",686,54],["Typeform",3,"Mar",668,83],["Typeform",4,"Abr",578,70],["Typeform",5,"May",457,66],["Typeform",6,"Jun",237,30],["Typeform",7,"Jul",234,44],["Typeform",8,"Ago",154,31],["Typeform",9,"Sep",87,21],["Typeform",10,"Oct",72,20],["Typeform",11,"Nov",5,1],["Partial typeform",1,"Ene",0,0],["Partial typeform",2,"Feb",4,2],["Partial typeform",3,"Mar",14,8],["Partial typeform",4,"Abr",10,4],["Partial typeform",5,"May",255,23],["Partial typeform",6,"Jun",219,18],["Partial typeform",7,"Jul",240,28],["Partial typeform",8,"Ago",451,58],["Partial typeform",9,"Sep",535,56],["Partial typeform",10,"Oct",519,57],["Partial typeform",11,"Nov",19,2],["LunaCal",1,"Ene",80,48],["LunaCal",2,"Feb",177,66],["LunaCal",3,"Mar",199,135],["LunaCal",4,"Abr",211,123],["LunaCal",5,"May",187,105],["LunaCal",6,"Jun",132,71],["LunaCal",7,"Jul",142,89],["LunaCal",8,"Ago",196,134],["LunaCal",9,"Sep",200,164],["LunaCal",10,"Oct",246,215],["LunaCal",11,"Nov",17,15],["Instagram DM",1,"Ene",0,0],["Instagram DM",2,"Feb",0,0],["Instagram DM",3,"Mar",0,0],["Instagram DM",4,"Abr",0,0],["Instagram DM",5,"May",0,0],["Instagram DM",6,"Jun",0,0],["Instagram DM",7,"Jul",0,0],["Instagram DM",8,"Ago",0,0],["Instagram DM",9,"Sep",61,1],["Instagram DM",10,"Oct",196,4],["Instagram DM",11,"Nov",14,1],["(Sin valor)",1,"Ene",83,32],["(Sin valor)",2,"Feb",56,46],["(Sin valor)",3,"Mar",45,41],["(Sin valor)",4,"Abr",47,45],["(Sin valor)",5,"May",62,49],["(Sin valor)",6,"Jun",85,57],["(Sin valor)",7,"Jul",70,69],["(Sin valor)",8,"Ago",41,38],["(Sin valor)",9,"Sep",28,27],["(Sin valor)",10,"Oct",30,28],["(Sin valor)",11,"Nov",3,2],["Otros",1,"Ene",0,0],["Otros",2,"Feb",0,0],["Otros",3,"Mar",0,0],["Otros",4,"Abr",0,0],["Otros",5,"May",0,0],["Otros",6,"Jun",4,2],["Otros",7,"Jul",1,1],["Otros",8,"Ago",11,10],["Otros",9,"Sep",9,9],["Otros",10,"Oct",21,9],["Otros",11,"Nov",0,0]]; // [Mecanismo, MesNum, MesLabel, Leads, Citas] — corte 2-nov-2026 (nov parcial)
 
+function mecScope() {
+  return (typeof currentScope !== "undefined" && currentScope && currentScope !== "total") ? currentScope : "total";
+}
+function mecScopeLabel() {
+  const sc = mecScope();
+  if (sc === "total") return "";
+  const sd = (window.DATA && window.DATA.sedes && window.DATA.sedes[sc]) || null;
+  return " · " + (sd ? sd.nombre : sc);
+}
+
 function mecDatos() {
+  const sc = mecScope();
+  const det = window.DATA && window.DATA.hubspot && window.DATA.hubspot.sede_detalle;
+  if (sc !== "total" && det && det.mecL && det.mecL[sc]) {
+    const leads = {}, citas = {};
+    for (const g of MEC_ORDEN) {
+      leads[g] = (det.mecL[sc][g] || Array(12).fill(0)).slice();
+      citas[g] = ((det.mecC && det.mecC[sc] && det.mecC[sc][g]) || Array(12).fill(0)).slice();
+    }
+    let ult = 0;
+    for (let m = 0; m < 12; m++) if (MEC_ORDEN.some(g => leads[g][m] > 0)) ult = m + 1;
+    return { leads, citas, ult, fuente: "Google Sheets (por sede)" };
+  }
   const crudo = _rawCache["HubspotSedeMensual"];
   let filas = [];
   if (Array.isArray(crudo)) {
@@ -2471,15 +2524,15 @@ function buildHubspotMecanismo() {
 
   cont.innerHTML = `
     <div class="section-title">HubSpot — Deals por mecanismo de conversión (LT conversion)</div>
-    <p class="section-sub">Pipeline "Interesa2" · deals creados por mes según lt_conversion_mechanism · Typeform = todo "typeform -…", Partial typeform = todo "partial typeform…" · compañía completa (no varía con filtros)</p>
+    <p class="section-sub">Pipeline "Interesa2" · deals creados por mes según lt_conversion_mechanism · Typeform = todo "typeform -…", Partial typeform = todo "partial typeform…" · ${mecScope() === "total" ? "compañía completa" : "filtrado por sede" + mecScopeLabel()} (sí varía con el filtro de Sede; no con Periodo)</p>
     <div class="grid-2">
-      <div class="panel"><div class="panel-title">Deals por mecanismo — ${MEC_MESES[0]} a ${MEC_MESES[i]}</div>
+      <div class="panel"><div class="panel-title">Deals por mecanismo — ${MEC_MESES[0]} a ${MEC_MESES[i]}${mecScopeLabel()}</div>
         <div class="chart-box tall"><canvas id="chart-mecanismo"></canvas></div></div>
-      <div class="panel"><div class="panel-title">Mezcla y conversión — ${etqMes}</div>
+      <div class="panel"><div class="panel-title">Mezcla y conversión — ${etqMes}${mecScopeLabel()}</div>
         <table><thead><tr><th>Mecanismo</th><th class="num" style="text-align:right;">Deals</th><th class="num" style="text-align:right;">Mezcla</th><th class="num" style="text-align:right;">Citas</th><th class="num" style="text-align:right;">Citas ÷ deals</th><th class="num" style="text-align:right;">Mezcla vs ${ant >= 0 ? MEC_MESES[ant] : "—"}</th></tr></thead><tbody>${filasMes}</tbody></table>
         <div style="font-size:11px; color:var(--axis); margin-top:8px; font-style:italic;">Citas = deals con cita agendada en el mes (fecha de agendamiento); deals = creados en el mes. No es una cohorte: leads recientes aún no completan su ventana de conversión${parcial ? ", y " + MEC_MESES[i] + " es parcial" : ""}.</div></div>
     </div>
-    <div class="panel" style="margin-top:16px;"><div class="panel-title">Deals creados por mecanismo y mes — ${ANIO_VIGENTE}</div>
+    <div class="panel" style="margin-top:16px;"><div class="panel-title">Deals creados por mecanismo y mes — ${ANIO_VIGENTE}${mecScopeLabel()}</div>
       <div class="scroll-table" style="margin-top:6px;"><table><thead><tr><th>Mecanismo</th>${cab}<th class="num" style="text-align:right;">Total</th></tr></thead><tbody>${cuerpo}</tbody></table></div>
       <div style="font-size:11px; color:var(--axis); margin-top:8px; font-style:italic;">${parcial ? "* Mes en curso, parcial al día " + CORTE_HUBSPOT_DIA + ". " : ""}"Otros" = llamada, aircall, referido, lead ads facebook, instagram, whatsapp, correo y otros valores sueltos. Fuente: ${D.fuente}. Puede diferir en pocos deals de la hoja "Hubspot" porque HubSpot cambia después del corte.</div></div>`;
 

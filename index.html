@@ -164,7 +164,7 @@
   <div class="grid-2" id="servicios-section"></div>
 
   <div class="section-title">HubSpot — Deals y conversión</div>
-  <p class="section-sub">Pipeline "Interesa2" · Deals, Citas y Conversión reaccionan a los filtros de Sede (por sucursal CDMX / GDL / MTP; "Todas las sedes" = compañía completa) y de Periodo · la tabla por sede y las cohortes son siempre de la compañía completa</p>
+  <p class="section-sub">Pipeline "Interesa2" · Deals, Citas y Conversión reaccionan a los filtros de Sede (por sucursal CDMX / GDL / MTP; "Todas las sedes" = compañía completa) y de Periodo · las cohortes (y los mecanismos de conversión, más abajo) reaccionan al filtro de Sede; la tabla de conversión por sede compara las tres sedes y resalta la seleccionada</p>
   <div class="grid-3" id="hubspot-charts"></div>
   <div class="grid-2" id="hubspot-detail" style="margin-top:16px;"></div>
 
@@ -1468,7 +1468,10 @@ function buildHubspotDetail(){
     const sel = (code === currentScope) ? ' style="font-weight:700;background:rgba(0,0,0,.05)"' : '';
     return `<tr${sel}><td>${code}</td><td class="num">${valMes}%</td><td class="num">${v.total2026}%</td><td class="num"><span class="${cls}">${arrow} ${diff>=0?'+':''}${diff} pp</span></td></tr>`;
   }).join("");
-  const cohRows = D.hubspot.cohortes.map(r=>`
+  const detSede = (D.hubspot.sede_detalle||{}).coh || {};
+  const cohSrc = (currentScope !== "total" && detSede[currentScope] && detSede[currentScope].length) ? detSede[currentScope] : D.hubspot.cohortes;
+  const cohTitulo = (currentScope !== "total" && detSede[currentScope]) ? `Cohortes de deals${hsScopeLabel()}` : "Cohortes de deals (compañía completa)";
+  const cohRows = cohSrc.map(r=>`
     <tr><td>${r.mes}</td><td class="num">${fmt(r.leads,0)}</td><td class="num">${r.m0}%</td><td class="num">${r.m1}%</td><td class="num">${r.m2}%</td><td class="num">${r.sin}%</td></tr>
   `).join("");
   el.innerHTML = `
@@ -1478,7 +1481,7 @@ function buildHubspotDetail(){
       <div style="font-size:11px; color:var(--axis); margin-top:8px; font-style:italic;">Usa el selector de "mes vigente" (Ene-Dic), no el filtro de Periodo. Citas agendadas en ${mesLabelLargo} ÷ deals creados en ${mesLabelLargo}, por sede. Si es el mes en curso, es parcial: deals recientes aún no completan su ventana de conversión.</div>
     </div>
     <div class="panel">
-      <div class="panel-title">Cohortes de deals (compañía completa): ¿cuántos meses después agenda cita?</div>
+      <div class="panel-title">${cohTitulo}: ¿cuántos meses después agenda cita?</div>
       <table><thead><tr><th>Mes</th><th class="num">Deals</th><th class="num">+0</th><th class="num">+1</th><th class="num">+2 o más</th><th class="num">Sin cita</th></tr></thead><tbody>${cohRows}</tbody></table>
     </div>
   `;
