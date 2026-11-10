@@ -1138,6 +1138,14 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
     if (!esAtenciones && atencionesRef && atencionesRef[sede] && atencionesRef[sede].proy > 0) {
       return Math.max(actual, atencionesRef[sede].proy * RATIO_PACIENTES_POR_ATENCION[sede]);
     }
+    // ATENCIONES NOV-2026 (10-nov-2026, corte 9): se fija con el método elegido por backtest abr-oct (mezcla ritmo del mes / ritmo ago-oct, k=10: error medio
+    // 7.5% y sin sesgo; la curva de máximo histórico + techo por ticket máximo daba sub-proyección). Metepec ya descuenta el bloqueo de agenda 16-20-nov.
+    // Con el ingreso de subrogación aparte, el ticket sin subrogación es ~$5.2K (igual que octubre), así que el techo por ticket máximo ya no aplica este mes.
+    // Pacientes = Atenciones x razón pacientes/atención (arriba). Se ignora si cambia el corte o el mes.
+    const ATEN_PROY_NOV26_CORTE9 = { CDMX: 2440, GDL: 609, MTP: 165 };
+    if (esAtenciones && anio === 2026 && MES_VIGENTE === 11 && CORTE_REAL_DIA === 9 && ATEN_PROY_NOV26_CORTE9[sede]) {
+      return Math.max(actual, ATEN_PROY_NOV26_CORTE9[sede]);
+    }
     const CURVA = esAtenciones ? SHARE_CURVE_ATENCIONES : SHARE_CURVE_PACIENTES;
     // BLOQUEO DE AGENDA (10-nov-2026): Metepec tiene la agenda de la Dra. bloqueada del 16 al 20-nov-2026. Esos días no aportan
     // ritmo: se quitan del calendario de la sede (restante y base de la curva de avance) solo para esa sede y mes.
