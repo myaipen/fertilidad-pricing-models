@@ -667,24 +667,26 @@ window.DATA = {
   },
   "highlights": {
     "total": [
-      "Noviembre al corte del 9-nov: Real $6.47M (6.69 de 23.25 días ponderados). Proyección $16.46M (rango $16.02M–$16.90M, método de mezcla elegido por backtest): +0% vs octubre ($16.47M). CDMX aporta 83% ($13.66M), Guadalajara 14% ($2.38M) y Metepec 3% ($0.41M).",
-      "Metepec con agenda bloqueada del 16 al 20-nov: se quitan 4.7 días ponderados (lun 16 feriado 0.7 + mar 17 a vie 20) del ritmo de Metepec. Efecto: -$0.11M (Metepec $0.41M en vez de $0.52M; Atenciones MTP 165, Pacientes 60). CDMX y GDL no cambian de calendario.",
-      "El lunes 9-nov cerró en $2.03M: cuatro paquetes de subrogación en CDMX por $1.42M (Fresh Egg Donor $833K y $381K, dos Essentials de $105K) más FIV, congelación y farmacia. Semana 2–8 nov: $4.39M. El Real corre $968K por día ponderado, pero $2.5M de los $6.47M son subrogación ($1.54M, paquetes de una sola vez) y renovaciones de almacenamiento ($0.98M, concentradas al inicio del mes); sin ellos el ritmo es ~$590K por día, en línea con el ~$560K del promedio ago-oct sin esos conceptos. Por eso no se extrapolan.",
-      "Backtest de métodos de ingresos (abr–oct, corte día 9, error medio absoluto del total): mezcla ritmo del mes/ritmo ago-oct con k=5–10 6.3%–7.3%; ritmo ago-oct solo 9.7%; curva de avance mediana 11.9%; curva conservadora (máximo histórico de avance) 14.9% con sesgo de -15%. Corrección del 10-nov: el real de la primera semana trae renovaciones de almacenamiento ($0.98M) y subrogación ($1.54M) que no se repiten a ese ritmo, por lo que se separan del ritmo base (ajuste no backtesteado). Rango por escenarios: $16.02M–$16.90M.",
-      "Por servicio (proyectado): Tratamientos FIV/ICSI $4.54M, Congelación de Gametos $3.34M, Farmacia $3.08M, Laboratorio $2.53M, Subrogación $1.99M. Subrogación $1.99M: $1.54M ya están en el Real (paquetes del 3 y 9-nov) y el resto es la mitad del promedio ago-oct.",
-      "Atenciones proyectadas 3,049 (-3% vs octubre) y Pacientes 1,014 (+5%). Consultas de primera vez al 9-nov: 104 reales y proyección 271 (-3% vs octubre, rango 260–283); No Show 15.4%. HubSpot (Interesa2) al 9-nov: 526 leads y 116 citas agendadas (22% de conversión; CDMX 39%, GDL 15%, MTP 19%)."
+      "Noviembre al corte del 9-nov: Real $6.47M (6.69 de 23.25 días ponderados). Proyección $16.46M (rango $16.02M–$16.90M): +0% vs octubre ($16.47M). CDMX aporta 83% ($13.66M), Guadalajara 14% ($2.38M) y Metepec 3% ($0.41M).",
+      "Metepec con la agenda de la Dra. bloqueada del 16 al 20-nov. Efecto estimado: -$0.11M (Metepec $0.41M en vez de $0.52M; Atenciones MTP 165, Pacientes 60).",
+      "El lunes 9-nov cerró en $2.03M: cuatro paquetes de subrogación en CDMX por $1.42M (Fresh Egg Donor $833K y $381K, dos Essentials de $105K) más FIV, congelación y farmacia. Semana 2–8 nov: $4.39M. Del Real de $6.47M, $1.54M son subrogación (paquetes de una sola vez) y $0.98M renovaciones de almacenamiento, cobradas al inicio del mes.",
+      "Por servicio (proyectado): Tratamientos FIV/ICSI $4.54M, Congelación de Gametos $3.34M, Farmacia $3.08M, Laboratorio $2.53M, Subrogación $1.99M. De la subrogación ($1.99M), $1.54M ya están en el Real (paquetes del 3 y 9-nov).",
+      "Atenciones proyectadas 3,049 (-3% vs octubre) y Pacientes 1,014 (+5%). Consultas de primera vez al 9-nov: 104 reales y proyección 271 (-3% vs octubre, rango 260–283); No Show 15.4%. HubSpot (Interesa2) al 9-nov: 526 leads y 116 citas agendadas (22% de conversión vs 25% en octubre; CDMX 39%, GDL 15%, MTP 19%)."
     ],
     "CDMX": [
       "CDMX lleva $5.48M al 9-nov y proyecta $13.66M (-1% vs octubre, +4% vs U3M): Tratamientos FIV/ICSI $3.82M, Congelación de Gametos $2.62M, Farmacia $2.55M, Laboratorio $2.05M, Subrogación $1.98M.",
-      "744 atenciones y 354 pacientes al corte; proyección 2,292 atenciones (-4% vs octubre) y 709 pacientes (+6% vs octubre). Consultas de primera vez: 62 al corte, proyección 157 (+8% vs octubre); No Show 11.4%."
+      "744 atenciones y 354 pacientes al corte; proyección 2,292 atenciones (-4% vs octubre) y 709 pacientes (+6% vs octubre). Consultas de primera vez: 62 al corte, proyección 157 (+8% vs octubre); No Show 11.4%.",
+      "HubSpot (Interesa2) al 9-nov: 178 leads y 69 citas agendadas (39% de conversión vs 30% en octubre, con 882 leads y 261 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
     ],
     "GDL": [
       "GDL lleva $0.87M al 9-nov y proyecta $2.38M (+19% vs octubre): Congelación de Gametos $0.66M, Tratamientos FIV/ICSI $0.59M, Laboratorio $0.41M, Farmacia $0.40M.",
-      "183 atenciones y 88 pacientes al corte; proyección 592 atenciones y 245 pacientes. Consultas de primera vez: 30 al corte, proyección 82 (-24% vs octubre); No Show 11.8%."
+      "183 atenciones y 88 pacientes al corte; proyección 592 atenciones y 245 pacientes. Consultas de primera vez: 30 al corte, proyección 82 (-24% vs octubre); No Show 11.8%.",
+      "HubSpot (Interesa2) al 9-nov: 183 leads y 28 citas agendadas (15% de conversión vs 24% en octubre, con 654 leads y 154 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
     ],
     "MTP": [
-      "Metepec lleva $130.5K al 9-nov (56 líneas) y proyecta $414K (-38% vs octubre). Ya incluye el bloqueo de la agenda de la Dra. del 16 al 20-nov (sin él: $523K); sigue siendo la sede con mayor incertidumbre (error de backtest ~30%).",
-      "56 atenciones y 35 pacientes al corte; proyección 165 atenciones y 60 pacientes (curva de avance ajustada a 18.55 días ponderados disponibles). Consultas de primera vez: 12 al corte, proyección 32 (+28% vs octubre; ya descuenta el bloqueo de agenda 16–20-nov); No Show 36.8%."
+      "Metepec lleva $130.5K al 9-nov (56 líneas) y proyecta $414K (-38% vs octubre). Ya incluye el bloqueo de la agenda de la Dra. del 16 al 20-nov (sin él: $523K); sigue siendo la sede con mayor incertidumbre.",
+      "56 atenciones y 35 pacientes al corte; proyección 165 atenciones y 60 pacientes. Consultas de primera vez: 12 al corte, proyección 32 (+28% vs octubre; ya descuenta el bloqueo de agenda 16–20-nov); No Show 36.8%.",
+      "HubSpot (Interesa2) al 9-nov: 42 leads y 8 citas agendadas (19% de conversión vs 32% en octubre, con 198 leads y 63 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
     ]
   },
   "consultas_ranking": {
