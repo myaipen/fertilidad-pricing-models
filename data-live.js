@@ -1796,13 +1796,17 @@ function buildHubspotSedeMensualMetric(rows) {
   // mes sin haber que tocar nada aquí.
   // Filas: [MesNum, MesLabel, Sede, Leads, Citas].
   const out = {};
-  for (const sede of SEDES) out[sede] = { mensual: Array(12).fill(null), leadsYtd: 0, citasYtd: 0 };
+  // 10-nov-2026: también se guardan leads[] y citas[] (12 casillas, null = sin dato) para que las gráficas de
+  // HubSpot (Deals, Citas, Conversión) puedan filtrarse por Sede.
+  for (const sede of SEDES) out[sede] = { mensual: Array(12).fill(null), leads: Array(12).fill(null), citas: Array(12).fill(null), leadsYtd: 0, citasYtd: 0 };
   for (const [mesNumRaw, , sede, leadsRaw, citasRaw] of rows) {
     if (!SEDES.includes(sede)) continue;
     const mesNum = Number(mesNumRaw);
     if (mesNum < 1 || mesNum > 12) continue;
     const leads = num(leadsRaw), citas = num(citasRaw);
     out[sede].mensual[mesNum - 1] = pct(citas, leads);
+    out[sede].leads[mesNum - 1] = leads;
+    out[sede].citas[mesNum - 1] = citas;
     out[sede].leadsYtd += leads;
     out[sede].citasYtd += citas;
   }

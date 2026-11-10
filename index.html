@@ -164,7 +164,7 @@
   <div class="grid-2" id="servicios-section"></div>
 
   <div class="section-title">HubSpot — Deals y conversión</div>
-  <p class="section-sub">Pipeline "Interesa2" · compañía completa (no varía con el filtro de Sede) · reacciona al filtro de Periodo</p>
+  <p class="section-sub">Pipeline "Interesa2" · Deals, Citas y Conversión reaccionan a los filtros de Sede (por sucursal CDMX / GDL / MTP; "Todas las sedes" = compañía completa) y de Periodo · la tabla por sede y las cohortes son siempre de la compañía completa</p>
   <div class="grid-3" id="hubspot-charts"></div>
   <div class="grid-2" id="hubspot-detail" style="margin-top:16px;"></div>
 
@@ -466,33 +466,55 @@ function buildFineGrain(metricKey, scope){
   }
 }
 
+// Datos de HubSpot según el filtro de Sede (10-nov-2026): "Todas las sedes" = compañía completa
+// (D.hubspot.leads/citas); CDMX / GDL / MTP = conversion_por_sede[sede].leads/citas (hoja
+// HubspotSedeMensual) para mes/trimestre/año y P.*.hubspot_sede[sede] para semana/día.
+function hsScope(){
+  const h = D.hubspot || {};
+  if (currentScope === "total" || !currentScope){
+    return { leadsHist: (h.leads||{}).hist || [], leadsAct: (h.leads||{}).actual || 0,
+             citasHist: (h.citas||{}).hist || [], citasAct: (h.citas||{}).actual || 0 };
+  }
+  const s = (h.conversion_por_sede || {})[currentScope] || {};
+  const mv = (typeof window.getMesVigente === "function") ? window.getMesVigente() : (((h.leads||{}).hist || []).length + 1);
+  const L = s.leads || [], C = s.citas || [];
+  const hist = (a) => Array.from({length: Math.max(0, mv-1)}, (_,i)=> a[i] || 0);
+  return { leadsHist: hist(L), leadsAct: L[mv-1] || 0, citasHist: hist(C), citasAct: C[mv-1] || 0 };
+}
+function hsScopeLabel(){
+  return currentScope === "total" ? "" : ` · ${D.sedes[currentScope] ? D.sedes[currentScope].nombre : currentScope}`;
+}
 function buildHubspotSeries(metricKey){
   // metricKey: 'leads' | 'citas' | 'conversion'
+  const S = hsScope();
   if (currentPeriod === "mes"){
-    const h = D.hubspot;
     if (metricKey === "conversion"){
-      const values = h.leads.hist.map((l,i)=> l ? Math.round(h.citas.hist[i]/l*100) : 0).concat([Math.round(h.citas.actual/h.leads.actual*100)]);
+      const values = S.leadsHist.map((l,i)=> l ? Math.round(S.citasHist[i]/l*100) : 0).concat([S.leadsAct ? Math.round(S.citasAct/S.leadsAct*100) : 0]);
       return { labels: [...D.meses_hist, D.mes_actual], values, currentIndex: values.length-1, proyIndex:null, badge1:null, badge2:null };
     }
-    const m = h[metricKey];
-    return { labels: [...D.meses_hist, D.mes_actual], values: [...m.hist, m.actual], currentIndex: m.hist.length, proyIndex:null, badge1:null, badge2:null };
+    const hist = metricKey === "leads" ? S.leadsHist : S.citasHist;
+    const act = metricKey === "leads" ? S.leadsAct : S.citasAct;
+    return { labels: [...D.meses_hist, D.mes_actual], values: [...hist, act], currentIndex: hist.length, proyIndex:null, badge1:null, badge2:null };
   }
   if (currentPeriod === "trimestre" || currentPeriod === "anio"){
-    const h = D.hubspot;
-    const leadsAll = [...h.leads.hist, h.leads.actual];
-    const citasAll = [...h.citas.hist, h.citas.actual];
+    const leadsAll = [...S.leadsHist, S.leadsAct];
+    const citasAll = [...S.citasHist, S.citasAct];
     if (currentPeriod === "anio"){
       const l = sum(leadsAll), c = sum(citasAll);
-      const v = metricKey === "leads" ? l : metricKey === "citas" ? c : Math.round(c/l*100);
+      const v = metricKey === "leads" ? l : metricKey === "citas" ? c : (l ? Math.round(c/l*100) : 0);
       return { labels:["2026 (YTD)"], values:[v], currentIndex:0, proyIndex:null, badge1:null, badge2:null };
     }
-    const bucket = (arr) => [arr[0]+arr[1]+arr[2], arr[3]+arr[4]+arr[5], arr[6]+arr[7]];
+    const g = (arr,i)=> arr[i] || 0;
+    const bucket = (arr) => [g(arr,0)+g(arr,1)+g(arr,2), g(arr,3)+g(arr,4)+g(arr,5), g(arr,6)+g(arr,7)];
     const lQ = bucket(leadsAll), cQ = bucket(citasAll);
     const values = metricKey === "leads" ? lQ : metricKey === "citas" ? cQ : lQ.map((l,i)=> l ? Math.round(cQ[i]/l*100) : 0);
     return { labels:["Q1","Q2","Q3"], values, currentIndex:2, proyIndex:null, badge1:null, badge2:null };
   }
   // semana / día
-  const raw = currentPeriod === "semana" ? P.weekly.hubspot : P.daily.hubspot;
+  const bySede = currentScope !== "total" && currentScope;
+  const rawW = bySede ? (((P.weekly||{}).hubspot_sede || {})[currentScope] || {leads:{}, citas:{}}) : P.weekly.hubspot;
+  const rawD = bySede ? (((P.daily||{}).hubspot_sede || {})[currentScope] || {leads:{}, citas:{}}) : P.daily.hubspot;
+  const raw = currentPeriod === "semana" ? rawW : rawD;
   const n = currentPeriod === "semana" ? 13 : 21;
   const leadsEntries = currentPeriod === "semana"
     ? Object.entries(raw.leads).sort((a,b)=> a[0]<b[0]?-1:1).slice(-n)
@@ -1402,9 +1424,9 @@ function buildMedicos(){
 function buildHubspotCharts(){
   const el = document.getElementById("hubspot-charts");
   el.innerHTML = `
-    <div class="panel"><div class="panel-title">Deals — ${PERIOD_LABELS[currentPeriod]}</div><div class="chart-box"><canvas id="chart-leads"></canvas></div></div>
-    <div class="panel"><div class="panel-title">Citas agendadas — ${PERIOD_LABELS[currentPeriod]}</div><div class="chart-box"><canvas id="chart-citas"></canvas></div></div>
-    <div class="panel"><div class="panel-title">Conversión % — ${PERIOD_LABELS[currentPeriod]}</div><div class="chart-box"><canvas id="chart-conv"></canvas></div></div>
+    <div class="panel"><div class="panel-title">Deals — ${PERIOD_LABELS[currentPeriod]}${hsScopeLabel()}</div><div class="chart-box"><canvas id="chart-leads"></canvas></div></div>
+    <div class="panel"><div class="panel-title">Citas agendadas — ${PERIOD_LABELS[currentPeriod]}${hsScopeLabel()}</div><div class="chart-box"><canvas id="chart-citas"></canvas></div></div>
+    <div class="panel"><div class="panel-title">Conversión % — ${PERIOD_LABELS[currentPeriod]}${hsScopeLabel()}</div><div class="chart-box"><canvas id="chart-conv"></canvas></div></div>
   `;
   function draw(id, metricKey, color, vf){
     destroyChart(id);
@@ -1443,7 +1465,8 @@ function buildHubspotDetail(){
     }
     const diff = valMes - v.total2026;
     const cls = diff>=0 ? "up":"down"; const arrow = diff>=0?"▲":"▼";
-    return `<tr><td>${code}</td><td class="num">${valMes}%</td><td class="num">${v.total2026}%</td><td class="num"><span class="${cls}">${arrow} ${diff>=0?'+':''}${diff} pp</span></td></tr>`;
+    const sel = (code === currentScope) ? ' style="font-weight:700;background:rgba(0,0,0,.05)"' : '';
+    return `<tr${sel}><td>${code}</td><td class="num">${valMes}%</td><td class="num">${v.total2026}%</td><td class="num"><span class="${cls}">${arrow} ${diff>=0?'+':''}${diff} pp</span></td></tr>`;
   }).join("");
   const cohRows = D.hubspot.cohortes.map(r=>`
     <tr><td>${r.mes}</td><td class="num">${fmt(r.leads,0)}</td><td class="num">${r.m0}%</td><td class="num">${r.m1}%</td><td class="num">${r.m2}%</td><td class="num">${r.sin}%</td></tr>
@@ -1455,7 +1478,7 @@ function buildHubspotDetail(){
       <div style="font-size:11px; color:var(--axis); margin-top:8px; font-style:italic;">Usa el selector de "mes vigente" (Ene-Dic), no el filtro de Periodo. Citas agendadas en ${mesLabelLargo} ÷ deals creados en ${mesLabelLargo}, por sede. Si es el mes en curso, es parcial: deals recientes aún no completan su ventana de conversión.</div>
     </div>
     <div class="panel">
-      <div class="panel-title">Cohortes de deals: ¿cuántos meses después agenda cita?</div>
+      <div class="panel-title">Cohortes de deals (compañía completa): ¿cuántos meses después agenda cita?</div>
       <table><thead><tr><th>Mes</th><th class="num">Deals</th><th class="num">+0</th><th class="num">+1</th><th class="num">+2 o más</th><th class="num">Sin cita</th></tr></thead><tbody>${cohRows}</tbody></table>
     </div>
   `;
@@ -1481,7 +1504,7 @@ function buildHeader(){
   document.getElementById("page-footnote").innerHTML =
     `*Ingresos, Atenciones y Pacientes Únicos: los tres se cuentan desde el mismo archivo de cargos (línea de cargo = atención, fecha = F. Cargo), igual que Consultas desde el sistema de agenda. La proyección de Atenciones a cierre de mes usa el ratio real/agenda ya validado por sede (CDMX 1.16×, GDL 1.19×, MTP 1.26×) aplicado sobre el real acumulado del mes; Semana/Día muestran solo lo real (sin proyección). ` +
     `vs LM/vs U3M (mes), vs trimestre/vs U3M (trimestre), vs semana/4 semanas y vs día/7 días son siempre "periodo actual ÷ periodo(s) de comparación − 1". ` +
-    `HubSpot: pipeline "Interesa2", deals por fecha de creación, citas por fecha de cita agendada; siempre a nivel compañía.`;
+    `HubSpot: pipeline "Interesa2", deals por fecha de creación, citas por fecha de cita agendada; filtrado por sucursal (CDMX, GDL, MTP). "Todas las sedes" incluye además deals sin sucursal asignada y de otras clínicas, por eso no es la suma de las tres sedes.`;
 }
 
 function renderAll(){
