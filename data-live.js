@@ -175,6 +175,12 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // Atenciones/Pacientes = Real, Consultas sin agenda pendiente (CONSULTAS_PROY queda inactivo porque corte != 26).
 // mesVigenteCerrado() ahora también devuelve true cuando el corte llega al último día del mes (CORTE_MES/CORTE_REAL_DIA),
 // así el mes sale cerrado aunque el calendario aún no haya cambiado de mes.
+// ACTUALIZADO 10-nov-2026: CORTE 9-nov-2026 (noviembre, 6.69 de 23.25 días hábiles equivalentes). Cargos de vRepro del 1 al 9 nov
+// (983 líneas, Real MTD $6,473,677: CDMX $5.48M, GDL $0.87M, MTP $0.13M). Proyección central de ingresos = Base!F por sede: Real de la sede + peso restante
+// x ritmo ponderado por recencia ($595K por día hábil equivalente repartido con la mezcla ago-oct). METEPEC: agenda de la Dra. bloqueada del
+// 16 al 20-nov (4.7 días ponderados sin ritmo) -> Base!F de MTP ya lo incluye; para Atenciones/Pacientes ver BLOQUEO_AGENDA en proyectarPorTendencia.
+// Central $16.21M (rango $15.46M–$17.23M); sin el bloqueo habría sido $16.33M. Cruce: curva mediana $22.3M, conservadora $19.5M (no se usan: el Real trae paquetes de subrogación del 9-nov).
+// CONSULTAS (primera vez), No Show, HubSpot y ranking de consultas siguen al corte 2-nov.
 // ACTUALIZADO 9-nov-2026: CORTE 8-nov-2026 (noviembre, 5.69 de 23.25 días hábiles equivalentes). Cargos de vRepro del 1 al 8 nov
 // (845 líneas, Real MTD $4,447,737: CDMX $3.60M, GDL $0.81M, MTP $0.04M; el archivo de Cargos del Drive llega al 31-oct).
 // Proyección central de ingresos = Base!F: Real + peso restante (17.56) x ritmo ponderado por recencia ($595K por día hábil equivalente)
@@ -194,7 +200,7 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // Atenciones = max(Real, promedio(Real/share al día 2, Real + peso restante x ritmo U3M)); Pacientes = Atenciones x ratio ago-oct.
 // Consultas: sin agenda leída para nov 3-30; proyección por RITMO (Real + peso restante x ritmo U3M por día hábil equivalente) = 299.
 // Oct queda cerrado (Real) en la columna de octubre del ranking; AJUSTE_ATEN_OCT_2026 solo aplica a octubre.
-let CORTE_REAL_DIA = 8;
+let CORTE_REAL_DIA = 9;
 const CORTE_HUBSPOT_DIA = 2; // HubSpot/mecanismos siguen al corte 2-nov (no refrescados al 8-nov)
 const CORTE_MES = 11; // mes (1-12) al que corresponde CORTE_REAL_DIA
 window.getCorteRealDia = () => CORTE_REAL_DIA;
@@ -1133,7 +1139,26 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
       return Math.max(actual, atencionesRef[sede].proy * RATIO_PACIENTES_POR_ATENCION[sede]);
     }
     const CURVA = esAtenciones ? SHARE_CURVE_ATENCIONES : SHARE_CURVE_PACIENTES;
-    const share = shareEnDia(CURVA, sede, CORTE_REAL_DIA);
+    // BLOQUEO DE AGENDA (10-nov-2026): Metepec tiene la agenda de la Dra. bloqueada del 16 al 20-nov-2026. Esos días no aportan
+    // ritmo: se quitan del calendario de la sede (restante y base de la curva de avance) solo para esa sede y mes.
+    const BLOQUEO_AGENDA = { MTP: { anio: 2026, mes: 11, dias: [16, 17, 18, 19, 20] } };
+    const _b = BLOQUEO_AGENDA[sede];
+    let pesoBloq = 0;
+    if (_b && _b.anio === anio && _b.mes === MES_VIGENTE) {
+      for (const dB of _b.dias) if (dB > CORTE_REAL_DIA) pesoBloq += pesoDiasMes(anio, MES_VIGENTE, dB) - pesoDiasMes(anio, MES_VIGENTE, dB - 1);
+    }
+    let share = shareEnDia(CURVA, sede, CORTE_REAL_DIA);
+    if (pesoBloq > 0) {
+      const Wm = pesoDiasMes(anio, MES_VIGENTE), Wc = pesoDiasMes(anio, MES_VIGENTE, CORTE_REAL_DIA);
+      const f = Wc / (Wm - pesoBloq); // fracción del mes disponible ya transcurrida
+      let prevF = 0, prevS = 0, hallado = false;
+      for (let dd = 1; dd <= diasEnMes(MES_VIGENTE); dd++) {
+        const fd = pesoDiasMes(anio, MES_VIGENTE, dd) / Wm, sd = shareEnDia(CURVA, sede, dd);
+        if (f <= fd) { share = prevS + (sd - prevS) * (f - prevF) / ((fd - prevF) || 1); hallado = true; break; }
+        prevF = fd; prevS = sd;
+      }
+      if (!hallado) share = 1;
+    }
     let proyBase = share > 0 ? actual / share : actual * (diasTot / diasTr);
     // MEZCLA PACING + RITMO RECIENTE (5-oct-2026, ver bloque "AJUSTE ATENCIONES"
     // arriba): promedio simple entre (a) Real / share mediano al día de corte y
@@ -1143,7 +1168,7 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
       const ult = meses.slice(-3);
       const tasas = ult.map((mes, i) => hist[hist.length - 3 + i] / pesoDiasMes(anio, mes));
       const tasa = tasas.reduce((a, b) => a + b, 0) / tasas.length;
-      const restante = pesoDiasMes(anio, MES_VIGENTE) - pesoDiasMes(anio, MES_VIGENTE, CORTE_REAL_DIA);
+      const restante = pesoDiasMes(anio, MES_VIGENTE) - pesoDiasMes(anio, MES_VIGENTE, CORTE_REAL_DIA) - pesoBloq;
       if (tasa > 0 && restante > 0) {
         proyBase = (proyBase + (actual + restante * tasa)) / 2;
       }
