@@ -429,6 +429,9 @@ function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
   const serviciosOut = { total: [] };
   const companyByServ = {};
   const lyVigRawByCode = {}; // pesos crudos (no millones) de Real LY por sede, para sumar en el total sin arrastrar redondeos
+  // (13-nov-2026) Acumuladores en pesos CRUDOS para el total de compañía: antes se sumaban los
+  // valores ya redondeados a 0.1M por sede (7.5+1.1+0.1 = $8.7M cuando el real exacto era $8.77M).
+  const rawHistTotal = [], rawRealTotal = { v: 0 }, rawProyTotal = { v: 0 };
 
   for (const sedeNombre of sedeNombres) {
     const code = SEDE_CODE[sedeNombre];
@@ -465,6 +468,8 @@ function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
     }
     serviciosOut[code] = servRows.sort((a, b) => b.valor - a.valor).slice(0, 7);
 
+    hist.forEach((v, i) => { rawHistTotal[i] = (rawHistTotal[i] || 0) + v; });
+    rawRealTotal.v += realVigente; rawProyTotal.v += proyVig;
     const lm = hist[hist.length - 1] || 0;
     const u3m = avgUlt3(hist);
     sedesOut[code] = {
@@ -484,19 +489,19 @@ function buildIngresosMetric(rows, anio = ANIO_VIGENTE) {
   }
 
   // ---- compañía (suma 3 sedes) ----
-  let histTotal = meses.map(() => 0), realVigenteTotal = 0, proyVigTotal = 0, lyVigTotalRaw = 0, tieneLYTotal = false;
+  let lyVigTotalRaw = 0, tieneLYTotal = false;
   for (const code of Object.keys(sedesOut)) {
-    sedesOut[code].ingresos.hist.forEach((v,i) => histTotal[i] += v);
-    realVigenteTotal += sedesOut[code].ingresos.actual;
-    proyVigTotal += sedesOut[code].ingresos.proy;
     if (lyVigRawByCode[code] != null) { lyVigTotalRaw += lyVigRawByCode[code]; tieneLYTotal = true; }
   }
+  const histTotal = meses.map((_, i) => (rawHistTotal[i] || 0) / 1e6);   // millones, sin redondear
+  const realVigenteTotal = rawRealTotal.v / 1e6;
+  const proyVigTotal = rawProyTotal.v / 1e6;
   const lmTotal = histTotal[histTotal.length - 1] || 0;
   const u3mTotal = avgUlt3(histTotal);
   const totalIngresos = {
     hist: histTotal.map(v => Math.round(v*10)/10),
-    actual: Math.round(realVigenteTotal*10)/10,
-    proy: Math.round(proyVigTotal*10)/10,
+    actual: Math.round(realVigenteTotal*100)/100,
+    proy: Math.round(proyVigTotal*100)/100,
     vsLM: pctOrNull(proyVigTotal, lmTotal),
     vsU3M: pctOrNull(proyVigTotal, u3mTotal),
     nomLM: Math.round((proyVigTotal-lmTotal)*10)/10,
@@ -1906,6 +1911,21 @@ function buildConceptosMensualMetric(rows) {
     out[sede][concepto].atenciones[idx] = num(atRaw);
     out[sede][concepto].uds[idx] = num(udsRaw);
   }
+  // (13-nov-2026) "Todas las sedes" = CDMX + GDL + MTP, SIEMPRE. En la hoja, las filas "total" de
+  // Ene-Oct quedaron 10-14% por debajo de la suma de sedes (faltaban conceptos) y había restos en
+  // diciembre; se reconstruye aquí para que el drill-down y el evolutivo por concepto cuadren con
+  // el ingreso real de cada mes.
+  const sedesBase = ["CDMX", "GDL", "MTP"].filter(c => out[c]);
+  if (sedesBase.length) {
+    const tot = {};
+    for (const c of sedesBase) {
+      for (const [concepto, v] of Object.entries(out[c])) {
+        const t = tot[concepto] = tot[concepto] || { labels: MESES_12, ingresos: Array(12).fill(0), atenciones: Array(12).fill(0), uds: Array(12).fill(0) };
+        for (let i = 0; i < 12; i++) { t.ingresos[i] += v.ingresos[i]; t.atenciones[i] += v.atenciones[i]; t.uds[i] += v.uds[i]; }
+      }
+    }
+    out.total = tot;
+  }
   return out;
 }
 
@@ -3018,7 +3038,7 @@ function cvRender() {
     <div class="panel" style="margin-top:16px;"><div class="panel-title">Derivaciones más frecuentes (consulta → médico tratante) — ${sedeTxt} · ${etqM}</div>
       <table><thead><tr><th>Consulta con</th><th>Trata</th><th class="num" style="text-align:right;">Pacientes</th></tr></thead><tbody>${matRows || '<tr><td colspan="3" style="color:var(--axis);">Sin derivaciones en este periodo</td></tr>'}</tbody></table>
       <div style="font-size:11px;color:var(--axis);margin-top:8px;font-style:italic;">Médico tratante = médico asignado en la historia durante las 3 semanas posteriores al inicio del tratamiento.</div></div>
-    <div style="font-size:11px;color:var(--axis);margin-top:8px;font-style:italic;">Primeros inicios = primer tratamiento de pacientes cuya consulta de entrada está en la base (≈1/3 de quienes inician tratamiento; el resto ya era paciente, tuvo consulta antes de 2025 o entró directo a paquete), no el total de inicios de la clínica. La historia previa a ene-2025 no está en la base. Consultas de entrada: agenda hasta el 31-oct y vRepro el 2-nov; inicios de tratamiento: cargos hasta el 2-nov (reconstrucción nov-2026: pueden variar ±1–3 pacientes por cohorte vs. cortes anteriores).${parcial ? " * Mes en curso, parcial al día " + D.dia + "." : ""}</div>`;
+    <div style="font-size:11px;color:var(--axis);margin-top:8px;font-style:italic;">Primeros inicios = primer tratamiento de pacientes cuya consulta de entrada está en la base (≈1/3 de quienes inician tratamiento; el resto ya era paciente, tuvo consulta antes de 2025 o entró directo a paquete), no el total de inicios de la clínica. La historia previa a ene-2025 no está en la base. Consultas de entrada (citas terminadas) e inicios de tratamiento (cargos): vRepro hasta el ${(() => { const p = String(D.corte).split("-"); return (+p[2]) + "-" + ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"][(+p[1]) - 1]; })()} (se reconstruye en cada corte: pueden variar ±1–3 pacientes por cohorte vs. cortes anteriores).${parcial ? " * Mes en curso, parcial al día " + D.dia + "." : ""}</div>`;
 
   // ---------- gráfica 1: barras simples
   let id = "chart-conv-curva";

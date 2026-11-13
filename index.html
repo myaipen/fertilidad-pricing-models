@@ -257,15 +257,34 @@ function miniPct(v, nomStr){
 // dado el periodo activo — mismo criterio que ya usaba buildSeries para
 // Ingresos/Atenciones/Pacientes/Consultas, reutilizado aquí para Subrogación
 // y para la nueva sección "Evolutivo por médico".
+// (13-nov-2026) Helpers genéricos: hist trae los meses CERRADOS del año hasta el mes
+// anterior al vigente (7 en agosto, 10 en noviembre...), así que "mes anterior" es
+// siempre el ÚLTIMO elemento y U3M el promedio de los últimos 3 — antes estaba
+// fijo en hist[6]/hist[4..6] (válido solo para agosto) y en noviembre comparaba
+// contra julio.
+function lmOf(hist){ return hist.length ? hist[hist.length-1] : null; }
+function u3Of(hist){ const a = hist.slice(Math.max(0, hist.length-3)); return a.length ? a.reduce((x,y)=>x+y,0)/a.length : null; }
+// Trimestres calendario: meses cerrados + valor del mes vigente (real o proyección).
+// Regresa [Q1,...,Qk] con Qk = trimestre en curso (puede ser parcial).
+function quarterSums(hist, cur){
+  const all = [...hist, cur], q = Math.ceil(all.length/3), Q = [];
+  for (let i=0;i<q;i++) Q.push(all.slice(i*3, i*3+3).reduce((a,b)=>a+b,0));
+  return Q;
+}
+function quarterCompare(hist, cur){
+  const Q = quarterSums(hist, cur), k = Q.length-1;
+  if (k < 1) return { Q, k, cur:Q[k], vsLQ:null, vsAvg:null, nomLQ:null, nomAvg:null };
+  const avgClosed = Q.slice(0,k).reduce((a,b)=>a+b,0)/k;
+  return { Q, k, cur:Q[k], vsLQ: pctOrNull(Q[k],Q[k-1]), vsAvg: pctOrNull(Q[k],avgClosed), nomLQ: Q[k]-Q[k-1], nomAvg: Q[k]-avgClosed };
+}
 function periodStats(hist, actual, period){
   if (period === "mes"){
-    const base = hist[6], baseU3M = (hist[4]+hist[5]+hist[6])/3;
-    return { current: actual, vsLM: pctOrNull(actual,base), vsU3M: pctOrNull(actual,baseU3M), nomLM: actual-base, nomU3M: actual-baseU3M };
+    const base = lmOf(hist), baseU3M = u3Of(hist);
+    return { current: actual, vsLM: pctOrNull(actual,base), vsU3M: pctOrNull(actual,baseU3M), nomLM: base==null?null:actual-base, nomU3M: baseU3M==null?null:actual-baseU3M };
   }
   if (period === "trimestre"){
-    const [e,f,m,a,my,j,jl] = hist;
-    const Q1=e+f+m, Q2=a+my+j, Q3=jl+actual;
-    return { current:Q3, vsLM: pctOrNull(Q3,Q2), vsU3M: pctOrNull(Q3,(Q1+Q2)/2), nomLM:Q3-Q2, nomU3M:Q3-(Q1+Q2)/2 };
+    const c = quarterCompare(hist, actual);
+    return { current:c.cur, vsLM: c.vsLQ, vsU3M: c.vsAvg, nomLM:c.nomLQ, nomU3M:c.nomAvg };
   }
   if (period === "anio"){
     return { current: hist.reduce((a,b)=>a+b,0)+actual, vsLM:null, vsU3M:null, nomLM:null, nomU3M:null };
@@ -394,22 +413,19 @@ function buildSeries(kind, scope, opts){
         values: [...s.hist, s.actual, s.proy],
         currentIndex: s.hist.length, proyIndex: s.hist.length+1,
         badge1: s.vsLM, badge2: s.vsU3M,
-        nomLM: s.proy - s.hist[6], nomU3M: s.proy - (s.hist[4]+s.hist[5]+s.hist[6])/3,
+        nomLM: s.proy - lmOf(s.hist), nomU3M: s.proy - u3Of(s.hist),
         vsLY: s.vsLY != null ? s.vsLY : null, nomLY: s.nomLY != null ? s.nomLY : null,
       };
     }
     if (currentPeriod === "trimestre"){
-      const [e,f,m,a,my,j,jl] = s.hist;
-      const Q1 = e+f+m, Q2 = a+my+j;
-      const Q3actual = jl + s.actual, Q3proy = jl + s.proy;
-      const vsLQ = (Q3proy/Q2 - 1) * 100;
-      const vsAvgClosed = (Q3proy/((Q1+Q2)/2) - 1) * 100;
+      const act = quarterSums(s.hist, s.actual), pro = quarterSums(s.hist, s.proy), cmp = quarterCompare(s.hist, s.proy), k = cmp.k;
+      const lbls = act.map((_,i)=>"Q"+(i+1));
       return {
-        labels: ["Q1", "Q2", "Q3", "Q3 proy."],
-        values: [Q1, Q2, Q3actual, Q3proy],
-        currentIndex: 2, proyIndex: 3,
-        badge1: vsLQ, badge2: vsAvgClosed,
-        nomLM: Q3proy - Q2, nomU3M: Q3proy - (Q1+Q2)/2,
+        labels: [...lbls, "Q"+(k+1)+" proy."],
+        values: [...act, pro[k]],
+        currentIndex: k, proyIndex: k+1,
+        badge1: cmp.vsLQ, badge2: cmp.vsAvg,
+        nomLM: cmp.nomLQ, nomU3M: cmp.nomAvg,
       };
     }
     if (currentPeriod === "anio"){
@@ -504,11 +520,10 @@ function buildHubspotSeries(metricKey){
       const v = metricKey === "leads" ? l : metricKey === "citas" ? c : (l ? Math.round(c/l*100) : 0);
       return { labels:["2026 (YTD)"], values:[v], currentIndex:0, proyIndex:null, badge1:null, badge2:null };
     }
-    const g = (arr,i)=> arr[i] || 0;
-    const bucket = (arr) => [g(arr,0)+g(arr,1)+g(arr,2), g(arr,3)+g(arr,4)+g(arr,5), g(arr,6)+g(arr,7)];
-    const lQ = bucket(leadsAll), cQ = bucket(citasAll);
+    // (13-nov-2026) trimestres calendario hasta el mes vigente (antes fijo Q1-Q3 de agosto)
+    const lQ = quarterSums(S.leadsHist, S.leadsAct), cQ = quarterSums(S.citasHist, S.citasAct);
     const values = metricKey === "leads" ? lQ : metricKey === "citas" ? cQ : lQ.map((l,i)=> l ? Math.round(cQ[i]/l*100) : 0);
-    return { labels:["Q1","Q2","Q3"], values, currentIndex:2, proyIndex:null, badge1:null, badge2:null };
+    return { labels: lQ.map((_,i)=>"Q"+(i+1)), values, currentIndex: lQ.length-1, proyIndex:null, badge1:null, badge2:null };
   }
   // semana / día
   const bySede = currentScope !== "total" && currentScope;
@@ -633,14 +648,13 @@ function buildConsultasSeries(scope){
   if (currentPeriod === "mes"){
     const proy = s.real+s.agendado;
     return { labels:[...D.meses_hist, D.mes_actual], values:[...s.hist, proy], currentIndex:s.hist.length, proyIndex:s.hist.length, badge1:s.vsLM, badge2:s.vsU3M,
-      nomLM: proy - s.hist[6], nomU3M: proy - (s.hist[4]+s.hist[5]+s.hist[6])/3,
+      nomLM: proy - lmOf(s.hist), nomU3M: proy - u3Of(s.hist),
       vsLY: s.vsLY != null ? s.vsLY : null, nomLY: s.nomLY != null ? s.nomLY : null };
   }
   if (currentPeriod === "trimestre"){
-    const [e,f,m,a,my,j,jl] = s.hist;
-    const Q1=e+f+m, Q2=a+my+j, Q3 = jl + s.real + s.agendado;
-    return { labels:["Q1","Q2","Q3"], values:[Q1,Q2,Q3], currentIndex:2, proyIndex:2, badge1:(Q3/Q2-1)*100, badge2:(Q3/((Q1+Q2)/2)-1)*100,
-      nomLM: Q3-Q2, nomU3M: Q3-(Q1+Q2)/2 };
+    const cmp = quarterCompare(s.hist, s.real + s.agendado), k = cmp.k;
+    return { labels:cmp.Q.map((_,i)=>"Q"+(i+1)), values:cmp.Q, currentIndex:k, proyIndex:k, badge1:cmp.vsLQ, badge2:cmp.vsAvg,
+      nomLM: cmp.nomLQ, nomU3M: cmp.nomAvg };
   }
   if (currentPeriod === "anio"){
     const ytd = sum(s.hist) + s.real + s.agendado;
@@ -763,10 +777,9 @@ function drawConsultasChart(){
     real = [...s.hist, s.real];
     agen = s.hist.map(()=>0).concat([s.agendado]);
   } else if (currentPeriod === "trimestre"){
-    const [e,f,m,a,my,j,jl] = s.hist;
-    labels = ["Q1","Q2","Q3"];
-    real = [e+f+m, a+my+j, jl+s.real];
-    agen = [0,0,s.agendado];
+    real = quarterSums(s.hist, s.real);
+    labels = real.map((_,i)=>"Q"+(i+1));
+    agen = real.map(()=>0); agen[agen.length-1] = s.agendado;
   } else {
     labels = ["2026 (YTD)"];
     real = [sum(s.hist)+s.real];
@@ -854,14 +867,13 @@ function buildConsultas(){
     badgesEl.innerHTML = `${pctBadge(series.badge1,b1,fmtSignedFn(series.nomLM,intFmt))} ${pctBadge(series.badge2,b2,fmtSignedFn(series.nomU3M,intFmt))}`;
   } else if (currentPeriod === "mes"){
     const proy = s.real+s.agendado;
-    const nomLM = proy - s.hist[6], nomU3M = proy - (s.hist[4]+s.hist[5]+s.hist[6])/3;
+    const nomLM = proy - lmOf(s.hist), nomU3M = proy - u3Of(s.hist);
     const ns = noShowSeries(currentScope);
     const nsBadge = ns ? noShowBadge(ns.actual, ns.deltaPts) : "";
     badgesEl.innerHTML = `${pctBadge(s.vsLM,"vs LM",fmtSignedFn(nomLM,intFmt))} ${pctBadge(s.vsU3M,"vs U3M",fmtSignedFn(nomU3M,intFmt))} ${nsBadge}`;
   } else if (currentPeriod === "trimestre"){
-    const [e,f,m,a,my,j,jl] = s.hist;
-    const Q1=e+f+m, Q2=a+my+j, Q3=jl+s.real+s.agendado;
-    badgesEl.innerHTML = `${pctBadge((Q3/Q2-1)*100,"vs trim. anterior",fmtSignedFn(Q3-Q2,intFmt))} ${pctBadge((Q3/((Q1+Q2)/2)-1)*100,"vs prom. trim. cerrados",fmtSignedFn(Q3-(Q1+Q2)/2,intFmt))}`;
+    const cq = quarterCompare(s.hist, s.real + s.agendado);
+    badgesEl.innerHTML = `${pctBadge(cq.vsLQ,"vs trim. anterior",fmtSignedFn(cq.nomLQ,intFmt))} ${pctBadge(cq.vsAvg,"vs prom. trim. cerrados",fmtSignedFn(cq.nomAvg,intFmt))}`;
   } else {
     badgesEl.innerHTML = "";
   }
@@ -1494,7 +1506,7 @@ function buildHeader(){
     `Vista: ${scopeLabel} · Periodo: ${PERIOD_LABELS[currentPeriod]} · Real acumulado al ${D.corte} + proyección donde aplica`;
   const notes = {
     anio: "Año: único año con datos completos (2026) — se muestra el acumulado a la fecha, sin proyección a cierre de año.",
-    trimestre: "Trimestre: Q1 y Q2 cerrados; Q3 = julio real + agosto (real + proyección a cierre de mes).",
+    trimestre: (() => { const k = Math.ceil((D.meses_hist.length + 1) / 3); return "Trimestre: Q1" + (k > 2 ? "–Q" + (k-1) : (k === 2 ? "" : "")) + (k > 1 ? " cerrados; " : "") + "Q" + k + " = meses cerrados del trimestre + " + D.mes_actual + " (real + proyección a cierre de mes)." + (((D.meses_hist.length % 3) + 1) < 3 ? " Q" + k + " es parcial (" + ((D.meses_hist.length % 3) + 1) + " de 3 meses): no es comparable con trimestres completos." : ""); })(),
     mes: "",
     semana: "Semana: últimas 13 semanas. Ingresos, Atenciones, Pacientes Únicos, Consultas y HubSpot con datos reales día a día.",
     dia: "Día: últimos 21 días. Ingresos, Atenciones, Pacientes Únicos, Consultas y HubSpot con datos reales día a día.",
