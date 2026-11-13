@@ -1978,11 +1978,28 @@ function computeConceptosView(conceptosMensual, conceptosHier) {
 */
 function buildConceptosPorMedicoMetric(rows) {
   const out = {};
-  for (const [sede, concepto, medico, ingresosRaw, atRaw, udsRaw] of rows) {
-    if (!concepto || !medico) continue;
+  /*
+    Corte 12-nov-2026: la hoja trae el acumulado Ene-Oct (filas sin marca) y,
+    al final, el bloque del mes en curso con la columna G = mes (11), por
+    Sede CDMX/GDL/MTP (sin filas "total"). Se suma todo por Sede+Concepto+Médico
+    y el "total" del bloque del mes se arma sumando las 3 sedes. Así el bloque
+    del mes se puede reescribir completo en cada corte sin tocar el histórico.
+  */
+  const add = (sede, concepto, medico, ing, at, uds) => {
     out[sede] = out[sede] || {};
     out[sede][concepto] = out[sede][concepto] || [];
-    out[sede][concepto].push({ medico, ingresos: num(ingresosRaw), atenciones: num(atRaw), uds: num(udsRaw) });
+    const lst = out[sede][concepto];
+    const ex = lst.find(x => x.medico === medico);
+    if (ex) { ex.ingresos += ing; ex.atenciones += at; ex.uds += uds; }
+    else lst.push({ medico, ingresos: ing, atenciones: at, uds });
+  };
+  for (const [sede, concepto, medico, ingresosRaw, atRaw, udsRaw, mesRaw] of rows) {
+    if (!concepto || !medico) continue;
+    const ing = num(ingresosRaw), at = num(atRaw), uds = num(udsRaw);
+    add(sede, concepto, medico, ing, at, uds);
+    if (mesRaw !== undefined && mesRaw !== null && mesRaw !== "" && sede !== "total") {
+      add("total", concepto, medico, ing, at, uds);
+    }
   }
   return out;
 }
