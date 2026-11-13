@@ -2399,6 +2399,46 @@ window.changeAnioVigente = changeAnioVigente;
 window.getAnioVigente = () => ANIO_VIGENTE;
 
 /**
+ * (13-nov-2026) Serie mensual REAL (12 meses) del año anterior a ANIO_VIGENTE, para la vista
+ * Año (2025 vs 2026). key: "ingresos" (MDP, suma de servicios de Base) | "atenciones" |
+ * "pacientes" | "consultas" (real). scope: "total" (CDMX+GDL+MTP) o código de sede.
+ * Devuelve null si la hoja no tiene filas de ese año (nunca se inventa).
+ */
+window.getPrevYearMonthly = function (scope, key) {
+  const prev = ANIO_VIGENTE - 1;
+  const out = new Array(12).fill(0);
+  let any = false;
+  const okSede = (code) => SEDES.includes(code) && (scope === "total" || !scope || code === scope);
+  if (key === "ingresos") {
+    const rows = _rawCache["Base"];
+    if (!rows) return null;
+    for (const r of rows) {
+      const [sede, serv, mesNumRaw, , realRaw, , , , anioRaw] = r;
+      if (!sede || !serv || serv === "Sin clasificar" || !(serv in SERVICIO_LABEL)) continue;
+      const fa = (anioRaw !== "" && anioRaw != null) ? Number(anioRaw) : ANIO_VIGENTE;
+      if (fa !== prev) continue;
+      const code = SEDE_CODE[sede];
+      if (!code || !okSede(code)) continue;
+      const m = Number(mesNumRaw);
+      if (m >= 1 && m <= 12) { out[m - 1] += num(realRaw) / 1e6; any = true; }
+    }
+  } else {
+    const hoja = { atenciones: "Atenciones", pacientes: "Pacientes", consultas: "Consultas" }[key];
+    const rows = hoja && _rawCache[hoja];
+    if (!rows) return null;
+    const idxAnio = key === "consultas" ? 5 : 4;
+    for (const r of rows) {
+      const sede = r[0];
+      if (!okSede(sede)) continue;
+      if (anioDeFila(r[idxAnio]) !== prev) continue;
+      const m = Number(r[1]);
+      if (m >= 1 && m <= 12) { out[m - 1] += num(r[3]); any = true; }
+    }
+  }
+  return any ? out : null;
+};
+
+/**
  * Las gráficas "Evolutivo con proyección" (buildSeries() en index.html)
  * arman sus labels con [...D.meses_hist, D.mes_actual, "Proy."] — esos dos
  * campos venían fijos en data.js (Ene-Jul / "Ago") y nunca se recalculaban

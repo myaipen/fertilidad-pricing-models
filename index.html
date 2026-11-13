@@ -220,6 +220,7 @@ function pctBadge(v, label, nomStr){
   const arrow = v >= 0 ? "▲" : "▼";
   const sign = v >= 0 ? "+" : "";
   const nomPart = nomStr ? ` (${nomStr})` : "";
+  if (Math.abs(v) > 999) return `<span class="neutral">${label}: n/a${nomPart}</span>`;
   return `<span class="${cls}">${arrow} ${label}: ${sign}${v.toFixed(0)}%${nomPart}</span>`;
 }
 // Badge para % de No show (consultas no asistidas / (realizadas + no
@@ -251,6 +252,9 @@ function miniPct(v, nomStr){
   const arrow = v >= 0 ? "▲" : "▼";
   const sign = v >= 0 ? "+" : "";
   const nomPart = nomStr ? ` <span style="font-weight:400;">(${nomStr})</span>` : "";
+  // (13-nov-2026) Variaciones > 999% vienen de una base casi cero (ej. Subrogación vs LY
+  // +27508%): no son interpretables, se muestra n/a con el nominal.
+  if (Math.abs(v) > 999) return `<span style="color:var(--axis);" title="Base de comparación casi cero: % no interpretable">n/a${nomPart}</span>`;
   return `<span class="${cls}">${arrow} ${sign}${v.toFixed(0)}%${nomPart}</span>`;
 }
 // vs LM / vs U3M / nominal genérico para una serie mensual {hist:[7], actual}
@@ -389,12 +393,34 @@ Chart.register(barValueLabels, hBarValueLabels, groupedValueLabels, stackedTotal
 // ---------------------------------------------------------------- período: config + series builders
 const PERIOD_LABELS = { anio:"Año", trimestre:"Trimestre", mes:"Mes", semana:"Semana", dia:"Día" };
 const PERIOD_BADGES = {
-  anio:      [null, null],
+  anio:      ["vs año ant. (mismo periodo)", null],
   trimestre: ["vs trim. anterior", "vs prom. trim. cerrados"],
   mes:       ["vs LM", "vs U3M"],
   semana:    ["vs semana anterior", "vs prom. 4 sem. cerradas"],
   dia:       ["vs día anterior", "vs prom. 7 días cerrados"],
 };
+
+// (13-nov-2026) Vista Año: muestra el año anterior (completo y mismo periodo Ene–mes vigente)
+// junto al año seleccionado (real YTD y proyectado), para comparar like-for-like.
+// prev = window.getPrevYearMonthly(scope,key) -> 12 valores del año anterior (null si no hay fuente).
+function buildAnioSeries(scope, key, hist, real, proy){
+  const A = (typeof window.getAnioVigente === "function") ? window.getAnioVigente() : 2026;
+  const mv = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 11;
+  const prev = (typeof window.getPrevYearMonthly === "function") ? window.getPrevYearMonthly(scope, key) : null;
+  const ytdReal = sum(hist) + real, ytdProy = sum(hist) + proy;
+  const periodoLbl = mv > 1 ? `Ene–${D.mes_actual}` : D.mes_actual;
+  if (!prev) return { labels:[`${A} (YTD)`], values:[ytdReal], currentIndex:0, proyIndex:null, badge1:null, badge2:null, nomLM:null, nomU3M:null };
+  const prevYtd = sum(prev.slice(0, mv)), prevFull = sum(prev);
+  if (!(prevYtd > 0)) return { labels:[`${A} (YTD)`], values:[ytdReal], currentIndex:0, proyIndex:null, badge1:null, badge2:null, nomLM:null, nomU3M:null };
+  const labels = [], values = [];
+  if (Math.abs(prevFull - prevYtd) > 1e-9){ labels.push(`${A-1} completo`); values.push(prevFull); }
+  labels.push(`${A-1} (${periodoLbl})`); values.push(prevYtd);
+  labels.push(`${A} (${periodoLbl}) real`); values.push(ytdReal);
+  const cur = labels.length - 1;
+  labels.push(`${A} (${periodoLbl}) proy.`); values.push(ytdProy);
+  return { labels, values, currentIndex: cur, proyIndex: cur+1,
+    badge1: pctOrNull(ytdProy, prevYtd), badge2: null, nomLM: ytdProy - prevYtd, nomU3M: null };
+}
 
 function monthlySeries(scope, key){
   const base = scope === "total" ? D.total : D.sedes[scope];
@@ -428,10 +454,7 @@ function buildSeries(kind, scope, opts){
         nomLM: cmp.nomLQ, nomU3M: cmp.nomAvg,
       };
     }
-    if (currentPeriod === "anio"){
-      const ytd = sum(s.hist) + s.actual;
-      return { labels: ["2026 (YTD)"], values: [ytd], currentIndex: 0, proyIndex: null, badge1: null, badge2: null, nomLM: null, nomU3M: null };
-    }
+    if (currentPeriod === "anio") return buildAnioSeries(scope, opts.key, s.hist, s.actual, s.proy);
     // semana / día -> fine-grain (only ingresos & pacientes have this; atenciones doesn't)
     return buildFineGrain(opts.fineKey, scope);
   }
@@ -454,6 +477,14 @@ function dayLabel(dateStr){
   return `${d.getDate()}/${d.getMonth()+1}`;
 }
 
+// (13-nov-2026) Vista Día = días del mes y año seleccionados (antes: últimos 21 días corridos,
+// que arrastraban días del mes anterior). Sin datos para ese mes/año -> vacío.
+function dayEntriesForMonth(obj){
+  const a = (typeof window.getAnioVigente === "function") ? window.getAnioVigente() : 2026;
+  const m = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 11;
+  const pre = a + "-" + String(m).padStart(2,"0") + "-";
+  return Object.entries(obj || {}).filter(([d]) => d.startsWith(pre)).sort((x,y)=> x[0] < y[0] ? -1 : 1);
+}
 function buildFineGrain(metricKey, scope){
   if (!metricKey) return null; // not available at this grain (e.g. atenciones)
   if (currentPeriod === "semana"){
@@ -470,7 +501,8 @@ function buildFineGrain(metricKey, scope){
   }
   if (currentPeriod === "dia"){
     const raw = P.daily[scope][metricKey]; // {date: value}
-    const entries = windowLastN(raw, 21);
+    const entries = dayEntriesForMonth(raw);
+    if (!entries.length) return null;
     const labels = entries.map(([d]) => dayLabel(d));
     const values = entries.map(([,v]) => v);
     const n = values.length;
@@ -518,7 +550,8 @@ function buildHubspotSeries(metricKey){
     if (currentPeriod === "anio"){
       const l = sum(leadsAll), c = sum(citasAll);
       const v = metricKey === "leads" ? l : metricKey === "citas" ? c : (l ? Math.round(c/l*100) : 0);
-      return { labels:["2026 (YTD)"], values:[v], currentIndex:0, proyIndex:null, badge1:null, badge2:null };
+      const A = (typeof window.getAnioVigente === "function") ? window.getAnioVigente() : 2026;
+      return { labels:[`${A} (YTD)`], values:[v], currentIndex:0, proyIndex:null, badge1:null, badge2:null };
     }
     // (13-nov-2026) trimestres calendario hasta el mes vigente (antes fijo Q1-Q3 de agosto)
     const lQ = quarterSums(S.leadsHist, S.leadsAct), cQ = quarterSums(S.citasHist, S.citasAct);
@@ -533,10 +566,10 @@ function buildHubspotSeries(metricKey){
   const n = currentPeriod === "semana" ? 13 : 21;
   const leadsEntries = currentPeriod === "semana"
     ? Object.entries(raw.leads).sort((a,b)=> a[0]<b[0]?-1:1).slice(-n)
-    : windowLastN(raw.leads, n);
+    : dayEntriesForMonth(raw.leads);
   const citasEntries = currentPeriod === "semana"
     ? Object.entries(raw.citas).sort((a,b)=> a[0]<b[0]?-1:1).slice(-n)
-    : windowLastN(raw.citas, n);
+    : dayEntriesForMonth(raw.citas);
   const labels = currentPeriod === "semana"
     ? leadsEntries.map(([wk,v])=>weekLabel(wk, v.start))
     : leadsEntries.map(([d])=>dayLabel(d));
@@ -637,7 +670,7 @@ function buildKPIs(){
         <div class="kpi-label">${it.label}</div>
         <div class="kpi-big">${it.prefix}${fmt(current, it.dec)}${it.suffix}${s.proyIndex!=null ? ' <span style="font-size:12px; font-weight:400; color:var(--axis);">proy.</span>' : ''}</div>
         ${showReal ? `<div class="kpi-sub">Real a la fecha: ${it.prefix}${fmt(real, it.dec)}${it.suffix}</div>` : ""}
-        ${b1label ? `<div class="kpi-badges">${pctBadge(s.badge1,b1label,fmtSignedFn(s.nomLM,v=>`${it.prefix}${fmt(v,it.dec)}${it.suffix}`))} ${pctBadge(s.badge2,b2label,fmtSignedFn(s.nomU3M,v=>`${it.prefix}${fmt(v,it.dec)}${it.suffix}`))}</div>` : ""}
+        ${b1label ? `<div class="kpi-badges">${pctBadge(s.badge1,b1label,fmtSignedFn(s.nomLM,v=>`${it.prefix}${fmt(v,it.dec)}${it.suffix}`))} ${b2label ? pctBadge(s.badge2,b2label,fmtSignedFn(s.nomU3M,v=>`${it.prefix}${fmt(v,it.dec)}${it.suffix}`)) : ""}</div>` : ""}
         ${hasLY ? `<div class="kpi-badges">${pctBadge(s.vsLY,"vs LY",fmtSignedFn(s.nomLY,v=>`${it.prefix}${fmt(v,it.dec)}${it.suffix}`))}</div>` : ""}
       </div>`;
   }).join("");
@@ -657,8 +690,8 @@ function buildConsultasSeries(scope){
       nomLM: cmp.nomLQ, nomU3M: cmp.nomAvg };
   }
   if (currentPeriod === "anio"){
-    const ytd = sum(s.hist) + s.real + s.agendado;
-    return { labels:["2026 (YTD)"], values:[ytd], currentIndex:0, proyIndex:0, badge1:null, badge2:null, nomLM:null, nomU3M:null };
+    const sr = buildAnioSeries(scope, "consultas", s.hist, s.real, s.real + s.agendado);
+    return sr;
   }
   return buildFineGrain("consultas_real", scope);
 }
@@ -759,7 +792,7 @@ function drawConsultasChart(){
   const ctx = document.getElementById("chart-consultas-stack").getContext("2d");
   const fine = (currentPeriod === "semana" || currentPeriod === "dia");
   if (fine){
-    const series = buildFineGrain("consultas_real", currentScope);
+    const series = buildFineGrain("consultas_real", currentScope) || { labels:[], values:[], currentIndex:-1 };
     const bg = series.labels.map((_,i)=> i===series.currentIndex ? COLORS.blue : COLORS.gray);
     charts["chart-consultas-stack"] = new Chart(ctx, {
       type:"bar",
@@ -781,9 +814,18 @@ function drawConsultasChart(){
     labels = real.map((_,i)=>"Q"+(i+1));
     agen = real.map(()=>0); agen[agen.length-1] = s.agendado;
   } else {
-    labels = ["2026 (YTD)"];
-    real = [sum(s.hist)+s.real];
-    agen = [s.agendado];
+    const sr = buildAnioSeries(currentScope, "consultas", s.hist, s.real, s.real + s.agendado);
+    if (sr.proyIndex != null){
+      // [año anterior (completo)?, año anterior mismo periodo, año real+agendado]
+      labels = sr.labels.slice(0, sr.currentIndex).concat([sr.labels[sr.currentIndex].replace(/ real$/, "")]);
+      real = sr.values.slice(0, sr.currentIndex).concat([sum(s.hist)+s.real]);
+      agen = real.map(()=>0); agen[agen.length-1] = s.agendado;
+    } else {
+      const A = (typeof window.getAnioVigente === "function") ? window.getAnioVigente() : 2026;
+      labels = [`${A} (YTD)`];
+      real = [sum(s.hist)+s.real];
+      agen = [s.agendado];
+    }
   }
   charts["chart-consultas-stack"] = new Chart(ctx, {
     type:"bar",
@@ -874,6 +916,9 @@ function buildConsultas(){
   } else if (currentPeriod === "trimestre"){
     const cq = quarterCompare(s.hist, s.real + s.agendado);
     badgesEl.innerHTML = `${pctBadge(cq.vsLQ,"vs trim. anterior",fmtSignedFn(cq.nomLQ,intFmt))} ${pctBadge(cq.vsAvg,"vs prom. trim. cerrados",fmtSignedFn(cq.nomAvg,intFmt))}`;
+  } else if (currentPeriod === "anio"){
+    const sr = buildAnioSeries(currentScope, "consultas", s.hist, s.real, s.real + s.agendado);
+    badgesEl.innerHTML = sr.proyIndex != null ? pctBadge(sr.badge1, "vs año ant. (mismo periodo)", fmtSignedFn(sr.nomLM, intFmt)) : "";
   } else {
     badgesEl.innerHTML = "";
   }
@@ -1388,10 +1433,35 @@ function buildMedicos(){
     el.innerHTML = `<div class="panel" style="grid-column:1 / -1;"><div class="unavailable" style="height:auto; padding:24px;">Evolutivo por médico no tiene datos día a día — cambia a Mes, Trimestre o Año.</div></div>`;
     return;
   }
+  // (13-nov-2026) El real del mes vigente es PARCIAL (a la fecha de corte), así que compararlo
+  // contra el mes/trimestre anterior COMPLETO daba caídas de -30% a -60% que no existen.
+  //  · Mes: el % compara el ritmo proyectado del mes (real ÷ avance del total de la sede) contra LM.
+  //  · Trimestre: si el trimestre en curso está incompleto (2 de 3 meses), no hay comparativo (—).
+  // La columna de ingresos/atenciones/pacientes sigue mostrando el real a la fecha.
+  const totBase = currentScope === "total" ? D.total : D.sedes[currentScope];
+  function avance(m){
+    const x = totBase && totBase[m];
+    return (x && x.proy > 0 && x.actual > 0 && x.actual < x.proy) ? x.actual / x.proy : 1;
+  }
+  const avIng = avance("ingresos"), avAt = avance("atenciones"), avPac = avance("pacientes");
+  const parcial = (avIng < 0.999 || avAt < 0.999 || avPac < 0.999);
+  const mesesVig = (D.meses_hist || []).length + 1;
+  const trimIncompleto = currentPeriod === "trimestre" && (mesesVig % 3 !== 0) && parcial;
+  function statsMedico(hist, actual, av){
+    const st = periodStats(hist, actual, currentPeriod);
+    if (!st) return st;
+    if (currentPeriod === "anio") return st;
+    if (trimIncompleto) return { ...st, vsLM:null, vsU3M:null, nomLM:null, nomU3M:null };
+    if (av < 0.999){
+      const pr = periodStats(hist, actual / av, currentPeriod);
+      return { ...st, vsLM: pr.vsLM, vsU3M: pr.vsU3M, nomLM: null, nomU3M: null };
+    }
+    return st;
+  }
   const rows = Object.entries(doctores).map(([nombre, d])=>{
-    const ing = periodStats(d.ingreso.hist, d.ingreso.actual, currentPeriod);
-    const at = periodStats(d.atenciones.hist, d.atenciones.actual, currentPeriod);
-    const pac = periodStats(d.pacientes.hist, d.pacientes.actual, currentPeriod);
+    const ing = statsMedico(d.ingreso.hist, d.ingreso.actual, avIng);
+    const at = statsMedico(d.atenciones.hist, d.atenciones.actual, avAt);
+    const pac = statsMedico(d.pacientes.hist, d.pacientes.actual, avPac);
     return { nombre, ing, at, pac };
   }).filter(r => (r.ing && r.ing.current > 0) || (r.at && r.at.current > 0));
   rows.sort((a,b)=> (b.ing?.current||0) - (a.ing?.current||0));
@@ -1417,14 +1487,19 @@ function buildMedicos(){
       <td class="num">${fmt(r.pac?.current||0,0)}</td><td class="num">${pacBadge}</td>
     </tr>`;
   }
+  const cmpLbl = currentPeriod === "trimestre" ? "vs trim. ant." : "vs LM";
   const bodyRows = top.map(r=>rowHtml(r,false)).join("") + (otros ? rowHtml(otros, true) : "");
   el.innerHTML = `
     <div class="panel" style="grid-column:1 / -1;">
-      <div class="panel-title">Top 20 médicos por ingresos — ${PERIOD_LABELS[currentPeriod]}${currentPeriod==='anio'?' (acumulado, sin vs LM)':' (badge = vs LM)'}</div>
-      <div class="section-sub" style="margin:0 0 8px;">${rows.length} médicos con actividad en este filtro · el resto se agrupa en "Otros"</div>
+      <div class="panel-title">Top 20 médicos por ingresos — ${PERIOD_LABELS[currentPeriod]}${currentPeriod==='anio'?' (acumulado, sin comparativo)':(currentPeriod==='trimestre'?' (badge = vs trimestre anterior)':' (badge = vs LM)')}</div>
+      <div class="section-sub" style="margin:0 0 8px;">${rows.length} médicos con actividad en este filtro · el resto se agrupa en "Otros"${
+        currentPeriod==='anio' ? '' :
+        trimIncompleto ? ` · Trimestre en curso incompleto (${mesesVig%3} de 3 meses, real a la fecha): sin comparativo contra el trimestre anterior` :
+        parcial ? ` · Mes en curso parcial (real al ${D.corte || "corte"}): el % compara el ritmo proyectado del mes contra el mes anterior cerrado` : ''
+      }</div>
       <div class="scroll-table">
         <table>
-          <thead><tr><th>Médico</th><th class="num">Ingresos</th><th class="num">vs LM</th><th class="num">Atenciones</th><th class="num">vs LM</th><th class="num">Pac. Únicos</th><th class="num">vs LM</th></tr></thead>
+          <thead><tr><th>Médico</th><th class="num">Ingresos</th><th class="num">${cmpLbl}</th><th class="num">Atenciones</th><th class="num">${cmpLbl}</th><th class="num">Pac. Únicos</th><th class="num">${cmpLbl}</th></tr></thead>
           <tbody>${bodyRows}</tbody>
         </table>
       </div>
@@ -1505,7 +1580,7 @@ function buildHeader(){
   document.getElementById("page-subtitle").textContent =
     `Vista: ${scopeLabel} · Periodo: ${PERIOD_LABELS[currentPeriod]} · Real acumulado al ${D.corte} + proyección donde aplica`;
   const notes = {
-    anio: "Año: único año con datos completos (2026) — se muestra el acumulado a la fecha, sin proyección a cierre de año.",
+    anio: "Año: compara el año anterior (completo y mismo periodo Ene–mes vigente) contra el año seleccionado (real a la fecha y proyección al cierre del mes vigente). HubSpot y médicos solo tienen datos 2026.",
     trimestre: (() => { const k = Math.ceil((D.meses_hist.length + 1) / 3); return "Trimestre: Q1" + (k > 2 ? "–Q" + (k-1) : (k === 2 ? "" : "")) + (k > 1 ? " cerrados; " : "") + "Q" + k + " = meses cerrados del trimestre + " + D.mes_actual + " (real + proyección a cierre de mes)." + (((D.meses_hist.length % 3) + 1) < 3 ? " Q" + k + " es parcial (" + ((D.meses_hist.length % 3) + 1) + " de 3 meses): no es comparable con trimestres completos." : ""); })(),
     mes: "",
     semana: "Semana: últimas 13 semanas. Ingresos, Atenciones, Pacientes Únicos, Consultas y HubSpot con datos reales día a día.",
