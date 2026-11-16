@@ -9,6 +9,7 @@
 <script src="data.js"></script>
 <script src="data_periods.js"></script>
 <script src="data-live.js"></script>
+<script src="data_iech.js"></script>
 <style>
   :root{
     --gray:#C9CDD3; --red:#B66863; --blue:#7096B0; --pink:#D46A93;
@@ -422,7 +423,40 @@ function buildAnioSeries(scope, key, hist, real, proy){
     badge1: pctOrNull(ytdProy, prevYtd), badge2: null, nomLM: ytdProy - prevYtd, nomU3M: null };
 }
 
+// ---------------------------------------------------------------- IECH (16-nov-2026)
+// IECH (Obispado, Monterrey) se suma a "Todas las sedes" SOLO en Ingresos (MDP, sin IVA).
+// Fuente: window.IECH (data_iech.js). Overlay NO mutante: data-live.js reasigna D.total.ingresos
+// y D.servicios en cada rebuild, así que aquí se combina al vuelo en la lectura.
+// Atenciones / Pacientes / Consultas / HubSpot / Subrogación / Médicos siguen siendo solo FI México.
+function iechOn(){
+  const I = window.IECH; if (!I || !window.PERIODS) return false;
+  const a = (typeof window.getAnioVigente === "function") ? window.getAnioVigente() : 2026;
+  const m = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 11;
+  return a === I.anio && m >= 1 && m <= I.mes_proy;
+}
+function iechMonth(m){ // m = 1..12 -> {real, proy} en MDP, o null si no hay dato
+  const I = window.IECH;
+  if (m >= 1 && m <= I.real_mensual.length) { const v = I.real_mensual[m-1]; return { real:v, proy:v }; }
+  if (m === I.mes_proy) return { real:I.mes_en_curso.real, proy:I.mes_en_curso.proy };
+  return null;
+}
+function iechObj(){ // objeto tipo monthlySeries {hist, actual, proy, vsLM, vsU3M}
+  const m = window.getMesVigente(), hist = [];
+  for (let i=1;i<m;i++) hist.push(iechMonth(i).proy);
+  const c = iechMonth(m);
+  return { hist, actual:c.real, proy:c.proy, vsLM:pctOrNull(c.proy, lmOf(hist)), vsU3M:pctOrNull(c.proy, u3Of(hist)), vsLY:null, nomLY:null };
+}
+function mergeIngresosIech(fi){
+  const m = window.getMesVigente(), c = iechMonth(m);
+  const hist = fi.hist.map((v,i)=> (v||0) + iechMonth(i+1).proy);
+  const actual = (fi.actual||0) + c.real, proy = (fi.proy||0) + c.proy;
+  return Object.assign({}, fi, { hist, actual, proy, vsLM:pctOrNull(proy, lmOf(hist)), vsU3M:pctOrNull(proy, u3Of(hist)), vsLY:null, nomLY:null, _iech:true });
+}
 function monthlySeries(scope, key){
+  if (key === "ingresos" && iechOn()){
+    if (scope === "IECH") return iechObj();
+    if (scope === "total") return mergeIngresosIech(D.total.ingresos);
+  }
   const base = scope === "total" ? D.total : D.sedes[scope];
   return base[key]; // {hist:[7], actual, proy, vsLM, vsU3M}
 }
@@ -432,7 +466,7 @@ function monthlySeries(scope, key){
 function buildSeries(kind, scope, opts){
   opts = opts || {};
   if (kind === "monthly"){
-    const s = monthlySeries(scope, opts.key);
+    const s = (currentPeriod === "anio" && scope === "total") ? D.total[opts.key] : monthlySeries(scope, opts.key);
     if (currentPeriod === "mes"){
       return {
         labels: [...D.meses_hist, D.mes_actual, "Proy."],
@@ -586,6 +620,7 @@ function buildHubspotSeries(metricKey){
 function buildTabs(){
   const sedeEl = document.getElementById("tabs-sede");
   const sedeOpts = [["total","Todas las sedes"], ["CDMX","CDMX"], ["GDL","Guadalajara"], ["MTP","Metepec"]];
+  if (iechOn()) sedeOpts.push(["IECH","IECH (Obispado)"]);
   sedeEl.innerHTML = sedeOpts.map(([key,label]) =>
     `<button class="tab-btn ${key===currentScope?'active':''}" data-scope="${key}">${label}</button>`
   ).join("");
@@ -646,11 +681,12 @@ function buildAnioVigenteSelect(){
 function buildKPIs(){
   const items = [
     { label:"Ingresos (MDP)", series: buildSeries("monthly", currentScope, {key:"ingresos", fineKey:"ingresos"}), dec:1, prefix:"$", suffix:"M" },
-    { label:"Atenciones", series: buildSeries("monthly", currentScope, {key:"atenciones", fineKey:"atenciones"}), dec:0, prefix:"", suffix:"" },
-    { label:"Pacientes Únicos", series: buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"}), dec:0, prefix:"", suffix:"" },
-    { label:"Consultas", series: buildConsultasSeries(currentScope), dec:0, prefix:"", suffix:"" },
+    { label:"Atenciones", series: currentScope==="IECH" ? null : buildSeries("monthly", currentScope, {key:"atenciones", fineKey:"atenciones"}), dec:0, prefix:"", suffix:"" },
+    { label:"Pacientes Únicos", series: currentScope==="IECH" ? null : buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"}), dec:0, prefix:"", suffix:"" },
+    { label:"Consultas", series: currentScope==="IECH" ? null : buildConsultasSeries(currentScope), dec:0, prefix:"", suffix:"" },
   ];
   const el = document.getElementById("kpi-row");
+  if (currentScope === "IECH") items.splice(1);
   el.innerHTML = items.map(it=>{
     const s = it.series;
     if (!s){
@@ -738,6 +774,7 @@ function drawEvolutivoBar(canvasId, series, valueFmt, metaValues){
 // igual que antes, sin línea de meta.
 function buildMetaValuesForIngresos(ing){
   if (currentPeriod !== "mes") return null;
+  if (iechOn() && (currentScope === "total" || currentScope === "IECH")) return null; // la meta es solo FI México
   const base = currentScope === "total" ? D.total : D.sedes[currentScope];
   const meta = base && base.meta;
   if (!meta) return null;
@@ -754,8 +791,9 @@ function buildMetaValuesForIngresos(ing){
 function buildEvolutivos(){
   const el = document.getElementById("evolutivos");
   const ing = buildSeries("monthly", currentScope, {key:"ingresos", fineKey:"ingresos"});
-  const at = buildSeries("monthly", currentScope, {key:"atenciones", fineKey:"atenciones"});
-  const pu = buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"});
+  const soloIng = currentScope === "IECH";
+  const at = soloIng ? null : buildSeries("monthly", currentScope, {key:"atenciones", fineKey:"atenciones"});
+  const pu = soloIng ? null : buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"});
   const [b1,b2] = PERIOD_BADGES[currentPeriod];
   const meta = ing ? buildMetaValuesForIngresos(ing) : null;
 
@@ -777,13 +815,13 @@ function buildEvolutivos(){
   const metaBadge = meta ? ` ${pctBadge(meta.vsMeta, "vs Meta")}` : "";
 
   el.innerHTML =
-    panel("chart-ingresos", "Ingresos — MDP", ing, v=>`$${fmt(v,1)}M`, metaBadge) +
-    panel("chart-atenciones", "Atenciones (#)", at, v=>`${fmt(v,0)}`) +
-    panel("chart-pacientes", "Pacientes Únicos (#)", pu, v=>`${fmt(v,0)}`);
+    panel("chart-ingresos", (iechOn() && currentScope==="total" && currentPeriod!=="anio" && currentPeriod!=="semana" && currentPeriod!=="dia") ? "Ingresos — MDP (FI México + IECH, sin IVA)" : (currentScope==="IECH" ? "Ingresos IECH — MDP (sin IVA)" : "Ingresos — MDP"), ing, v=>`$${fmt(v,1)}M`, metaBadge) +
+    (soloIng ? "" : panel("chart-atenciones", "Atenciones (#)", at, v=>`${fmt(v,0)}`) +
+    panel("chart-pacientes", "Pacientes Únicos (#)", pu, v=>`${fmt(v,0)}`));
 
   if (ing) drawEvolutivoBar("chart-ingresos", ing, v=>`$${fmt(v,1)}M`, meta ? meta.values : null);
-  if (at) drawEvolutivoBar("chart-atenciones", at, v=>`${fmt(v,0)}`);
-  if (pu) drawEvolutivoBar("chart-pacientes", pu, v=>`${fmt(v,0)}`);
+  if (!soloIng && at) drawEvolutivoBar("chart-atenciones", at, v=>`${fmt(v,0)}`);
+  if (!soloIng && pu) drawEvolutivoBar("chart-pacientes", pu, v=>`${fmt(v,0)}`);
 }
 
 // ---------------------------------------------------------------- consultas (stacked mes/trim/año, simple bar semana/día) + ranking
@@ -1045,6 +1083,43 @@ function buildHighlightsAuto(scope){
 const MES_NOMBRES_LARGOS = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 function nombreMesLargo(num){ return MES_NOMBRES_LARGOS[num-1] || ""; }
 
+function iechFilaMezcla(){
+  const o = iechObj(), nomF = v=>`$${fmt(v,1)}M`;
+  return { nombre:"IECH (Obispado) — sin desglose por servicio", valor:o.proy, vsLM:o.vsLM, vsU3M:o.vsU3M, vsLY:null,
+    nomLM: lmOf(o.hist)==null?null:o.proy-lmOf(o.hist), nomU3M: u3Of(o.hist)==null?null:o.proy-u3Of(o.hist), nomLY:null };
+}
+function iechBulletTotal(){
+  const I = window.IECH, m = window.getMesVigente(), tot = mergeIngresosIech(D.total.ingresos), fi = D.total.ingresos, io = iechObj();
+  const mes = nombreMesLargo(m), nov = (m === I.mes_proy);
+  const frags = [tot.vsLM==null?"":`${tot.vsLM>=0?'+':''}${tot.vsLM}% vs LM`, tot.vsU3M==null?"":`${tot.vsU3M>=0?'+':''}${tot.vsU3M}% vs U3M`].filter(Boolean);
+  return `Ingresos totales (FI México + IECH, sin IVA): $${fmt(tot.proy,1)}M ${nov?"proyectados a cierre de "+mes:"en "+mes}${frags.length?" ("+frags.join(", ")+")":""} — FI México $${fmt(fi.proy,1)}M + IECH $${fmt(io.proy,1)}M.` +
+    (nov ? ` IECH: real $${fmt(io.actual,2)}M al ${I.corte} + proyección a cierre (rango $${fmt(I.mes_en_curso.bajo,1)}M–$${fmt(I.mes_en_curso.alto,1)}M); atenciones, pacientes y consultas son solo FI México.` : ` Atenciones, pacientes y consultas son solo FI México.`);
+}
+function iechDeptRows(){
+  const I = window.IECH, m = window.getMesVigente(), nomF = v=>`$${fmt(v,1)}M`;
+  if (m === I.mes_proy){
+    return { sub:`Proyección a cierre de ${nombreMesLargo(m)}: real al ${I.corte} + resto del mes con la mezcla de departamentos del 11 al 31 de octubre · vs LM = contra octubre real`, rows: I.deptos.map(d=>({
+      nombre:d.nombre, valor:d.nov_proy, vsLM: pctOrNull(d.nov_proy, d.oct), nomLM: d.oct? d.nov_proy-d.oct : null, vsU3M:null, vsLY:null })) };
+  }
+  if (m === 10){
+    return { sub:"Octubre real (hoja BASE DE DATOS FACTURADO, sin IVA)", rows: I.deptos.map(d=>({ nombre:d.nombre, valor:d.oct, vsLM:null, vsU3M:null, vsLY:null })) };
+  }
+  return { sub:"Sin desglose por departamento para este mes (solo octubre y noviembre vienen de la hoja BASE DE DATOS FACTURADO)", rows:[] };
+}
+function iechHighlights(){
+  const I = window.IECH, m = window.getMesVigente(), o = iechObj(), out = [], mes = nombreMesLargo(m);
+  if (m === I.mes_proy){
+    const c = I.mes_en_curso, lm = lmOf(o.hist);
+    out.push(`Ingresos IECH (sin IVA): $${fmt(c.proy,2)}M proyectados a cierre de ${mes} (rango $${fmt(c.bajo,2)}M–$${fmt(c.alto,2)}M), ${o.vsLM>=0?'+':''}${o.vsLM}% vs octubre ($${fmt(lm,2)}M) y ${o.vsU3M>=0?'+':''}${o.vsU3M}% vs U3M.`);
+    out.push(`Real al ${I.corte}: $${fmt(c.real,2)}M (${fmt(c.dias_pond_transcurridos,2)} de ${fmt(c.dias_pond_total,1)} días ponderados; los mismos 10 días de octubre sumaron $${fmt(c.oct_mismos_dias,2)}M, ${fmt((c.real/c.oct_mismos_dias-1)*100,0)}%).`);
+    out.push(`Método: promedio de (A) curva de avance acumulado de octubre a igual avance ponderado ($${fmt(c.alto,2)}M) y (B) ritmo diario de noviembre mezclado con el ritmo ago–oct según avance del mes ($${fmt(c.bajo,2)}M). Días ponderados: L–V 1, sáb 0.55, dom 0, lunes 16-nov feriado 0.`);
+    out.push(`Embriología es ${fmt(I.deptos[0].nov_proy/c.proy*100,0)}% de la proyección ($${fmt(I.deptos[0].nov_proy,2)}M); el resto del mes se reparte con la mezcla del 11 al 31 de octubre.`);
+    out.push(`Ene–sep vienen del modelo FI_MTY_Evolutivo_2026 (ya incluye Genevity); octubre y noviembre de la hoja BASE DE DATOS FACTURADO (octubre difiere $0.02M del modelo).`);
+  } else {
+    out.push(`Ingresos IECH (sin IVA) en ${mes}: $${fmt(o.proy,2)}M${o.vsLM==null?"":` (${o.vsLM>=0?'+':''}${o.vsLM}% vs LM)`}.`);
+  }
+  return out;
+}
 function buildServicios(){
   const rows = D.servicios[currentScope];
   const mesVigenteNum = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 8;
@@ -1060,12 +1135,23 @@ function buildServicios(){
   // agosto".)
   const mesHighlightsCurados = (typeof window.MES_HIGHLIGHTS_CURADOS === "number") ? window.MES_HIGHLIGHTS_CURADOS : mesVigenteNum;
   const esMesCorteOriginal = mesVigenteNum === mesHighlightsCurados;
-  const hi = esMesCorteOriginal ? (D.highlights[currentScope] || []) : buildHighlightsAuto(currentScope);
+  let hi = esMesCorteOriginal ? (D.highlights[currentScope] || []) : buildHighlightsAuto(currentScope);
+  let rows2 = rows, tituloMezcla = "Ingresos por servicio (MDP)", subMezcla = "Clic en un servicio para ver el desglose por concepto (mes vigente)";
+  if (iechOn() && currentScope === "total"){
+    const f = iechFilaMezcla();
+    rows2 = [...rows, f];
+    hi = [iechBulletTotal(), ...hi.map((h,i)=> i===0 ? "FI México — " + h : h)];
+    subMezcla += " · IECH se muestra como una sola línea (sin desglose por servicio)";
+  } else if (currentScope === "IECH"){
+    const d = iechDeptRows();
+    rows2 = d.rows; hi = iechHighlights(); tituloMezcla = "Ingresos por departamento (MDP)";
+    subMezcla = d.sub;
+  }
   const highlightsNota = esMesCorteOriginal ? "" : `<div style="font-size:10.5px; color:var(--axis); margin-bottom:8px;">Highlights automáticos para ${nombreMesLargo(mesVigenteNum)} — los redactados a mano son del corte de ${nombreMesLargo(mesHighlightsCurados)}.</div>`;
   const mesLabelEl = document.getElementById("mezcla-mes-label");
   if (mesLabelEl) mesLabelEl.textContent = nombreMesLargo(mesVigenteNum);
   const el = document.getElementById("servicios-section");
-  const rowsHtml = rows.map(r=>{
+  const rowsHtml = rows2.map(r=>{
     const nomLMStr = fmtSignedFn(r.nomLM, v=>`$${fmt(v,1)}M`);
     const nomU3MStr = fmtSignedFn(r.nomU3M, v=>`$${fmt(v,1)}M`);
     const nomLYStr = fmtSignedFn(r.nomLY, v=>`$${fmt(v,1)}M`);
@@ -1079,9 +1165,9 @@ function buildServicios(){
   }).join("");
   el.innerHTML = `
     <div class="panel">
-      <div class="panel-title">Ingresos por servicio (MDP)</div>
-      <div class="section-sub" style="margin:0 0 8px;">Clic en un servicio para ver el desglose por concepto (mes vigente)</div>
-      <table><thead><tr><th>Servicio</th><th class="num">MDP</th><th class="num">vs LM</th><th class="num">vs U3M</th><th class="num">vs LY</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+      <div class="panel-title">${tituloMezcla}</div>
+      <div class="section-sub" style="margin:0 0 8px;">${subMezcla}</div>
+      <table><thead><tr><th>${currentScope==="IECH"?"Departamento":"Servicio"}</th><th class="num">MDP</th><th class="num">vs LM</th><th class="num">vs U3M</th><th class="num">vs LY</th></tr></thead><tbody>${rowsHtml}</tbody></table>
     </div>
     <div class="panel">
       <div class="panel-title">Highlights</div>
@@ -1576,9 +1662,9 @@ function buildHubspotDetail(){
 
 // ---------------------------------------------------------------- header / notes
 function buildHeader(){
-  const scopeLabel = currentScope === "total" ? D.total.nombre : D.sedes[currentScope].nombre;
+  const scopeLabel = currentScope === "total" ? (D.total.nombre + (iechOn() ? " (Ingresos: FI México + IECH)" : "")) : (currentScope === "IECH" ? window.IECH.nombre : D.sedes[currentScope].nombre);
   document.getElementById("page-subtitle").textContent =
-    `Vista: ${scopeLabel} · Periodo: ${PERIOD_LABELS[currentPeriod]} · Real acumulado al ${D.corte} + proyección donde aplica`;
+    `Vista: ${scopeLabel} · Periodo: ${PERIOD_LABELS[currentPeriod]} · Real acumulado al ${(currentScope==="IECH" && window.IECH) ? window.IECH.corte : D.corte} + proyección donde aplica`;
   const notes = {
     anio: "Año: compara el año anterior (completo y mismo periodo Ene–mes vigente) contra el año seleccionado (real a la fecha y proyección al cierre del mes vigente). HubSpot y médicos solo tienen datos 2026.",
     trimestre: (() => { const k = Math.ceil((D.meses_hist.length + 1) / 3); return "Trimestre: Q1" + (k > 2 ? "–Q" + (k-1) : (k === 2 ? "" : "")) + (k > 1 ? " cerrados; " : "") + "Q" + k + " = meses cerrados del trimestre + " + D.mes_actual + " (real + proyección a cierre de mes)." + (((D.meses_hist.length % 3) + 1) < 3 ? " Q" + k + " es parcial (" + ((D.meses_hist.length % 3) + 1) + " de 3 meses): no es comparable con trimestres completos." : ""); })(),
@@ -1586,28 +1672,56 @@ function buildHeader(){
     semana: "Semana: últimas 13 semanas. Ingresos, Atenciones, Pacientes Únicos, Consultas y HubSpot con datos reales día a día.",
     dia: "Día: últimos 21 días. Ingresos, Atenciones, Pacientes Únicos, Consultas y HubSpot con datos reales día a día.",
   };
-  document.getElementById("period-note").textContent = notes[currentPeriod];
+  let pn = notes[currentPeriod];
+  if (iechOn()){
+    const I = window.IECH;
+    if (currentScope === "total"){
+      pn = (pn ? pn + " " : "") + `Ingresos de "Todas las sedes" = FI México + IECH (sin IVA; IECH con corte al ${I.corte}` + (D.mes_actual && window.getMesVigente() === I.mes_proy ? ", proyectado a cierre" : "") + `)` +
+        (currentPeriod==="anio" ? ". En la vista Año el total de Ingresos es solo FI México (IECH no tiene base 2025)" : (currentPeriod==="semana"||currentPeriod==="dia" ? ". En Semana y Día el total de Ingresos es solo FI México; IECH tiene su propia pestaña" : "")) +
+        ". Atenciones, Pacientes y Consultas son solo FI México.";
+    } else if (currentScope === "IECH"){
+      pn = `IECH (Obispado, Monterrey): solo Ingresos (sin IVA), con corte al ${I.corte}. Sin Atenciones, Pacientes, Consultas, HubSpot, Subrogación ni Médicos.` + (currentPeriod==="anio" ? " Año: sin base 2025." : (currentPeriod==="semana" ? " Semana: solo semanas completas desde el 5-oct." : (currentPeriod==="dia" ? " Día: datos hasta el 10-nov." : "")));
+    }
+  }
+  else if (window.IECH && currentScope === "total") pn = (pn ? pn + " " : "") + "IECH no tiene datos para este mes/año: los Ingresos de \"Todas las sedes\" son solo FI México.";
+  document.getElementById("period-note").textContent = pn;
   document.getElementById("evolutivo-sub").textContent =
     (currentPeriod==="semana"||currentPeriod==="dia")
       ? "Histórico real (gris) · periodo más reciente (azul) — a este nivel de detalle no se proyecta un cierre."
       : "Histórico real (gris) · periodo actual real (azul) · proyección a cierre (rojo)";
-  document.getElementById("page-footnote").innerHTML =
+  document.getElementById("page-footnote").innerHTML = (iechOn() ? `IECH (Obispado, Monterrey): ingresos sin IVA de la hoja BASE DE DATOS FACTURADO (columna MONTO; se excluyen documentos cancelados/sustituidos sin monto). Ene–sep del modelo FI_MTY_Evolutivo_2026 (incluye Genevity). Se suma a "Todas las sedes" solo en Ingresos; no hay LY ni Meta para el total combinado. ` : "") +
     `*Ingresos, Atenciones y Pacientes Únicos: los tres se cuentan desde el mismo archivo de cargos (línea de cargo = atención, fecha = F. Cargo), igual que Consultas desde el sistema de agenda. La proyección de Atenciones a cierre de mes usa el ratio real/agenda ya validado por sede (CDMX 1.16×, GDL 1.19×, MTP 1.26×) aplicado sobre el real acumulado del mes; Semana/Día muestran solo lo real (sin proyección). ` +
     `vs LM/vs U3M (mes), vs trimestre/vs U3M (trimestre), vs semana/4 semanas y vs día/7 días son siempre "periodo actual ÷ periodo(s) de comparación − 1". ` +
     `HubSpot: pipeline "Interesa2", deals por fecha de creación, citas por fecha de cita agendada; filtrado por sucursal (CDMX, GDL, MTP). "Todas las sedes" incluye además deals sin sucursal asignada y de otras clínicas, por eso no es la suma de las tres sedes.`;
 }
 
 function renderAll(){
+  if (currentScope === "IECH" && !iechOn()) currentScope = "total";
   buildTabs();
   buildHeader();
   buildKPIs();
   buildEvolutivos();
-  buildConsultas();
+  const soloIng = currentScope === "IECH";
+  if (!soloIng) buildConsultas();
   buildServicios();
-  buildSubrogacion();
-  buildHubspotCharts();
-  buildHubspotDetail();
-  buildMedicos();
+  if (!soloIng){
+    buildSubrogacion();
+    buildHubspotCharts();
+    buildHubspotDetail();
+    buildMedicos();
+  }
+  applyScopeVisibility();
+}
+// En la pestaña IECH solo aplica Ingresos: oculta las secciones que son solo FI México.
+function applyScopeVisibility(){
+  const wrap = document.querySelector(".wrap"); if (!wrap) return;
+  const hideIt = currentScope === "IECH";
+  let flag = false;
+  Array.from(wrap.children).forEach(ch=>{
+    if (ch.classList.contains("section-title")) flag = hideIt && /HubSpot|Consultas|Subrogaci|médico/i.test(ch.textContent);
+    if (ch.id === "page-footnote" || ch.classList.contains("footer")) flag = false;
+    ch.style.display = flag ? "none" : "";
+  });
 }
 
 (async function start(){
