@@ -1309,8 +1309,28 @@ let conceptModalPath = [];   // ej. ["Laboratorio Clínico", "Hormonas, Sangre y
 let conceptModalServNombre = "";
 let conceptModalDetail = null;  // nombre del concepto hoja cuyo evolutivo mensual se está viendo, o null
 
+// (17-nov-2026) Mes en curso parcial: el real a la fecha se compara contra el mes anterior COMPLETO daba -30% a -60% en
+// todos los conceptos aunque el total proyectado subiera. Igual que en el evolutivo por médico, vs LM compara el ritmo
+// proyectado (real ÷ avance del mes) contra LM; las cifras en pesos siguen siendo real a la fecha.
+function conceptAvance(){
+  const base = currentScope === "total" ? D.total : D.sedes[currentScope], x = base && base.ingresos;
+  return (x && x.proy > 0 && x.actual > 0 && x.actual < x.proy) ? x.actual / x.proy : 1;
+}
+let conceptModalParcial = false;
 function openConceptModal(servKey, servNombre){
-  conceptModalRows = (D.conceptos && D.conceptos[currentScope] && D.conceptos[currentScope][servKey]) || [];
+  const av = conceptAvance();
+  conceptModalRows = ((D.conceptos && D.conceptos[currentScope] && D.conceptos[currentScope][servKey]) || []).map(r=> Object.assign({}, r, { _pace: r.ago/av }));
+  conceptModalParcial = av < 0.999;
+  // Farmacia consolidada (FI México + Medifert): se agrega la subclasificación «Medifert» (por ciudad, neto de intercompañía)
+  if (/^Farmacia \(FI/.test(servNombre) && currentScope === "total" && satOn("MEDI")){
+    const I = window.MEDI, c = I.mes_en_curso, avM = c.proy > 0 ? c.real / c.proy : 1;
+    conceptModalRows = conceptModalRows.map(r=> Object.assign({}, r, { subclas: "FI México (farmacia clínica)" }));
+    [["Monterrey","MTY"],["CDMX","CDMX"]].forEach(([nm,k])=>{
+      const m = I.ciudad[k];
+      conceptModalRows.push({ subclas:"Medifert", subclas2:null, concepto:"Medifert "+nm+" (neto de IECH y Clínica Valle)", ago:m.real*1e6, jul:m.oct*1e6, count:m.facturas, uds:0, _medi:true, _pace:(m.real*1e6)/(avM < 0.999 ? avM : 1) });
+    });
+    conceptModalParcial = conceptModalParcial || avM < 0.999;
+  }
   conceptModalServNombre = servNombre;
   conceptModalPath = [];
   conceptModalDetail = null;
@@ -1330,7 +1350,13 @@ function conceptRowsAtPath(path){
   );
 }
 
-function conceptVsLMHtml(ago, jul){
+function conceptVsLMHtml(ago, jul, pace){
+  // pace = ritmo proyectado del mes (real ÷ avance); si no viene, se usa el real tal cual.
+  if (pace != null && conceptModalParcial && ago){
+    const v = pctOrNull(pace, jul);
+    if (v === null) return '<span style="color:var(--axis); font-weight:700;">Nuevo</span>';
+    return miniPct(v, fmtSignedFn(pace - jul, x => `$${fmt(x,0)}`));
+  }
   // Un concepto con $0 este mes (aunque sí haya vendido en algún momento de
   // Ene-Ago, que es la única razón por la que aparece en esta tabla) se
   // marca como alerta explícita — no se confunde con "Nuevo" (que es cuando
@@ -1347,7 +1373,7 @@ function conceptVsLMHtml(ago, jul){
 // atención ya ES la unidad, así que la columna/():dato se oculta fuera de
 // Farmacia para no duplicar información.
 function conceptModalShowUds(){
-  return conceptModalServNombre === "Farmacia";
+  return /^Farmacia/.test(conceptModalServNombre);
 }
 
 function renderConceptModalLevel(){
@@ -1395,27 +1421,28 @@ function renderConceptModalLevel(){
   const nextField = conceptModalPath.length === 0 ? 'subclas' : (conceptModalPath.length === 1 ? 'subclas2' : null);
   const canGroup = nextField && rowsHere.some(r => r[nextField]);
 
-  const summaryHtml = `<div style="font-size:12px; color:var(--axis); margin-bottom:10px;">Total: <b style="color:var(--text);">$${fmt(totalAgo,0)}</b> · vs LM ${conceptVsLMHtml(totalAgo,totalJul)} · ${fmt(totalCount,0)} atenciones${showUds?` · ${fmt(totalUds,0)} UDS`:''} · ${rowsHere.length} concepto${rowsHere.length===1?'':'s'} en este nivel${canGroup?'':' · ordenado de mayor a menor'}</div>`;
+  const summaryHtml = `<div style="font-size:12px; color:var(--axis); margin-bottom:10px;">Total: <b style="color:var(--text);">$${fmt(totalAgo,0)}</b> · vs LM ${conceptVsLMHtml(totalAgo,totalJul,sum(rowsHere.map(r=>r._pace)))} · ${fmt(totalCount,0)} atenciones${(showUds && !rowsHere.every(r=>r._medi))?` · ${fmt(totalUds,0)} UDS${rowsHere.some(r=>r._medi)?' (solo FI)':''}`:''} · ${rowsHere.length} concepto${rowsHere.length===1?'':'s'} en este nivel${canGroup?'':' · ordenado de mayor a menor'}</div>` +
+    (conceptModalParcial ? `<div style="font-size:11px; color:var(--axis); margin-bottom:10px; font-style:italic;">Mes en curso parcial (real al ${D.corte || "corte"}): los pesos son real a la fecha y el % vs LM compara el ritmo proyectado del mes (real ÷ avance) contra el mes anterior cerrado${conceptModalRows.some(r=>r._medi) ? ". Medifert: neto de ventas a IECH y Clínica Valle; atenciones = facturas; sin UDS ni evolutivo por concepto" : ""}.</div>` : "");
 
   let tableHtml;
   if (canGroup){
     const groups = {};
     for (const r of rowsHere){
       const key = r[nextField] || "(sin subclasificar)";
-      groups[key] = groups[key] || { ago:0, jul:0, n:0, count:0, uds:0 };
-      groups[key].ago += r.ago; groups[key].jul += r.jul; groups[key].n += 1;
+      groups[key] = groups[key] || { ago:0, jul:0, n:0, count:0, uds:0, pace:0, medi:false };
+      groups[key].ago += r.ago; groups[key].jul += r.jul; groups[key].n += 1; groups[key].pace += r._pace; groups[key].medi = groups[key].medi || !!r._medi;
       groups[key].count += (r.count||0); groups[key].uds += (r.uds||0);
     }
     const groupEntries = Object.entries(groups).sort((a,b)=>b[1].ago-a[1].ago);
     const colLabel = nextField === 'subclas' ? 'Subclasificación' : 'Subclasificación 2';
     tableHtml = `<table><thead><tr><th>${colLabel}</th><th class="num">MDP</th><th class="num">Atenciones</th>${showUds?'<th class="num">UDS</th>':''}<th class="num">vs LM</th></tr></thead><tbody>` +
       groupEntries.map(([name,g])=>
-        `<tr class="servicio-row concept-group-row" data-key="${name}"><td>${name} <span class="drill-hint">▸ ${g.n} concepto${g.n===1?'':'s'}</span></td><td class="num">$${fmt(g.ago,0)}</td><td class="num">${fmt(g.count,0)}</td>${showUds?`<td class="num">${fmt(g.uds,0)}</td>`:''}<td class="num">${conceptVsLMHtml(g.ago,g.jul)}</td></tr>`
+        `<tr class="servicio-row concept-group-row" data-key="${name}"><td>${name} <span class="drill-hint">▸ ${g.n} concepto${g.n===1?'':'s'}</span></td><td class="num">$${fmt(g.ago,0)}</td><td class="num">${fmt(g.count,0)}</td>${showUds?`<td class="num">${g.medi?'—':fmt(g.uds,0)}</td>`:''}<td class="num">${conceptVsLMHtml(g.ago,g.jul,g.pace)}</td></tr>`
       ).join("") + `</tbody></table>`;
   } else {
     const sorted = [...rowsHere].sort((a,b)=>b.ago-a.ago);
     tableHtml = `<table><thead><tr><th>Concepto</th><th class="num">MDP (pesos)</th><th class="num">Atenciones</th>${showUds?'<th class="num">UDS</th>':''}<th class="num">vs LM</th></tr></thead><tbody>` +
-      sorted.map(r=>`<tr class="servicio-row concept-leaf-row${r.ago?'':' concept-zero-row'}" data-concepto="${r.concepto.replace(/"/g,'&quot;')}"><td>${r.concepto} <span class="drill-hint">▸ evolutivo</span></td><td class="num">$${fmt(r.ago,0)}</td><td class="num">${fmt(r.count||0,0)}</td>${showUds?`<td class="num">${fmt(r.uds||0,0)}</td>`:''}<td class="num">${conceptVsLMHtml(r.ago,r.jul)}</td></tr>`).join("") + `</tbody></table>`;
+      sorted.map(r=>`<tr class="${r._medi?'':'servicio-row concept-leaf-row'}${r.ago?'':' concept-zero-row'}" data-concepto="${r.concepto.replace(/"/g,'&quot;')}"><td>${r.concepto}${r._medi?'':' <span class="drill-hint">▸ evolutivo</span>'}</td><td class="num">$${fmt(r.ago,0)}</td><td class="num">${fmt(r.count||0,0)}</td>${showUds?`<td class="num">${r._medi?'—':fmt(r.uds||0,0)}</td>`:''}<td class="num">${conceptVsLMHtml(r.ago,r.jul,r._pace)}</td></tr>`).join("") + `</tbody></table>`;
   }
 
   body.innerHTML = backBtn + summaryHtml + tableHtml;
