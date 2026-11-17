@@ -11,6 +11,7 @@
 <script src="data-live.js"></script>
 <script src="data_iech.js"></script>
 <script src="data_cmv.js"></script>
+<script src="data_medifert.js"></script>
 <style>
   :root{
     --gray:#C9CDD3; --red:#B66863; --blue:#7096B0; --pink:#D46A93;
@@ -430,9 +431,9 @@ function buildAnioSeries(scope, key, hist, real, proy){
 // El resto (Consultas, HubSpot, Subrogación, Conversión, Médicos) es SOLO CDMX, GDL y Metepec.
 // Fuente: window.IECH (data_iech.js) y window.CMV (data_cmv.js). Overlay NO mutante: data-live.js reasigna D.total.ingresos
 // y D.servicios en cada rebuild, así que aquí se combina al vuelo en la lectura. Ingresos sin IVA, MDP.
-const SAT_KEYS = ["IECH","CMV"];
-function satObj(k){ return k === "IECH" ? window.IECH : (k === "CMV" ? window.CMV : null); }
-function satName(k){ return k === "IECH" ? "IECH" : "Clínica Valle"; }
+const SAT_KEYS = ["IECH","CMV","MEDI"];
+function satObj(k){ return k === "IECH" ? window.IECH : (k === "CMV" ? window.CMV : (k === "MEDI" ? window.MEDI : null)); }
+function satName(k){ return k === "IECH" ? "IECH" : (k === "MEDI" ? "Medifert" : "Clínica Valle"); }
 function satOn(k){
   const I = satObj(k); if (!I) return false;
   if (k === "IECH" && !window.PERIODS) return false;
@@ -442,7 +443,8 @@ function satOn(k){
 }
 function iechOn(){ return SAT_KEYS.some(satOn); }          // alguna entidad satélite activa
 function activeSats(){ return SAT_KEYS.filter(satOn); }
-function isSatScope(sc){ return sc === "IECH" || sc === "CMV"; }
+function isSatScope(sc){ return sc === "IECH" || sc === "CMV" || sc === "MEDI"; }
+function soloIngScope(sc){ return sc === "CMV" || sc === "MEDI"; }   // satélites que solo traen Ingresos
 function satMonth(k, m){ // m = 1..12 -> {real, proy} en MDP, o null si no hay dato
   const I = satObj(k);
   if (m >= 1 && m <= I.real_mensual.length) { const v = I.real_mensual[m-1]; return { real:v, proy:v }; }
@@ -490,6 +492,7 @@ function monthlySeries(scope, key){
   if (key === "ingresos" && iechOn()){
     if (scope === "IECH" && satOn("IECH")) return satObjIng("IECH");
     if (scope === "CMV" && satOn("CMV")) return satObjIng("CMV");
+    if (scope === "MEDI" && satOn("MEDI")) return satObjIng("MEDI");
     if (scope === "total") return mergeIngresosIech(D.total.ingresos);
   }
   if ((key === "atenciones" || key === "pacientes") && currentPeriod === "mes"){
@@ -508,7 +511,7 @@ function buildSeries(kind, scope, opts){
   if (kind === "monthly"){
     const _fine = currentPeriod === "semana" || currentPeriod === "dia";
     if (isSatScope(scope) && (opts.key === "atenciones" || opts.key === "pacientes")){
-      if (scope === "CMV" || !(currentPeriod === "mes" || _fine)) return null;   // CMV sin atenciones/pacientes; IECH solo oct-nov
+      if (soloIngScope(scope) || !(currentPeriod === "mes" || _fine)) return null;   // CMV sin atenciones/pacientes; IECH solo oct-nov
     }
     const s = (currentPeriod === "anio" && scope === "total") ? D.total[opts.key] : (_fine ? {hist:[],actual:0,proy:0} : monthlySeries(scope, opts.key));
     if (!s) return null;
@@ -669,6 +672,7 @@ function buildTabs(){
   const sedeOpts = [["total","Todas las sedes"], ["CDMX","CDMX"], ["GDL","Guadalajara"], ["MTP","Metepec"]];
   if (satOn("IECH")) sedeOpts.push(["IECH","IECH (Obispado)"]);
   if (satOn("CMV")) sedeOpts.push(["CMV","Clínica Valle"]);
+  if (satOn("MEDI")) sedeOpts.push(["MEDI","Medifert"]);
   sedeEl.innerHTML = sedeOpts.map(([key,label]) =>
     `<button class="tab-btn ${key===currentScope?'active':''}" data-scope="${key}">${label}</button>`
   ).join("");
@@ -734,7 +738,7 @@ function buildKPIs(){
     { label:(iechOn() && !isSatScope(currentScope)) ? "Consultas (solo CDMX, GDL, MTP)" : "Consultas", series: isSatScope(currentScope) ? null : buildConsultasSeries(currentScope), dec:0, prefix:"", suffix:"" },
   ];
   const el = document.getElementById("kpi-row");
-  if (currentScope === "CMV") items.splice(1);
+  if (soloIngScope(currentScope)) items.splice(1);
   else if (currentScope === "IECH") items.splice(3);
   el.innerHTML = items.map(it=>{
     const s = it.series;
@@ -840,7 +844,7 @@ function buildMetaValuesForIngresos(ing){
 function buildEvolutivos(){
   const el = document.getElementById("evolutivos");
   const ing = buildSeries("monthly", currentScope, {key:"ingresos", fineKey:"ingresos"});
-  const soloIng = currentScope === "CMV";
+  const soloIng = soloIngScope(currentScope);
   const at = soloIng ? null : buildSeries("monthly", currentScope, {key:"atenciones", fineKey:"atenciones"});
   const pu = soloIng ? null : buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"});
   const [b1,b2] = PERIOD_BADGES[currentPeriod];
@@ -866,7 +870,7 @@ function buildEvolutivos(){
   const _sats = activeSats().map(satName), _combo = iechOn() && currentScope==="total" && currentPeriod!=="anio" && currentPeriod!=="semana" && currentPeriod!=="dia";
   const _atCombo = satOn("IECH") && currentScope==="total" && currentPeriod==="mes";
   el.innerHTML =
-    panel("chart-ingresos", _combo ? ("Ingresos — MDP (FI México + " + _sats.join(" + ") + ", sin IVA)") : (currentScope==="IECH" ? "Ingresos IECH — MDP (sin IVA)" : (currentScope==="CMV" ? "Ingresos Clínica Valle — MDP (sin IVA)" : "Ingresos — MDP")), ing, v=>`$${fmt(v,1)}M`, metaBadge) +
+    panel("chart-ingresos", _combo ? ("Ingresos — MDP (FI México + " + _sats.join(" + ") + ", sin IVA)") : (currentScope==="IECH" ? "Ingresos IECH — MDP (sin IVA)" : (currentScope==="CMV" ? "Ingresos Clínica Valle — MDP (sin IVA)" : (currentScope==="MEDI" ? "Ingresos Medifert (Farmacia) — MDP (sin IVA, neto de ventas a IECH y Clínica Valle)" : "Ingresos — MDP"))), ing, v=>`$${fmt(v,1)}M`, metaBadge) +
     (soloIng ? "" : panel("chart-atenciones", currentScope==="IECH" ? "Atenciones IECH (#, líneas con monto)" : (_atCombo ? "Atenciones (#) — FI México + IECH (IECH desde oct-26)" : "Atenciones (#)"), at, v=>`${fmt(v,0)}`) +
     panel("chart-pacientes", currentScope==="IECH" ? "Pacientes Únicos IECH (#)" : (_atCombo ? "Pacientes Únicos (#) — FI México + IECH (IECH desde oct-26)" : "Pacientes Únicos (#)"), pu, v=>`${fmt(v,0)}`));
 
@@ -1152,8 +1156,8 @@ function satBulletTotal(){
 function satDeptRows(k){
   const I = satObj(k), m = window.getMesVigente();
   if (m === I.mes_proy){
-    const base = k === "IECH" ? "la mezcla de departamentos del 17 al 31 de octubre" : "la mezcla promedio de departamentos ago–oct";
-    return { sub:`Proyección a cierre de ${nombreMesLargo(m)}: real al ${I.corte} + resto del mes con ${base} · vs LM = contra octubre real`, rows: I.deptos.map(d=>({
+    const base = k === "IECH" ? "la mezcla de departamentos del 17 al 31 de octubre" : (k === "MEDI" ? "el ritmo por ciudad (50% noviembre / 50% ago–oct) repartido por almacén según su avance" : "la mezcla promedio de departamentos ago–oct");
+    return { sub:`Proyección a cierre de ${nombreMesLargo(m)}: real al ${I.corte} + resto del mes con ${base} · ${k === "MEDI" ? "sin comparativo por almacén (el histórico no trae este corte)" : "vs LM = contra octubre real"}`, rows: I.deptos.map(d=>({
       nombre:d.nombre, valor:d.nov_proy, vsLM: pctOrNull(d.nov_proy, d.oct), nomLM: d.oct? d.nov_proy-d.oct : null, vsU3M:null, vsLY:null })) };
   }
   if (m === 10){
@@ -1191,6 +1195,48 @@ function cmvHighlights(){
   }
   return out;
 }
+
+function _implied(r, which){ // valor del periodo de comparación implícito de una fila de servicio (MDP)
+  const nom = which==="LM" ? r.nomLM : r.nomU3M, pct = which==="LM" ? r.vsLM : r.vsU3M;
+  if (nom!=null) return r.valor - nom;
+  if (pct!=null && pct > -100) return r.valor/(1+pct/100);
+  return null;
+}
+// Medifert (Farmacia › Medifert): suma a Farmacia en la mezcla de servicios y aparece como subfila.
+function mediFarmaciaRows(rows){
+  if (!satOn("MEDI")) return rows;
+  const mo = satObjIng("MEDI"), lmM = lmOf(mo.hist), u3M = u3Of(mo.hist);
+  const sub = { nombre:"   ↳ Farmacia › Medifert", valor:mo.proy, vsLM:mo.vsLM, vsU3M:mo.vsU3M, vsLY:null,
+    nomLM: lmM==null?null:mo.proy-lmM, nomU3M: u3M==null?null:mo.proy-u3M, nomLY:null, _sub:true };
+  const i = rows.findIndex(r=>r.nombre==="Farmacia");
+  if (i < 0) return [...rows, sub];
+  const f = rows[i], lmF = _implied(f,"LM"), u3F = _implied(f,"U3M"), val = f.valor + mo.proy;
+  const lm = (lmF==null||lmM==null) ? null : lmF+lmM, u3 = (u3F==null||u3M==null) ? null : u3F+u3M;
+  const fc = Object.assign({}, f, { nombre:"Farmacia (FI México + Medifert)", valor:val,
+    vsLM: lm==null?null:pctOrNull(val,lm), nomLM: lm==null?null:val-lm, vsU3M: u3==null?null:pctOrNull(val,u3), nomU3M: u3==null?null:val-u3, vsLY:null, nomLY:null });
+  const main = rows.map((r,j)=> j===i ? fc : r).sort((a,b)=> b.valor - a.valor);
+  const k = main.indexOf(fc);
+  return [...main.slice(0,k+1), sub, ...main.slice(k+1)];
+}
+function medifertBulletTotal(){
+  const I = window.MEDI, c = I.mes_en_curso, m = window.getMesVigente(), o = satObjIng("MEDI");
+  if (m !== I.mes_proy) return `Farmacia › Medifert (sin IVA, neto de ventas a IECH y Clínica Valle) en ${nombreMesLargo(m)}: $${fmt(o.proy,2)}M.`;
+  return `Farmacia › Medifert: $${fmt(c.proy,2)}M proyectados a cierre de ${nombreMesLargo(m)} (real $${fmt(c.real,2)}M al ${I.corte}; rango $${fmt(c.bajo,1)}M–$${fmt(c.alto,1)}M), ${o.vsLM>=0?'+':''}${o.vsLM}% vs octubre. Es ${fmt(c.proy/(c.proy+(D.servicios.total.find(r=>r.nombre==="Farmacia")||{valor:0}).valor)*100,0)}% de Farmacia consolidada; sin IVA y neto de ventas a IECH y Clínica Valle para no duplicar ingreso.`;
+}
+function medifertHighlights(){
+  const I = window.MEDI, m = window.getMesVigente(), o = satObjIng("MEDI"), out = [], mes = nombreMesLargo(m);
+  if (m === I.mes_proy){
+    const c = I.mes_en_curso, lm = lmOf(o.hist), b = I.bruto, cd = I.ciudad;
+    out.push(`Ingresos Medifert (Farmacia › Medifert, sin IVA, neto de intercompañía): $${fmt(c.proy,2)}M proyectados a cierre de ${mes} (rango $${fmt(c.bajo,2)}M–$${fmt(c.alto,2)}M), ${o.vsLM>=0?'+':''}${o.vsLM}% vs octubre ($${fmt(lm,2)}M) y ${o.vsU3M>=0?'+':''}${o.vsU3M}% vs U3M.`);
+    out.push(`Real al ${I.corte}: $${fmt(c.real,2)}M neto = $${fmt(b.real,2)}M facturado sin IVA − $${fmt(b.a_iech,2)}M a IECH − $${fmt(b.a_valle,2)}M a Clínica Valle (${fmt(b.facturas,0)} facturas; el importe es "sin impuestos", el IVA va aparte y solo grava ~2% de la venta).`);
+    out.push(`Método: real + días ponderados restantes (${fmt(c.dias_pond_total-c.dias_pond_transcurridos,2)}) × ritmo diario (50% ritmo de noviembre $${fmt(c.ritmo_nov,3)}M/día · 50% ritmo ago–oct $${fmt(c.ritmo_ago_oct,3)}M/día). Días ponderados: L–V 1, sáb 0.5, dom 0.075, lunes 16-nov feriado 0.4. Rango: bajo = ritmo ago–oct, alto = ritmo de noviembre.`);
+    out.push(`CDMX lleva $${fmt(cd.CDMX.real,2)}M al corte (proy. $${fmt(cd.CDMX.proy,2)}M vs ~$1.9–2.6M mensual ago–oct) por compras grandes de Fertilidad 360 ($${fmt(I.f360,2)}M, 7 facturas); Monterrey lleva $${fmt(cd.MTY.real,2)}M (proy. $${fmt(cd.MTY.proy,2)}M, en línea con ago–oct). Si la compra de CDMX no se repite, el cierre se acerca al extremo bajo.`);
+    out.push(`Todo se reporta dentro de Farmacia, subclasificación «Medifert». Ene–oct vienen del modelo FI_MTY_Metas_2026_2027 (hoja Medifert CDMX-MTY, neto de ventas a IECH y Clínica Valle). La fuente de noviembre no trae pacientes ni atenciones: solo Ingresos.`);
+  } else {
+    out.push(`Ingresos Medifert (sin IVA, neto de intercompañía) en ${mes}: $${fmt(o.proy,2)}M${o.vsLM==null?"":` (${o.vsLM>=0?'+':''}${o.vsLM}% vs LM)`}.`);
+  }
+  return out;
+}
 function buildServicios(){
   const rows = D.servicios[currentScope];
   const mesVigenteNum = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 8;
@@ -1209,12 +1255,15 @@ function buildServicios(){
   let hi = esMesCorteOriginal ? (D.highlights[currentScope] || []) : buildHighlightsAuto(currentScope);
   let rows2 = rows, tituloMezcla = "Ingresos por servicio (MDP)", subMezcla = "Clic en un servicio para ver el desglose por concepto (mes vigente)";
   if (iechOn() && currentScope === "total"){
-    rows2 = [...rows, ...activeSats().map(satFilaMezcla)];
+    rows2 = [...mediFarmaciaRows(rows), ...activeSats().filter(k=>k!=="MEDI").map(satFilaMezcla)];
     hi = [satBulletTotal(), ...hi.map((h,i)=> i===0 ? "FI México — " + h : h)];
-    subMezcla += " · " + activeSats().map(satName).join(" y ") + " se muestran como una sola línea cada una (sin desglose por servicio)";
+    const _sinMedi = activeSats().filter(k=>k!=="MEDI").map(satName);
+    if (_sinMedi.length) subMezcla += " · " + _sinMedi.join(" y ") + " se muestran como una sola línea cada una (sin desglose por servicio)";
+    if (satOn("MEDI")) subMezcla += " · Medifert está dentro de Farmacia (subclasificación «Medifert»)";
+    if (satOn("MEDI")) hi = [hi[0], medifertBulletTotal(), ...hi.slice(1)];
   } else if (isSatScope(currentScope)){
     const d = satDeptRows(currentScope);
-    rows2 = d.rows; hi = currentScope === "IECH" ? iechHighlights() : cmvHighlights(); tituloMezcla = "Ingresos por departamento (MDP)";
+    rows2 = d.rows; hi = currentScope === "IECH" ? iechHighlights() : (currentScope === "MEDI" ? medifertHighlights() : cmvHighlights()); tituloMezcla = currentScope === "MEDI" ? "Farmacia › Medifert por almacén (MDP, neto)" : "Ingresos por departamento (MDP)";
     subMezcla = d.sub;
   }
   const highlightsNota = esMesCorteOriginal ? "" : `<div style="font-size:10.5px; color:var(--axis); margin-bottom:8px;">Highlights automáticos para ${nombreMesLargo(mesVigenteNum)} — los redactados a mano son del corte de ${nombreMesLargo(mesHighlightsCurados)}.</div>`;
@@ -1237,7 +1286,7 @@ function buildServicios(){
     <div class="panel">
       <div class="panel-title">${tituloMezcla}</div>
       <div class="section-sub" style="margin:0 0 8px;">${subMezcla}</div>
-      <table><thead><tr><th>${isSatScope(currentScope)?"Departamento":"Servicio"}</th><th class="num">MDP</th><th class="num">vs LM</th><th class="num">vs U3M</th><th class="num">vs LY</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+      <table><thead><tr><th>${currentScope==="MEDI"?"Almacén":(isSatScope(currentScope)?"Departamento":"Servicio")}</th><th class="num">MDP</th><th class="num">vs LM</th><th class="num">vs U3M</th><th class="num">vs LY</th></tr></thead><tbody>${rowsHtml}</tbody></table>
     </div>
     <div class="panel">
       <div class="panel-title">Highlights</div>
@@ -1748,23 +1797,25 @@ function buildHeader(){
     const proyTxt = (D.mes_actual && act.some(k=> window.getMesVigente() === satObj(k).mes_proy)) ? ", proyectado a cierre" : "";
     if (currentScope === "total"){
       pn = (pn ? pn + " " : "") + `"Todas las sedes" suma FI México + ${nmS} (sin IVA; ${cortes}${proyTxt}) únicamente en Ingresos${satOn("IECH") ? ", Atenciones, Pacientes" : ""}, Mezcla de servicios y Highlights` +
-        (currentPeriod==="anio" ? ". En la vista Año el total es solo FI México (IECH y Clínica Valle no tienen base 2025)" : (currentPeriod==="semana"||currentPeriod==="dia" ? ". En Semana y Día el total es solo FI México; IECH tiene su propia pestaña" : (currentPeriod==="trimestre" ? ". En Trimestre, Atenciones y Pacientes son solo FI México" : (satOn("IECH") ? ". IECH aporta Atenciones y Pacientes solo desde octubre-26: no hay base anterior, por eso no se muestra vs U3M y los meses previos son solo FI México" : "")))) +
+        (currentPeriod==="anio" ? ". En la vista Año el total es solo FI México (IECH, Clínica Valle y Medifert no tienen base 2025)" : (currentPeriod==="semana"||currentPeriod==="dia" ? ". En Semana y Día el total es solo FI México; IECH tiene su propia pestaña" : (currentPeriod==="trimestre" ? ". En Trimestre, Atenciones y Pacientes son solo FI México" : (satOn("IECH") ? ". IECH aporta Atenciones y Pacientes solo desde octubre-26: no hay base anterior, por eso no se muestra vs U3M y los meses previos son solo FI México" : "")))) +
         ". Consultas, HubSpot, Subrogación, Conversión y Médicos incluyen solo CDMX, GDL y Metepec.";
     } else if (currentScope === "IECH"){
       pn = `IECH (Obispado, Monterrey): Ingresos (sin IVA), Atenciones (líneas con monto) y Pacientes únicos (expedientes), con corte al ${satObj("IECH").corte}. Atenciones y Pacientes solo desde octubre-26. Sin Consultas, HubSpot, Subrogación ni Médicos.` + (currentPeriod==="anio" ? " Año: sin base 2025." : (currentPeriod==="semana" ? " Semana: solo semanas completas desde el 5-oct." : (currentPeriod==="dia" ? " Día: datos hasta el 16-nov." : "")));
+    } else if (currentScope === "MEDI"){
+      pn = `Medifert (Farmacia › Medifert): solo Ingresos (sin IVA, neto de ventas a IECH y Clínica Valle), con corte al ${satObj("MEDI").corte}. Sin Atenciones, Pacientes, Consultas, HubSpot, Subrogación ni Médicos, y sin serie diaria/semanal.` + (currentPeriod==="anio" ? " Año: sin base 2025." : "");
     } else if (currentScope === "CMV"){
       pn = `Clínica Valle (CMV): solo Ingresos (sin IVA, Neto − descuento del reporte de ventas por producto de CONTPAQ), con corte al ${satObj("CMV").corte}. Sin Atenciones, Pacientes, Consultas, HubSpot, Subrogación ni Médicos, y sin serie diaria/semanal (el reporte no trae fechas).` + (currentPeriod==="anio" ? " Año: sin base 2025." : "");
     } else {
-      pn = (pn ? pn + " " : "") + "Esta sede es parte de FI México (CDMX, GDL, Metepec); IECH y Clínica Valle no se incluyen en esta vista.";
+      pn = (pn ? pn + " " : "") + "Esta sede es parte de FI México (CDMX, GDL, Metepec); IECH, Clínica Valle y Medifert no se incluyen en esta vista.";
     }
   }
-  else if ((window.IECH || window.CMV) && currentScope === "total") pn = (pn ? pn + " " : "") + "IECH y Clínica Valle no tienen datos para este mes/año: los Ingresos de \"Todas las sedes\" son solo FI México.";
+  else if ((window.IECH || window.CMV || window.MEDI) && currentScope === "total") pn = (pn ? pn + " " : "") + "IECH, Clínica Valle y Medifert no tienen datos para este mes/año: los Ingresos de \"Todas las sedes\" son solo FI México.";
   document.getElementById("period-note").textContent = pn;
   document.getElementById("evolutivo-sub").textContent =
     (currentPeriod==="semana"||currentPeriod==="dia")
       ? "Histórico real (gris) · periodo más reciente (azul) — a este nivel de detalle no se proyecta un cierre."
       : "Histórico real (gris) · periodo actual real (azul) · proyección a cierre (rojo)";
-  document.getElementById("page-footnote").innerHTML = (iechOn() ? `IECH (Obispado, Monterrey): ingresos sin IVA de la hoja BASE DE DATOS FACTURADO (columna MONTO; departamentos de la columna SERVICIOS; se excluyen documentos cancelados/sustituidos sin monto); atenciones = líneas con monto y pacientes = expedientes únicos (solo oct–nov 2026). Ene–sep del modelo FI_MTY_Evolutivo_2026 (incluye Genevity). Clínica Valle: reporte CONTPAQ de ventas por producto (Neto − descuento, sin IVA; ene–oct del modelo FI_MTY_Evolutivo_2026), clasificado por departamento por nombre de producto. IECH y Clínica Valle se suman a "Todas las sedes" solo en Ingresos, Atenciones y Pacientes (IECH), Mezcla de servicios y Highlights; Consultas, HubSpot, Subrogación, Conversión y Médicos incluyen solo CDMX, GDL y Metepec. No hay LY ni Meta para el total combinado; no se descarta facturación cruzada IECH–Clínica Valle. ` : "") +
+  document.getElementById("page-footnote").innerHTML = (iechOn() ? `IECH (Obispado, Monterrey): ingresos sin IVA de la hoja BASE DE DATOS FACTURADO (columna MONTO; departamentos de la columna SERVICIOS; se excluyen documentos cancelados/sustituidos sin monto); atenciones = líneas con monto y pacientes = expedientes únicos (solo oct–nov 2026). Ene–sep del modelo FI_MTY_Evolutivo_2026 (incluye Genevity). Clínica Valle: reporte CONTPAQ de ventas por producto (Neto − descuento, sin IVA; ene–oct del modelo FI_MTY_Evolutivo_2026), clasificado por departamento por nombre de producto. IECH y Clínica Valle se suman a "Todas las sedes" solo en Ingresos, Atenciones y Pacientes (IECH), Mezcla de servicios y Highlights; Consultas, HubSpot, Subrogación, Conversión y Médicos incluyen solo CDMX, GDL y Metepec. No hay LY ni Meta para el total combinado; no se descarta facturación cruzada IECH–Clínica Valle. ` : "") + (satOn("MEDI") ? `Medifert (Farmacia › Medifert): factura sin impuestos del reporte VENTAS MEDIFERT (Monterrey y CDMX), neta de ventas a IECH y Clínica Valle (intercompañía; mismo criterio del modelo de metas), clasificada completa como Farmacia; ene–oct del modelo FI_MTY_Metas_2026_2027 (hoja Medifert CDMX-MTY). Se suma a "Todas las sedes" en Ingresos, Mezcla de servicios (dentro de Farmacia) y Highlights. ` : "") +
     `*Ingresos, Atenciones y Pacientes Únicos: los tres se cuentan desde el mismo archivo de cargos (línea de cargo = atención, fecha = F. Cargo), igual que Consultas desde el sistema de agenda. La proyección de Atenciones a cierre de mes usa el ratio real/agenda ya validado por sede (CDMX 1.16×, GDL 1.19×, MTP 1.26×) aplicado sobre el real acumulado del mes; Semana/Día muestran solo lo real (sin proyección). ` +
     `vs LM/vs U3M (mes), vs trimestre/vs U3M (trimestre), vs semana/4 semanas y vs día/7 días son siempre "periodo actual ÷ periodo(s) de comparación − 1". ` +
     `HubSpot: pipeline "Interesa2", deals por fecha de creación, citas por fecha de cita agendada; filtrado por sede: CDMX = Ciudad de México + Benito Juárez; GDL = Guadalajara + Puerto Vallarta + Sahuayo (todo se atiende y factura en GDL); MTP = Metepec. "Todas las sedes" incluye además deals sin sucursal asignada o pendientes, por eso no es la suma de las tres sedes.`;
@@ -1800,7 +1851,7 @@ function applyScopeVisibility(){
       let nt = ch.querySelector(".scope-note");
       if (fiOnly && iechOn() && !hideIt){
         if (!nt){ nt = document.createElement("span"); nt.className = "scope-note"; nt.style.cssText = "font-size:12px; font-weight:400; color:var(--axis); font-family:Calibri, sans-serif; margin-left:8px;"; ch.appendChild(nt); }
-        nt.textContent = " · Solo CDMX, GDL y Metepec (no incluye IECH ni Clínica Valle)";
+        nt.textContent = " · Solo CDMX, GDL y Metepec (no incluye IECH, Clínica Valle ni Medifert)";
       } else if (nt){ nt.remove(); }
     }
     if (ch.id === "page-footnote" || ch.classList.contains("footer")) flag = false;
