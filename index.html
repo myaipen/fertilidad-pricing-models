@@ -10,6 +10,7 @@
 <script src="data_periods.js"></script>
 <script src="data-live.js"></script>
 <script src="data_iech.js"></script>
+<script src="data_cmv.js"></script>
 <style>
   :root{
     --gray:#C9CDD3; --red:#B66863; --blue:#7096B0; --pink:#D46A93;
@@ -423,40 +424,79 @@ function buildAnioSeries(scope, key, hist, real, proy){
     badge1: pctOrNull(ytdProy, prevYtd), badge2: null, nomLM: ytdProy - prevYtd, nomU3M: null };
 }
 
-// ---------------------------------------------------------------- IECH (16-nov-2026)
-// IECH (Obispado, Monterrey) se suma a "Todas las sedes" SOLO en Ingresos (MDP, sin IVA).
-// Fuente: window.IECH (data_iech.js). Overlay NO mutante: data-live.js reasigna D.total.ingresos
-// y D.servicios en cada rebuild, así que aquí se combina al vuelo en la lectura.
-// Atenciones / Pacientes / Consultas / HubSpot / Subrogación / Médicos siguen siendo solo FI México.
-function iechOn(){
-  const I = window.IECH; if (!I || !window.PERIODS) return false;
+// ---------------------------------------------------------------- Entidades satélite: IECH y Clínica Valle (17-nov-2026)
+// IECH (Obispado, Monterrey) y Clínica Valle (CMV) se suman a "Todas las sedes" SOLO en: Ingresos (evolutivo de venta),
+// Atenciones y Pacientes (solo IECH, y solo desde oct-26; CMV no trae atenciones ni pacientes), Mezcla de servicios y Highlights.
+// El resto (Consultas, HubSpot, Subrogación, Conversión, Médicos) es SOLO CDMX, GDL y Metepec.
+// Fuente: window.IECH (data_iech.js) y window.CMV (data_cmv.js). Overlay NO mutante: data-live.js reasigna D.total.ingresos
+// y D.servicios en cada rebuild, así que aquí se combina al vuelo en la lectura. Ingresos sin IVA, MDP.
+const SAT_KEYS = ["IECH","CMV"];
+function satObj(k){ return k === "IECH" ? window.IECH : (k === "CMV" ? window.CMV : null); }
+function satName(k){ return k === "IECH" ? "IECH" : "Clínica Valle"; }
+function satOn(k){
+  const I = satObj(k); if (!I) return false;
+  if (k === "IECH" && !window.PERIODS) return false;
   const a = (typeof window.getAnioVigente === "function") ? window.getAnioVigente() : 2026;
   const m = (typeof window.getMesVigente === "function") ? window.getMesVigente() : 11;
   return a === I.anio && m >= 1 && m <= I.mes_proy;
 }
-function iechMonth(m){ // m = 1..12 -> {real, proy} en MDP, o null si no hay dato
-  const I = window.IECH;
+function iechOn(){ return SAT_KEYS.some(satOn); }          // alguna entidad satélite activa
+function activeSats(){ return SAT_KEYS.filter(satOn); }
+function isSatScope(sc){ return sc === "IECH" || sc === "CMV"; }
+function satMonth(k, m){ // m = 1..12 -> {real, proy} en MDP, o null si no hay dato
+  const I = satObj(k);
   if (m >= 1 && m <= I.real_mensual.length) { const v = I.real_mensual[m-1]; return { real:v, proy:v }; }
   if (m === I.mes_proy) return { real:I.mes_en_curso.real, proy:I.mes_en_curso.proy };
   return null;
 }
-function iechObj(){ // objeto tipo monthlySeries {hist, actual, proy, vsLM, vsU3M}
+function satObjIng(k){ // objeto tipo monthlySeries {hist, actual, proy, vsLM, vsU3M}
   const m = window.getMesVigente(), hist = [];
-  for (let i=1;i<m;i++) hist.push(iechMonth(i).proy);
-  const c = iechMonth(m);
+  for (let i=1;i<m;i++) hist.push((satMonth(k,i)||{proy:0}).proy);
+  const c = satMonth(k,m) || {real:0, proy:0};
   return { hist, actual:c.real, proy:c.proy, vsLM:pctOrNull(c.proy, lmOf(hist)), vsU3M:pctOrNull(c.proy, u3Of(hist)), vsLY:null, nomLY:null };
 }
+function iechObj(){ return satObjIng("IECH"); }
 function mergeIngresosIech(fi){
-  const m = window.getMesVigente(), c = iechMonth(m);
-  const hist = fi.hist.map((v,i)=> (v||0) + iechMonth(i+1).proy);
-  const actual = (fi.actual||0) + c.real, proy = (fi.proy||0) + c.proy;
+  const m = window.getMesVigente(), act = activeSats();
+  const hist = fi.hist.map((v,i)=> (v||0) + act.reduce((t,k)=> t + ((satMonth(k,i+1)||{proy:0}).proy), 0));
+  const actual = (fi.actual||0) + act.reduce((t,k)=> t + (satMonth(k,m)||{real:0}).real, 0);
+  const proy = (fi.proy||0) + act.reduce((t,k)=> t + (satMonth(k,m)||{proy:0}).proy, 0);
   return Object.assign({}, fi, { hist, actual, proy, vsLM:pctOrNull(proy, lmOf(hist)), vsU3M:pctOrNull(proy, u3Of(hist)), vsLY:null, nomLY:null, _iech:true });
+}
+// Atenciones / Pacientes de IECH (líneas con monto / expedientes únicos): solo octubre y noviembre 2026.
+function iechAtPacMonth(key, m){
+  const I = window.IECH; if (!I || !I.atpac) return null;
+  const f = key === "atenciones" ? "at" : "pac";
+  if (m === 10) { const v = I.atpac.oct[f]; return { real:v, proy:v }; }
+  if (m === I.mes_proy) return { real:I.atpac.nov["real_"+f], proy:I.atpac.nov["proy_"+f] };
+  return null;
+}
+function iechAtPacObj(key){ // serie propia de IECH: meses sin dato = null
+  const m = window.getMesVigente(), c = iechAtPacMonth(key, m); if (!c) return null;
+  const hist = []; for (let i=1;i<m;i++){ const x = iechAtPacMonth(key, i); hist.push(x ? x.proy : null); }
+  const lm = hist.length ? hist[hist.length-1] : null;
+  const u3 = hist.slice(-3), u3ok = u3.length === 3 && u3.every(v=>v!=null);
+  return { hist, actual:c.real, proy:c.proy, vsLM:pctOrNull(c.proy, lm), vsU3M: u3ok ? pctOrNull(c.proy, u3.reduce((x,y)=>x+y,0)/3) : null, vsLY:null, nomLY:null, _nullHist:true };
+}
+function mergeAtPacIech(fi, key){
+  const m = window.getMesVigente(), c = iechAtPacMonth(key, m); if (!c) return fi;
+  const per = i => iechAtPacMonth(key, i);
+  const hist = fi.hist.map((v,i)=> (v||0) + ((per(i+1)||{proy:0}).proy));
+  const actual = (fi.actual||0) + c.real, proy = (fi.proy||0) + c.proy;
+  const lmOk = m > 1 && per(m-1), u3ok = m > 3 && per(m-1) && per(m-2) && per(m-3);
+  return Object.assign({}, fi, { hist, actual, proy, vsLM: lmOk ? pctOrNull(proy, lmOf(hist)) : null, vsU3M: u3ok ? pctOrNull(proy, u3Of(hist)) : null, vsLY:null, nomLY:null, _iech:true });
 }
 function monthlySeries(scope, key){
   if (key === "ingresos" && iechOn()){
-    if (scope === "IECH") return iechObj();
+    if (scope === "IECH" && satOn("IECH")) return satObjIng("IECH");
+    if (scope === "CMV" && satOn("CMV")) return satObjIng("CMV");
     if (scope === "total") return mergeIngresosIech(D.total.ingresos);
   }
+  if ((key === "atenciones" || key === "pacientes") && currentPeriod === "mes"){
+    if (scope === "IECH") return satOn("IECH") ? iechAtPacObj(key) : null;
+    if (scope === "total" && satOn("IECH")) return mergeAtPacIech(D.total[key], key);
+  }
+  if (isSatScope(scope)) return null;   // Consultas y demás: no aplican a IECH / Clínica Valle
   const base = scope === "total" ? D.total : D.sedes[scope];
   return base[key]; // {hist:[7], actual, proy, vsLM, vsU3M}
 }
@@ -466,7 +506,12 @@ function monthlySeries(scope, key){
 function buildSeries(kind, scope, opts){
   opts = opts || {};
   if (kind === "monthly"){
-    const s = (currentPeriod === "anio" && scope === "total") ? D.total[opts.key] : monthlySeries(scope, opts.key);
+    const _fine = currentPeriod === "semana" || currentPeriod === "dia";
+    if (isSatScope(scope) && (opts.key === "atenciones" || opts.key === "pacientes")){
+      if (scope === "CMV" || !(currentPeriod === "mes" || _fine)) return null;   // CMV sin atenciones/pacientes; IECH solo oct-nov
+    }
+    const s = (currentPeriod === "anio" && scope === "total") ? D.total[opts.key] : (_fine ? {hist:[],actual:0,proy:0} : monthlySeries(scope, opts.key));
+    if (!s) return null;
     if (currentPeriod === "mes"){
       return {
         labels: [...D.meses_hist, D.mes_actual, "Proy."],
@@ -522,7 +567,8 @@ function dayEntriesForMonth(obj){
 function buildFineGrain(metricKey, scope){
   if (!metricKey) return null; // not available at this grain (e.g. atenciones)
   if (currentPeriod === "semana"){
-    const raw = P.weekly[scope][metricKey]; // {wk: {start, valor}}
+    const raw = (P.weekly[scope] || {})[metricKey]; // {wk: {start, valor}}
+    if (!raw) return null;
     const entries = Object.entries(raw).sort((a,b)=> a[0] < b[0] ? -1 : 1).slice(-13);
     const labels = entries.map(([wk,v]) => weekLabel(wk, v.start));
     const values = entries.map(([wk,v]) => v.valor);
@@ -534,7 +580,8 @@ function buildFineGrain(metricKey, scope){
     return { labels, values, currentIndex: n-1, proyIndex: null, badge1, badge2, nomLM, nomU3M };
   }
   if (currentPeriod === "dia"){
-    const raw = P.daily[scope][metricKey]; // {date: value}
+    const raw = (P.daily[scope] || {})[metricKey]; // {date: value}
+    if (!raw) return null;
     const entries = dayEntriesForMonth(raw);
     if (!entries.length) return null;
     const labels = entries.map(([d]) => dayLabel(d));
@@ -620,7 +667,8 @@ function buildHubspotSeries(metricKey){
 function buildTabs(){
   const sedeEl = document.getElementById("tabs-sede");
   const sedeOpts = [["total","Todas las sedes"], ["CDMX","CDMX"], ["GDL","Guadalajara"], ["MTP","Metepec"]];
-  if (iechOn()) sedeOpts.push(["IECH","IECH (Obispado)"]);
+  if (satOn("IECH")) sedeOpts.push(["IECH","IECH (Obispado)"]);
+  if (satOn("CMV")) sedeOpts.push(["CMV","Clínica Valle"]);
   sedeEl.innerHTML = sedeOpts.map(([key,label]) =>
     `<button class="tab-btn ${key===currentScope?'active':''}" data-scope="${key}">${label}</button>`
   ).join("");
@@ -681,12 +729,13 @@ function buildAnioVigenteSelect(){
 function buildKPIs(){
   const items = [
     { label:"Ingresos (MDP)", series: buildSeries("monthly", currentScope, {key:"ingresos", fineKey:"ingresos"}), dec:1, prefix:"$", suffix:"M" },
-    { label:"Atenciones", series: currentScope==="IECH" ? null : buildSeries("monthly", currentScope, {key:"atenciones", fineKey:"atenciones"}), dec:0, prefix:"", suffix:"" },
-    { label:"Pacientes Únicos", series: currentScope==="IECH" ? null : buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"}), dec:0, prefix:"", suffix:"" },
-    { label:"Consultas", series: currentScope==="IECH" ? null : buildConsultasSeries(currentScope), dec:0, prefix:"", suffix:"" },
+    { label:"Atenciones", series: buildSeries("monthly", currentScope, {key:"atenciones", fineKey:"atenciones"}), dec:0, prefix:"", suffix:"" },
+    { label:"Pacientes Únicos", series: buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"}), dec:0, prefix:"", suffix:"" },
+    { label:(iechOn() && !isSatScope(currentScope)) ? "Consultas (solo CDMX, GDL, MTP)" : "Consultas", series: isSatScope(currentScope) ? null : buildConsultasSeries(currentScope), dec:0, prefix:"", suffix:"" },
   ];
   const el = document.getElementById("kpi-row");
-  if (currentScope === "IECH") items.splice(1);
+  if (currentScope === "CMV") items.splice(1);
+  else if (currentScope === "IECH") items.splice(3);
   el.innerHTML = items.map(it=>{
     const s = it.series;
     if (!s){
@@ -774,7 +823,7 @@ function drawEvolutivoBar(canvasId, series, valueFmt, metaValues){
 // igual que antes, sin línea de meta.
 function buildMetaValuesForIngresos(ing){
   if (currentPeriod !== "mes") return null;
-  if (iechOn() && (currentScope === "total" || currentScope === "IECH")) return null; // la meta es solo FI México
+  if (iechOn() && (currentScope === "total" || isSatScope(currentScope))) return null; // la meta es solo FI México
   const base = currentScope === "total" ? D.total : D.sedes[currentScope];
   const meta = base && base.meta;
   if (!meta) return null;
@@ -791,7 +840,7 @@ function buildMetaValuesForIngresos(ing){
 function buildEvolutivos(){
   const el = document.getElementById("evolutivos");
   const ing = buildSeries("monthly", currentScope, {key:"ingresos", fineKey:"ingresos"});
-  const soloIng = currentScope === "IECH";
+  const soloIng = currentScope === "CMV";
   const at = soloIng ? null : buildSeries("monthly", currentScope, {key:"atenciones", fineKey:"atenciones"});
   const pu = soloIng ? null : buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"});
   const [b1,b2] = PERIOD_BADGES[currentPeriod];
@@ -814,10 +863,12 @@ function buildEvolutivos(){
 
   const metaBadge = meta ? ` ${pctBadge(meta.vsMeta, "vs Meta")}` : "";
 
+  const _sats = activeSats().map(satName), _combo = iechOn() && currentScope==="total" && currentPeriod!=="anio" && currentPeriod!=="semana" && currentPeriod!=="dia";
+  const _atCombo = satOn("IECH") && currentScope==="total" && currentPeriod==="mes";
   el.innerHTML =
-    panel("chart-ingresos", (iechOn() && currentScope==="total" && currentPeriod!=="anio" && currentPeriod!=="semana" && currentPeriod!=="dia") ? "Ingresos — MDP (FI México + IECH, sin IVA)" : (currentScope==="IECH" ? "Ingresos IECH — MDP (sin IVA)" : "Ingresos — MDP"), ing, v=>`$${fmt(v,1)}M`, metaBadge) +
-    (soloIng ? "" : panel("chart-atenciones", "Atenciones (#)", at, v=>`${fmt(v,0)}`) +
-    panel("chart-pacientes", "Pacientes Únicos (#)", pu, v=>`${fmt(v,0)}`));
+    panel("chart-ingresos", _combo ? ("Ingresos — MDP (FI México + " + _sats.join(" + ") + ", sin IVA)") : (currentScope==="IECH" ? "Ingresos IECH — MDP (sin IVA)" : (currentScope==="CMV" ? "Ingresos Clínica Valle — MDP (sin IVA)" : "Ingresos — MDP")), ing, v=>`$${fmt(v,1)}M`, metaBadge) +
+    (soloIng ? "" : panel("chart-atenciones", currentScope==="IECH" ? "Atenciones IECH (#, líneas con monto)" : (_atCombo ? "Atenciones (#) — FI México + IECH (IECH desde oct-26)" : "Atenciones (#)"), at, v=>`${fmt(v,0)}`) +
+    panel("chart-pacientes", currentScope==="IECH" ? "Pacientes Únicos IECH (#)" : (_atCombo ? "Pacientes Únicos (#) — FI México + IECH (IECH desde oct-26)" : "Pacientes Únicos (#)"), pu, v=>`${fmt(v,0)}`));
 
   if (ing) drawEvolutivoBar("chart-ingresos", ing, v=>`$${fmt(v,1)}M`, meta ? meta.values : null);
   if (!soloIng && at) drawEvolutivoBar("chart-atenciones", at, v=>`${fmt(v,0)}`);
@@ -1083,40 +1134,60 @@ function buildHighlightsAuto(scope){
 const MES_NOMBRES_LARGOS = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 function nombreMesLargo(num){ return MES_NOMBRES_LARGOS[num-1] || ""; }
 
-function iechFilaMezcla(){
-  const o = iechObj(), nomF = v=>`$${fmt(v,1)}M`;
-  return { nombre:"IECH (Obispado) — sin desglose por servicio", valor:o.proy, vsLM:o.vsLM, vsU3M:o.vsU3M, vsLY:null,
+function satFilaMezcla(k){
+  const o = satObjIng(k), nomF = v=>`$${fmt(v,1)}M`;
+  return { nombre: satName(k) + " — sin desglose por servicio", valor:o.proy, vsLM:o.vsLM, vsU3M:o.vsU3M, vsLY:null,
     nomLM: lmOf(o.hist)==null?null:o.proy-lmOf(o.hist), nomU3M: u3Of(o.hist)==null?null:o.proy-u3Of(o.hist), nomLY:null };
 }
-function iechBulletTotal(){
-  const I = window.IECH, m = window.getMesVigente(), tot = mergeIngresosIech(D.total.ingresos), fi = D.total.ingresos, io = iechObj();
-  const mes = nombreMesLargo(m), nov = (m === I.mes_proy);
+function satBulletTotal(){
+  const act = activeSats(), m = window.getMesVigente(), tot = mergeIngresosIech(D.total.ingresos), fi = D.total.ingresos;
+  const mes = nombreMesLargo(m), nov = act.some(k=> satObj(k).mes_proy === m);
   const frags = [tot.vsLM==null?"":`${tot.vsLM>=0?'+':''}${tot.vsLM}% vs LM`, tot.vsU3M==null?"":`${tot.vsU3M>=0?'+':''}${tot.vsU3M}% vs U3M`].filter(Boolean);
-  return `Ingresos totales (FI México + IECH, sin IVA): $${fmt(tot.proy,1)}M ${nov?"proyectados a cierre de "+mes:"en "+mes}${frags.length?" ("+frags.join(", ")+")":""} — FI México $${fmt(fi.proy,1)}M + IECH $${fmt(io.proy,1)}M.` +
-    (nov ? ` IECH: real $${fmt(io.actual,2)}M al ${I.corte} + proyección a cierre (rango $${fmt(I.mes_en_curso.bajo,1)}M–$${fmt(I.mes_en_curso.alto,1)}M); atenciones, pacientes y consultas son solo FI México.` : ` Atenciones, pacientes y consultas son solo FI México.`);
+  const parts = act.map(k=> `${satName(k)} $${fmt(satObjIng(k).proy,1)}M`);
+  let t = `Ingresos totales (FI México + ${act.map(satName).join(" + ")}, sin IVA): $${fmt(tot.proy,1)}M ${nov?"proyectados a cierre de "+mes:"en "+mes}${frags.length?" ("+frags.join(", ")+")":""} — FI México $${fmt(fi.proy,1)}M + ${parts.join(" + ")}.`;
+  if (nov) t += " " + act.map(k=>{ const I = satObj(k), c = I.mes_en_curso; return `${satName(k)}: real $${fmt(c.real,2)}M al ${I.corte}, proyección a cierre $${fmt(c.proy,2)}M (rango $${fmt(c.bajo,1)}M–$${fmt(c.alto,1)}M).`; }).join(" ");
+  const ap = satOn("IECH") ? ` Atenciones y Pacientes incluyen IECH solo desde octubre-26 (Clínica Valle no reporta atenciones ni pacientes).` : "";
+  return t + ap + ` Consultas, HubSpot, Subrogación, Conversión y Médicos son solo CDMX, GDL y Metepec.`;
 }
-function iechDeptRows(){
-  const I = window.IECH, m = window.getMesVigente(), nomF = v=>`$${fmt(v,1)}M`;
+function satDeptRows(k){
+  const I = satObj(k), m = window.getMesVigente();
   if (m === I.mes_proy){
-    return { sub:`Proyección a cierre de ${nombreMesLargo(m)}: real al ${I.corte} + resto del mes con la mezcla de departamentos del 11 al 31 de octubre · vs LM = contra octubre real`, rows: I.deptos.map(d=>({
+    const base = k === "IECH" ? "la mezcla de departamentos del 17 al 31 de octubre" : "la mezcla promedio de departamentos ago–oct";
+    return { sub:`Proyección a cierre de ${nombreMesLargo(m)}: real al ${I.corte} + resto del mes con ${base} · vs LM = contra octubre real`, rows: I.deptos.map(d=>({
       nombre:d.nombre, valor:d.nov_proy, vsLM: pctOrNull(d.nov_proy, d.oct), nomLM: d.oct? d.nov_proy-d.oct : null, vsU3M:null, vsLY:null })) };
   }
   if (m === 10){
-    return { sub:"Octubre real (hoja BASE DE DATOS FACTURADO, sin IVA)", rows: I.deptos.map(d=>({ nombre:d.nombre, valor:d.oct, vsLM:null, vsU3M:null, vsLY:null })) };
+    return { sub:"Octubre real (sin IVA)", rows: I.deptos.map(d=>({ nombre:d.nombre, valor:d.oct, vsLM:null, vsU3M:null, vsLY:null })) };
   }
-  return { sub:"Sin desglose por departamento para este mes (solo octubre y noviembre vienen de la hoja BASE DE DATOS FACTURADO)", rows:[] };
+  return { sub:"Sin desglose por departamento para este mes (solo octubre y noviembre traen departamentos)", rows:[] };
 }
 function iechHighlights(){
-  const I = window.IECH, m = window.getMesVigente(), o = iechObj(), out = [], mes = nombreMesLargo(m);
+  const I = window.IECH, m = window.getMesVigente(), o = satObjIng("IECH"), out = [], mes = nombreMesLargo(m);
   if (m === I.mes_proy){
-    const c = I.mes_en_curso, lm = lmOf(o.hist);
+    const c = I.mes_en_curso, lm = lmOf(o.hist), ap = I.atpac;
     out.push(`Ingresos IECH (sin IVA): $${fmt(c.proy,2)}M proyectados a cierre de ${mes} (rango $${fmt(c.bajo,2)}M–$${fmt(c.alto,2)}M), ${o.vsLM>=0?'+':''}${o.vsLM}% vs octubre ($${fmt(lm,2)}M) y ${o.vsU3M>=0?'+':''}${o.vsU3M}% vs U3M.`);
-    out.push(`Real al ${I.corte}: $${fmt(c.real,2)}M (${fmt(c.dias_pond_transcurridos,2)} de ${fmt(c.dias_pond_total,1)} días ponderados; los mismos 10 días de octubre sumaron $${fmt(c.oct_mismos_dias,2)}M, ${fmt((c.real/c.oct_mismos_dias-1)*100,0)}%).`);
-    out.push(`Método: promedio de (A) curva de avance acumulado de octubre a igual avance ponderado ($${fmt(c.alto,2)}M) y (B) ritmo diario de noviembre mezclado con el ritmo ago–oct según avance del mes ($${fmt(c.bajo,2)}M). Días ponderados: L–V 1, sáb 0.55, dom 0, lunes 16-nov feriado 0.`);
-    out.push(`Embriología es ${fmt(I.deptos[0].nov_proy/c.proy*100,0)}% de la proyección ($${fmt(I.deptos[0].nov_proy,2)}M); el resto del mes se reparte con la mezcla del 11 al 31 de octubre.`);
-    out.push(`Ene–sep vienen del modelo FI_MTY_Evolutivo_2026 (ya incluye Genevity); octubre y noviembre de la hoja BASE DE DATOS FACTURADO (octubre difiere $0.02M del modelo).`);
+    out.push(`Real al ${I.corte}: $${fmt(c.real,2)}M (${fmt(c.dias_pond_transcurridos,2)} de ${fmt(c.dias_pond_total,1)} días ponderados; los mismos 16 días de octubre sumaron $${fmt(c.oct_mismos_dias,2)}M, ${fmt((c.real/c.oct_mismos_dias-1)*100,0)}% más en noviembre).`);
+    out.push(`Método: promedio de (A) curva de avance acumulado de octubre a igual avance ponderado ($${fmt(c.alto,2)}M) y (B) ritmo diario de noviembre mezclado con el ritmo ago–oct según avance del mes ($${fmt(c.bajo,2)}M). Días ponderados: L–V 1, sáb 0.55, dom 0, lunes 16-nov feriado 0. El rango es amplio porque octubre cargó su avance al final del mes.`);
+    out.push(`Embriología es ${fmt(I.deptos[0].nov_proy/c.proy*100,0)}% de la proyección ($${fmt(I.deptos[0].nov_proy,2)}M); el resto del mes se reparte con la mezcla del 17 al 31 de octubre.`);
+    out.push(`Atenciones (líneas con monto): ${fmt(ap.nov.real_at,0)} al corte y ${fmt(ap.nov.proy_at,0)} proyectadas (${fmt((ap.nov.proy_at/ap.oct.at-1)*100,0)}% vs octubre, ${fmt(ap.oct.at,0)}). Pacientes únicos (expedientes): ${fmt(ap.nov.real_pac,0)} al corte y ${fmt(ap.nov.proy_pac,0)} proyectados (${fmt((ap.nov.proy_pac/ap.oct.pac-1)*100,0)}% vs octubre, ${fmt(ap.oct.pac,0)}), con la razón pacientes/atención de octubre. Solo hay base de atenciones y pacientes desde octubre.`);
+    out.push(`Ene–sep vienen del modelo FI_MTY_Evolutivo_2026 (ya incluye Genevity); octubre y noviembre de la hoja BASE DE DATOS FACTURADO (columna SERVICIOS; octubre difiere $0.02M del modelo).`);
   } else {
     out.push(`Ingresos IECH (sin IVA) en ${mes}: $${fmt(o.proy,2)}M${o.vsLM==null?"":` (${o.vsLM>=0?'+':''}${o.vsLM}% vs LM)`}.`);
+  }
+  return out;
+}
+function cmvHighlights(){
+  const I = window.CMV, m = window.getMesVigente(), o = satObjIng("CMV"), out = [], mes = nombreMesLargo(m);
+  if (m === I.mes_proy){
+    const c = I.mes_en_curso, lm = lmOf(o.hist);
+    out.push(`Ingresos Clínica Valle (sin IVA): $${fmt(c.proy,2)}M proyectados a cierre de ${mes} (rango $${fmt(c.bajo,2)}M–$${fmt(c.alto,2)}M), ${o.vsLM>=0?'+':''}${o.vsLM}% vs octubre ($${fmt(lm,2)}M) y ${o.vsU3M>=0?'+':''}${o.vsU3M}% vs U3M.`);
+    out.push(`Real al ${I.corte}: $${fmt(c.real,2)}M (${fmt(c.dias_pond_transcurridos,2)} de ${fmt(c.dias_pond_total,1)} días ponderados), del reporte de ventas por producto (Neto − descuento, sin IVA).`);
+    out.push(`Método: real + días ponderados restantes × ritmo diario (50% ritmo de noviembre / 50% ritmo ago–oct). Rango: bajo con el ritmo ago–oct y alto con el ritmo de noviembre. La mezcla del resto del mes sigue el promedio ago–oct por departamento.`);
+    const e = I.deptos.find(d=>d.nombre==="Embriología");
+    if (e) out.push(`Embriología ya suma $${fmt(e.nov_real,2)}M al corte (anticipo ICSI $115K, anticipo Plan Plus $52K y PGT-A $87K), más que todo octubre ($${fmt(e.oct,2)}M): es un mes con venta concentrada en pocos paquetes, no un ritmo diario estable.`);
+    out.push(`Esta fuente no trae fechas ni pacientes: no hay serie diaria/semanal, Atenciones ni Pacientes para Clínica Valle. Ene–oct vienen del modelo FI_MTY_Evolutivo_2026. Posible facturación cruzada con IECH no depurada.`);
+  } else {
+    out.push(`Ingresos Clínica Valle (sin IVA) en ${mes}: $${fmt(o.proy,2)}M${o.vsLM==null?"":` (${o.vsLM>=0?'+':''}${o.vsLM}% vs LM)`}.`);
   }
   return out;
 }
@@ -1138,13 +1209,12 @@ function buildServicios(){
   let hi = esMesCorteOriginal ? (D.highlights[currentScope] || []) : buildHighlightsAuto(currentScope);
   let rows2 = rows, tituloMezcla = "Ingresos por servicio (MDP)", subMezcla = "Clic en un servicio para ver el desglose por concepto (mes vigente)";
   if (iechOn() && currentScope === "total"){
-    const f = iechFilaMezcla();
-    rows2 = [...rows, f];
-    hi = [iechBulletTotal(), ...hi.map((h,i)=> i===0 ? "FI México — " + h : h)];
-    subMezcla += " · IECH se muestra como una sola línea (sin desglose por servicio)";
-  } else if (currentScope === "IECH"){
-    const d = iechDeptRows();
-    rows2 = d.rows; hi = iechHighlights(); tituloMezcla = "Ingresos por departamento (MDP)";
+    rows2 = [...rows, ...activeSats().map(satFilaMezcla)];
+    hi = [satBulletTotal(), ...hi.map((h,i)=> i===0 ? "FI México — " + h : h)];
+    subMezcla += " · " + activeSats().map(satName).join(" y ") + " se muestran como una sola línea cada una (sin desglose por servicio)";
+  } else if (isSatScope(currentScope)){
+    const d = satDeptRows(currentScope);
+    rows2 = d.rows; hi = currentScope === "IECH" ? iechHighlights() : cmvHighlights(); tituloMezcla = "Ingresos por departamento (MDP)";
     subMezcla = d.sub;
   }
   const highlightsNota = esMesCorteOriginal ? "" : `<div style="font-size:10.5px; color:var(--axis); margin-bottom:8px;">Highlights automáticos para ${nombreMesLargo(mesVigenteNum)} — los redactados a mano son del corte de ${nombreMesLargo(mesHighlightsCurados)}.</div>`;
@@ -1167,7 +1237,7 @@ function buildServicios(){
     <div class="panel">
       <div class="panel-title">${tituloMezcla}</div>
       <div class="section-sub" style="margin:0 0 8px;">${subMezcla}</div>
-      <table><thead><tr><th>${currentScope==="IECH"?"Departamento":"Servicio"}</th><th class="num">MDP</th><th class="num">vs LM</th><th class="num">vs U3M</th><th class="num">vs LY</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+      <table><thead><tr><th>${isSatScope(currentScope)?"Departamento":"Servicio"}</th><th class="num">MDP</th><th class="num">vs LM</th><th class="num">vs U3M</th><th class="num">vs LY</th></tr></thead><tbody>${rowsHtml}</tbody></table>
     </div>
     <div class="panel">
       <div class="panel-title">Highlights</div>
@@ -1662,9 +1732,9 @@ function buildHubspotDetail(){
 
 // ---------------------------------------------------------------- header / notes
 function buildHeader(){
-  const scopeLabel = currentScope === "total" ? (D.total.nombre + (iechOn() ? " (Ingresos: FI México + IECH)" : "")) : (currentScope === "IECH" ? window.IECH.nombre : D.sedes[currentScope].nombre);
+  const scopeLabel = currentScope === "total" ? (D.total.nombre + (iechOn() ? " (Ingresos, Atenciones y Pacientes: FI México + " + activeSats().map(satName).join(" + ") + ")" : "")) : (isSatScope(currentScope) ? satObj(currentScope).nombre : D.sedes[currentScope].nombre);
   document.getElementById("page-subtitle").textContent =
-    `Vista: ${scopeLabel} · Periodo: ${PERIOD_LABELS[currentPeriod]} · Real acumulado al ${(currentScope==="IECH" && window.IECH) ? window.IECH.corte : D.corte} + proyección donde aplica`;
+    `Vista: ${scopeLabel} · Periodo: ${PERIOD_LABELS[currentPeriod]} · Real acumulado al ${isSatScope(currentScope) && satObj(currentScope) ? satObj(currentScope).corte : D.corte} + proyección donde aplica`;
   const notes = {
     anio: "Año: compara el año anterior (completo y mismo periodo Ene–mes vigente) contra el año seleccionado (real a la fecha y proyección al cierre del mes vigente). HubSpot y médicos solo tienen datos 2026.",
     trimestre: (() => { const k = Math.ceil((D.meses_hist.length + 1) / 3); return "Trimestre: Q1" + (k > 2 ? "–Q" + (k-1) : (k === 2 ? "" : "")) + (k > 1 ? " cerrados; " : "") + "Q" + k + " = meses cerrados del trimestre + " + D.mes_actual + " (real + proyección a cierre de mes)." + (((D.meses_hist.length % 3) + 1) < 3 ? " Q" + k + " es parcial (" + ((D.meses_hist.length % 3) + 1) + " de 3 meses): no es comparable con trimestres completos." : ""); })(),
@@ -1674,34 +1744,39 @@ function buildHeader(){
   };
   let pn = notes[currentPeriod];
   if (iechOn()){
-    const I = window.IECH;
+    const act = activeSats(), nmS = act.map(satName).join(" + "), cortes = act.map(k=> satName(k) + " al " + satObj(k).corte).join(", ");
+    const proyTxt = (D.mes_actual && act.some(k=> window.getMesVigente() === satObj(k).mes_proy)) ? ", proyectado a cierre" : "";
     if (currentScope === "total"){
-      pn = (pn ? pn + " " : "") + `Ingresos de "Todas las sedes" = FI México + IECH (sin IVA; IECH con corte al ${I.corte}` + (D.mes_actual && window.getMesVigente() === I.mes_proy ? ", proyectado a cierre" : "") + `)` +
-        (currentPeriod==="anio" ? ". En la vista Año el total de Ingresos es solo FI México (IECH no tiene base 2025)" : (currentPeriod==="semana"||currentPeriod==="dia" ? ". En Semana y Día el total de Ingresos es solo FI México; IECH tiene su propia pestaña" : "")) +
-        ". Atenciones, Pacientes y Consultas son solo FI México.";
+      pn = (pn ? pn + " " : "") + `"Todas las sedes" suma FI México + ${nmS} (sin IVA; ${cortes}${proyTxt}) únicamente en Ingresos${satOn("IECH") ? ", Atenciones, Pacientes" : ""}, Mezcla de servicios y Highlights` +
+        (currentPeriod==="anio" ? ". En la vista Año el total es solo FI México (IECH y Clínica Valle no tienen base 2025)" : (currentPeriod==="semana"||currentPeriod==="dia" ? ". En Semana y Día el total es solo FI México; IECH tiene su propia pestaña" : (currentPeriod==="trimestre" ? ". En Trimestre, Atenciones y Pacientes son solo FI México" : (satOn("IECH") ? ". IECH aporta Atenciones y Pacientes solo desde octubre-26: no hay base anterior, por eso no se muestra vs U3M y los meses previos son solo FI México" : "")))) +
+        ". Consultas, HubSpot, Subrogación, Conversión y Médicos incluyen solo CDMX, GDL y Metepec.";
     } else if (currentScope === "IECH"){
-      pn = `IECH (Obispado, Monterrey): solo Ingresos (sin IVA), con corte al ${I.corte}. Sin Atenciones, Pacientes, Consultas, HubSpot, Subrogación ni Médicos.` + (currentPeriod==="anio" ? " Año: sin base 2025." : (currentPeriod==="semana" ? " Semana: solo semanas completas desde el 5-oct." : (currentPeriod==="dia" ? " Día: datos hasta el 10-nov." : "")));
+      pn = `IECH (Obispado, Monterrey): Ingresos (sin IVA), Atenciones (líneas con monto) y Pacientes únicos (expedientes), con corte al ${satObj("IECH").corte}. Atenciones y Pacientes solo desde octubre-26. Sin Consultas, HubSpot, Subrogación ni Médicos.` + (currentPeriod==="anio" ? " Año: sin base 2025." : (currentPeriod==="semana" ? " Semana: solo semanas completas desde el 5-oct." : (currentPeriod==="dia" ? " Día: datos hasta el 16-nov." : "")));
+    } else if (currentScope === "CMV"){
+      pn = `Clínica Valle (CMV): solo Ingresos (sin IVA, Neto − descuento del reporte de ventas por producto de CONTPAQ), con corte al ${satObj("CMV").corte}. Sin Atenciones, Pacientes, Consultas, HubSpot, Subrogación ni Médicos, y sin serie diaria/semanal (el reporte no trae fechas).` + (currentPeriod==="anio" ? " Año: sin base 2025." : "");
+    } else {
+      pn = (pn ? pn + " " : "") + "Esta sede es parte de FI México (CDMX, GDL, Metepec); IECH y Clínica Valle no se incluyen en esta vista.";
     }
   }
-  else if (window.IECH && currentScope === "total") pn = (pn ? pn + " " : "") + "IECH no tiene datos para este mes/año: los Ingresos de \"Todas las sedes\" son solo FI México.";
+  else if ((window.IECH || window.CMV) && currentScope === "total") pn = (pn ? pn + " " : "") + "IECH y Clínica Valle no tienen datos para este mes/año: los Ingresos de \"Todas las sedes\" son solo FI México.";
   document.getElementById("period-note").textContent = pn;
   document.getElementById("evolutivo-sub").textContent =
     (currentPeriod==="semana"||currentPeriod==="dia")
       ? "Histórico real (gris) · periodo más reciente (azul) — a este nivel de detalle no se proyecta un cierre."
       : "Histórico real (gris) · periodo actual real (azul) · proyección a cierre (rojo)";
-  document.getElementById("page-footnote").innerHTML = (iechOn() ? `IECH (Obispado, Monterrey): ingresos sin IVA de la hoja BASE DE DATOS FACTURADO (columna MONTO; se excluyen documentos cancelados/sustituidos sin monto). Ene–sep del modelo FI_MTY_Evolutivo_2026 (incluye Genevity). Se suma a "Todas las sedes" solo en Ingresos; no hay LY ni Meta para el total combinado. ` : "") +
+  document.getElementById("page-footnote").innerHTML = (iechOn() ? `IECH (Obispado, Monterrey): ingresos sin IVA de la hoja BASE DE DATOS FACTURADO (columna MONTO; departamentos de la columna SERVICIOS; se excluyen documentos cancelados/sustituidos sin monto); atenciones = líneas con monto y pacientes = expedientes únicos (solo oct–nov 2026). Ene–sep del modelo FI_MTY_Evolutivo_2026 (incluye Genevity). Clínica Valle: reporte CONTPAQ de ventas por producto (Neto − descuento, sin IVA; ene–oct del modelo FI_MTY_Evolutivo_2026), clasificado por departamento por nombre de producto. IECH y Clínica Valle se suman a "Todas las sedes" solo en Ingresos, Atenciones y Pacientes (IECH), Mezcla de servicios y Highlights; Consultas, HubSpot, Subrogación, Conversión y Médicos incluyen solo CDMX, GDL y Metepec. No hay LY ni Meta para el total combinado; no se descarta facturación cruzada IECH–Clínica Valle. ` : "") +
     `*Ingresos, Atenciones y Pacientes Únicos: los tres se cuentan desde el mismo archivo de cargos (línea de cargo = atención, fecha = F. Cargo), igual que Consultas desde el sistema de agenda. La proyección de Atenciones a cierre de mes usa el ratio real/agenda ya validado por sede (CDMX 1.16×, GDL 1.19×, MTP 1.26×) aplicado sobre el real acumulado del mes; Semana/Día muestran solo lo real (sin proyección). ` +
     `vs LM/vs U3M (mes), vs trimestre/vs U3M (trimestre), vs semana/4 semanas y vs día/7 días son siempre "periodo actual ÷ periodo(s) de comparación − 1". ` +
     `HubSpot: pipeline "Interesa2", deals por fecha de creación, citas por fecha de cita agendada; filtrado por sucursal (CDMX, GDL, MTP). "Todas las sedes" incluye además deals sin sucursal asignada y de otras clínicas, por eso no es la suma de las tres sedes.`;
 }
 
 function renderAll(){
-  if (currentScope === "IECH" && !iechOn()) currentScope = "total";
+  if (isSatScope(currentScope) && !satOn(currentScope)) currentScope = "total";
   buildTabs();
   buildHeader();
   buildKPIs();
   buildEvolutivos();
-  const soloIng = currentScope === "IECH";
+  const soloIng = isSatScope(currentScope);
   if (!soloIng) buildConsultas();
   buildServicios();
   if (!soloIng){
@@ -1712,13 +1787,22 @@ function renderAll(){
   }
   applyScopeVisibility();
 }
-// En la pestaña IECH solo aplica Ingresos: oculta las secciones que son solo FI México.
+// En las pestañas IECH / Clínica Valle se ocultan las secciones que son solo FI México (CDMX, GDL, MTP);
+// en las demás vistas, esas secciones llevan la nota "solo CDMX, GDL y Metepec" cuando hay entidades satélite.
 function applyScopeVisibility(){
   const wrap = document.querySelector(".wrap"); if (!wrap) return;
-  const hideIt = currentScope === "IECH";
+  const hideIt = isSatScope(currentScope);
   let flag = false;
   Array.from(wrap.children).forEach(ch=>{
-    if (ch.classList.contains("section-title")) flag = hideIt && /HubSpot|Consultas|Subrogaci|médico/i.test(ch.textContent);
+    if (ch.classList.contains("section-title")){
+      const fiOnly = /HubSpot|Consultas|Subrogaci|médico/i.test(ch.textContent.replace(/ · Solo CDMX.*$/,""));
+      flag = hideIt && fiOnly;
+      let nt = ch.querySelector(".scope-note");
+      if (fiOnly && iechOn() && !hideIt){
+        if (!nt){ nt = document.createElement("span"); nt.className = "scope-note"; nt.style.cssText = "font-size:12px; font-weight:400; color:var(--axis); font-family:Calibri, sans-serif; margin-left:8px;"; ch.appendChild(nt); }
+        nt.textContent = " · Solo CDMX, GDL y Metepec (no incluye IECH ni Clínica Valle)";
+      } else if (nt){ nt.remove(); }
+    }
     if (ch.id === "page-footnote" || ch.classList.contains("footer")) flag = false;
     ch.style.display = flag ? "none" : "";
   });
