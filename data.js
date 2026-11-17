@@ -1170,7 +1170,7 @@ window.DATA = {
           3,
           92,
           15,
-          9
+          10
         ],
         "Programa Activo": [
           0,
@@ -1188,9 +1188,9 @@ window.DATA = {
       },
       "actual": {
         "Valoración": {
-          "pacientes": 9,
-          "ingreso": 12801.69,
-          "ticket": 1422.41
+          "pacientes": 10,
+          "ingreso": 32198.24,
+          "ticket": 3219.82
         },
         "Programa Activo": {
           "pacientes": 5,
@@ -1199,10 +1199,10 @@ window.DATA = {
         }
       },
       "totalPacientesYTD": {
-        "Valoración": 161,
+        "Valoración": 162,
         "Programa Activo": 35
       },
-      "ingresoYTD": 8062181.29
+      "ingresoYTD": 8081577.84
     },
     "CDMX": {
       "labels": [
@@ -1290,7 +1290,7 @@ window.DATA = {
           0,
           1,
           0,
-          0
+          1
         ],
         "Programa Activo": [
           0,
@@ -1308,9 +1308,9 @@ window.DATA = {
       },
       "actual": {
         "Valoración": {
-          "pacientes": 0,
-          "ingreso": 0,
-          "ticket": 0
+          "pacientes": 1,
+          "ingreso": 19396.55,
+          "ticket": 19396.55
         },
         "Programa Activo": {
           "pacientes": 0,
@@ -1319,10 +1319,10 @@ window.DATA = {
         }
       },
       "totalPacientesYTD": {
-        "Valoración": 1,
+        "Valoración": 2,
         "Programa Activo": 1
       },
-      "ingresoYTD": 36206.89
+      "ingresoYTD": 55603.44
     },
     "MTP": {
       "labels": [
