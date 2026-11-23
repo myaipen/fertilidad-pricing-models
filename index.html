@@ -1213,7 +1213,7 @@ function cmvHighlights(){
     out.push(`Método: real + días ponderados restantes × ritmo diario (50% ritmo de noviembre / 50% ritmo ago–oct). Rango: bajo con el ritmo ago–oct y alto con el ritmo de noviembre. La mezcla del resto del mes sigue el promedio ago–oct por departamento.`);
     const e = I.deptos.find(d=>d.nombre==="Embriología"), f = I.deptos.find(d=>d.nombre==="Farmacia");
     if (f) out.push(`Farmacia suma $${fmt(f.nov_real,2)}M al corte (octubre completo $${fmt(f.oct,2)}M), e incluye PGT-A embrión adicional ($87K) porque así lo clasifica el reporte. Embriología suma $${fmt(e.nov_real,2)}M (anticipo ICSI $115K y anticipo Plan Plus $52K): venta concentrada en pocos paquetes, no un ritmo diario estable.`);
-    out.push(`Esta fuente no trae fechas ni pacientes: no hay serie diaria/semanal, Atenciones ni Pacientes para Clínica Valle. Ene–oct vienen del modelo FI_MTY_Evolutivo_2026 (Medicamentos histórico = Farmacia). Servicios según la columna de clasificación del propio reporte. Posible facturación cruzada con IECH no depurada.`);
+    out.push(`Esta fuente no trae fechas ni pacientes: no hay serie diaria/semanal, Atenciones ni Pacientes para Clínica Valle. Ene–oct vienen del modelo FI_MTY_Evolutivo_2026 (Medicamentos histórico = Farmacia). Servicios según la clasificación producto → departamento de Clínica Valle (columna Servicio del reporte). En el reporte del 17–22 se toma la suma del detalle: su Total General trae $31K más por una factura sustituida que no se duplica. Posible facturación cruzada con IECH no depurada.`);
   } else {
     out.push(`Ingresos Clínica Valle (sin IVA) en ${mes}: $${fmt(o.proy,2)}M${o.vsLM==null?"":` (${o.vsLM>=0?'+':''}${o.vsLM}% vs LM)`}.`);
   }
