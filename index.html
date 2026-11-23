@@ -161,11 +161,11 @@
   <div class="section-title">Evolutivo con proyección</div>
   <p class="section-sub" id="evolutivo-sub"></p>
   <div class="grid-3" id="evolutivos"></div>
-  <div id="medi-detalle"></div>
 
   <div class="section-title">Mezcla de servicios (mes vigente: <span id="mezcla-mes-label">agosto</span>)</div>
   <p class="section-sub">Ingresos proyectados por servicio (MDP) del mes en curso — no varía con el filtro de Periodo, sí con Sede</p>
   <div class="grid-2" id="servicios-section"></div>
+  <div id="medi-detalle"></div>
 
   <div class="section-title">HubSpot — Deals y conversión</div>
   <p class="section-sub">Pipeline "Interesa2" · Deals, Citas y Conversión reaccionan a los filtros de Sede (por sede: CDMX = Ciudad de México + Benito Juárez, GDL = Guadalajara + Puerto Vallarta + Sahuayo, MTP = Metepec; "Todas las sedes" = compañía completa) y de Periodo · las cohortes (y los mecanismos de conversión, más abajo) reaccionan al filtro de Sede; la tabla de conversión por sede compara las tres sedes y resalta la seleccionada</p>
@@ -1289,12 +1289,14 @@ function buildServicios(){
       <td>${r.nombre}${clickable?' <span class="drill-hint">▸ ver conceptos</span>':''}</td>
       <td class="num">${fmt(r.valor,1)}</td><td class="num">${lm}</td><td class="num">${u3m}</td><td class="num">${ly}</td></tr>`;
   }).join("");
-  el.innerHTML = `
+  const _segMedi = (currentScope === "MEDI" && window.MEDI && window.MEDI.det && typeof mediSegPanel === "function") ? mediSegPanel() : null;
+  el.innerHTML = (_segMedi ? `
+    <div class="panel">${_segMedi}</div>` : `
     <div class="panel">
       <div class="panel-title">${tituloMezcla}</div>
       <div class="section-sub" style="margin:0 0 8px;">${subMezcla}</div>
       <table><thead><tr><th>${currentScope==="MEDI"?"Almacén":(isSatScope(currentScope)?"Departamento":"Servicio")}</th><th class="num">MDP</th><th class="num">vs LM</th><th class="num">vs U3M</th><th class="num">vs LY</th></tr></thead><tbody>${rowsHtml}</tbody></table>
-    </div>
+    </div>`) + `
     <div class="panel">
       <div class="panel-title">Highlights</div>
       ${highlightsNota}
@@ -1902,20 +1904,10 @@ function mediCanalRows(c, m){
   }).join("");
   return mediTable(["Canal","MDP","% mezcla",cmp.lbl,"Margen est."], html);
 }
-function buildMediDetalle(){
-  const el = document.getElementById("medi-detalle"); if (!el) return;
-  if (!(currentScope === "MEDI" && satOn("MEDI") && window.MEDI && window.MEDI.det)){ el.innerHTML = ""; return; }
-  const I = window.MEDI, D_ = I.det, m = window.getMesVigente(), mes = nombreMesLargo(m), cmp = mediCmp(m);
-  if (m < 1 || m > D_.meses){ el.innerHTML = `<div class="section-title">Medifert — detalle por ciudad</div><p class="section-sub">Sin detalle para este mes (la base cubre enero–noviembre 2026).</p>`; return; }
-  const parcial = m === I.mes_proy, corte = parcial ? ` al ${I.corte}` : "";
-  const sub = `Ventas netas sin IVA (excluye IECH y Clínica Valle) de ${mes}${corte}. ${parcial ? "Los comparativos son contra octubre en los mismos días (1–22) para no comparar un mes parcial contra uno completo." : "Comparativos contra el mes anterior."} Margen estimado = 1 − costo estimado de la base ÷ venta, solo en líneas con costo cargado.`;
-  const cityPanel = c => `<div class="panel">
-      <div class="panel-title">${MEDI_CIUDAD_NOM[c]} — Medicamentos más vendidos (familia) · MDP</div>
-      ${mediFamRows(c, m, 8)}
-      <div class="panel-title" style="margin-top:16px;">${MEDI_CIUDAD_NOM[c]} — Canal · MDP</div>
-      ${mediCanalRows(c, m)}
-    </div>`;
-  // Segmento de cliente (ambas ciudades)
+function mediSegPanel(){
+  const I = window.MEDI, D_ = I && I.det, m = window.getMesVigente();
+  if (!D_ || m < 1 || m > D_.meses) return null;
+  const cmp = mediCmp(m), parcial = m === I.mes_proy;
   const segKeys = ["Paciente final","Mostrador (público general)","B2B (clínicas y distribuidores)"];
   const segRows = segKeys.map(k=>{
     const cur = ["CDMX","MTY"].map(c=> (D_.seg[c][k]||[])[m-1]||0), prev = cmp.mode ? ["CDMX","MTY"].map(c=> mediPrev(D_.seg[c][k]||[], (D_.seg_oct22[c]||{})[k], m)) : [null,null];
@@ -1924,6 +1916,21 @@ function buildMediDetalle(){
   });
   const segTot = segRows.reduce((a,r)=>a+r.t,0);
   const segHtml = segRows.map(r=>`<tr><td>${r.k}</td><td class="num">${fmt(r.cur[0],2)}</td><td class="num">${fmt(r.cur[1],2)}</td><td class="num">${fmt(r.t,2)}</td><td class="num">${segTot?fmt(r.t/segTot*100,0):0}%</td><td class="num">${mediDeltaCell(r.t,r.p)}</td></tr>`).join("");
+  return `<div class="panel-title">Segmento de cliente · MDP</div>
+      <div class="section-sub" style="margin:0 0 8px;">Venta neta sin IVA de ${nombreMesLargo(m)}${parcial ? " al "+I.corte : ""} (real, sin proyección) · ${parcial ? "comparativo contra octubre 1–22" : "comparativo contra el mes anterior"}</div>
+      ${mediTable(["Segmento","CDMX","Monterrey","Total","% mezcla",cmp.lbl], segHtml)}`;
+}
+function buildMediDetalle(){
+  const el = document.getElementById("medi-detalle"); if (!el) return;
+  if (!(currentScope === "MEDI" && satOn("MEDI") && window.MEDI && window.MEDI.det)){ el.innerHTML = ""; return; }
+  const I = window.MEDI, D_ = I.det, m = window.getMesVigente(), mes = nombreMesLargo(m), cmp = mediCmp(m);
+  if (m < 1 || m > D_.meses){ el.innerHTML = `<div class="section-title">Medifert — detalle por ciudad</div><p class="section-sub">Sin detalle para este mes (la base cubre enero–noviembre 2026).</p>`; return; }
+  const parcial = m === I.mes_proy, corte = parcial ? ` al ${I.corte}` : "";
+  const sub = `Ventas netas sin IVA (excluye IECH y Clínica Valle) de ${mes}${corte}. ${parcial ? "Los comparativos son contra octubre en los mismos días (1–22) para no comparar un mes parcial contra uno completo." : "Comparativos contra el mes anterior."}`;
+  const cityPanel = c => `<div class="panel">
+      <div class="panel-title">${MEDI_CIUDAD_NOM[c]} — Medicamentos más vendidos (familia) · MDP</div>
+      ${mediFamRows(c, m, 8)}
+    </div>`;
   // Clientes B2B
   const cliRows = D_.clientes.map(c=>({n:c.nombre, pl:c.plaza, cur:c.m[m-1]||0, prev:mediPrev(c.m, c.oct22, m), avg:(c.m[7]+c.m[8]+c.m[9])/3})).filter(r=>r.cur>0||r.avg>0).sort((a,b)=>b.cur-a.cur);
   const netoM = (I.ciudad_hist.CDMX[m-1]!=null ? I.ciudad_hist.CDMX[m-1]+I.ciudad_hist.MTY[m-1] : I.mes_en_curso.real);
@@ -1947,8 +1954,7 @@ function buildMediDetalle(){
     <div class="section-title">Medifert — detalle por ciudad</div>
     <p class="section-sub">${sub}</p>
     <div class="grid-2" style="grid-template-columns:1fr 1fr; align-items:start;">${cityPanel("CDMX")}${cityPanel("MTY")}</div>
-    <div class="grid-2" style="grid-template-columns:1fr 1fr; margin-top:16px; align-items:start;">
-      <div class="panel"><div class="panel-title">Segmento de cliente · MDP</div>${mediTable(["Segmento","CDMX","Monterrey","Total","% mezcla",cmp.lbl], segHtml)}</div>
+    <div style="margin-top:16px;">
       <div class="panel"><div class="panel-title">Clientes B2B principales (top 8 del año) · MDP</div>${mediTable(["Cliente","Ciudad",mes,`% del neto`,cmp.lbl,"Prom. ago–oct"], cliHtml)}
         <div class="section-sub" style="margin:8px 0 0;">Solo instituciones y distribuidores del segmento B2B; el neto es la venta Medifert de ${mes} sin intercompañía. Un cliente grande mueve la proyección: revisar su recurrencia.</div></div>
     </div>
