@@ -676,7 +676,7 @@ window.DATA = {
     "CDMX": [
       "CDMX lleva $10.78M al 22-nov y proyecta $14.41M (+4% vs octubre, +9% vs U3M): Tratamientos FIV/ICSI $4.08M, Congelación de Gametos $2.80M, Farmacia $2.73M, Laboratorio $2.19M, Subrogación $1.92M.",
       "1,834 atenciones y 580 pacientes al corte; proyección 2,560 atenciones (+7% vs octubre) y 792 pacientes (+18% vs octubre). Consultas de primera vez: 134 al corte, proyección 199 (+37% vs octubre); No Show 14.6%.",
-      "HubSpot (Interesa2) al 22-nov (Ciudad de México + Benito Juárez): 552 leads y 178 citas agendadas (32% de conversión vs 30% en octubre, con 909 leads y 270 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
+      "HubSpot (Interesa2) al 22-nov (Ciudad de México + Benito Juárez): 552 leads y 179 citas agendadas (32% de conversión vs 30% en octubre, con 909 leads y 270 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
     ],
     "GDL": [
       "GDL lleva $1.77M al 22-nov y proyecta $2.44M (+22% vs octubre): Congelación de Gametos $0.67M, Tratamientos FIV/ICSI $0.60M, Laboratorio $0.42M, Farmacia $0.40M. Ojo: los cargos de los días hábiles 17, 18 y 20-nov ($57K, $42K y $43K) fueron bajos; si fue captura tardía, el Real de GDL subirá.",
@@ -963,7 +963,7 @@ window.DATA = {
           187,
           227,
           270,
-          178,
+          179,
           null
         ]
       },
