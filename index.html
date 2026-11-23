@@ -161,6 +161,7 @@
   <div class="section-title">Evolutivo con proyección</div>
   <p class="section-sub" id="evolutivo-sub"></p>
   <div class="grid-3" id="evolutivos"></div>
+  <div id="medi-detalle"></div>
 
   <div class="section-title">Mezcla de servicios (mes vigente: <span id="mezcla-mes-label">agosto</span>)</div>
   <p class="section-sub">Ingresos proyectados por servicio (MDP) del mes en curso — no varía con el filtro de Periodo, sí con Sede</p>
@@ -489,6 +490,7 @@ function mergeAtPacIech(fi, key){
   return Object.assign({}, fi, { hist, actual, proy, vsLM: lmOk ? pctOrNull(proy, lmOf(hist)) : null, vsU3M: u3ok ? pctOrNull(proy, u3Of(hist)) : null, vsLY:null, nomLY:null, _iech:true });
 }
 function monthlySeries(scope, key){
+  if (key === "ingresos" && (scope === "MEDI_CDMX" || scope === "MEDI_MTY") && satOn("MEDI")) return mediCityObj(scope === "MEDI_CDMX" ? "CDMX" : "MTY");
   if (key === "ingresos" && iechOn()){
     if (scope === "IECH" && satOn("IECH")) return satObjIng("IECH");
     if (scope === "CMV" && satOn("CMV")) return satObjIng("CMV");
@@ -849,6 +851,9 @@ function buildEvolutivos(){
   const pu = soloIng ? null : buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"});
   const [b1,b2] = PERIOD_BADGES[currentPeriod];
   const meta = ing ? buildMetaValuesForIngresos(ing) : null;
+  const _mediCity = currentScope === "MEDI" && satOn("MEDI") && window.MEDI && window.MEDI.ciudad_hist;
+  const ingCD = _mediCity ? buildSeries("monthly", "MEDI_CDMX", {key:"ingresos", fineKey:"ingresos"}) : null;
+  const ingMT = _mediCity ? buildSeries("monthly", "MEDI_MTY", {key:"ingresos", fineKey:"ingresos"}) : null;
 
   function panel(id, title, series, valueFmt, extraBadge){
     if (!series){
@@ -871,10 +876,12 @@ function buildEvolutivos(){
   const _atCombo = satOn("IECH") && currentScope==="total" && currentPeriod==="mes";
   el.innerHTML =
     panel("chart-ingresos", _combo ? ("Ingresos — MDP (FI México + " + _sats.join(" + ") + ", sin IVA)") : (currentScope==="IECH" ? "Ingresos IECH — MDP (sin IVA)" : (currentScope==="CMV" ? "Ingresos Clínica Valle — MDP (sin IVA)" : (currentScope==="MEDI" ? "Ingresos Medifert (Farmacia) — MDP (sin IVA, neto de ventas a IECH y Clínica Valle)" : "Ingresos — MDP"))), ing, v=>`$${fmt(v,1)}M`, metaBadge) +
+    (_mediCity ? panel("chart-ingresos-cdmx", "Ingresos Medifert CDMX — MDP (sin IVA, neto de intercompañía)", ingCD, v=>`$${fmt(v,1)}M`) + panel("chart-ingresos-mty", "Ingresos Medifert Monterrey — MDP (sin IVA, neto de intercompañía)", ingMT, v=>`$${fmt(v,1)}M`) : "") +
     (soloIng ? "" : panel("chart-atenciones", currentScope==="IECH" ? "Atenciones IECH (#, líneas con monto)" : (_atCombo ? "Atenciones (#) — FI México + IECH (IECH desde oct-26)" : "Atenciones (#)"), at, v=>`${fmt(v,0)}`) +
     panel("chart-pacientes", currentScope==="IECH" ? "Pacientes Únicos IECH (#)" : (_atCombo ? "Pacientes Únicos (#) — FI México + IECH (IECH desde oct-26)" : "Pacientes Únicos (#)"), pu, v=>`${fmt(v,0)}`));
 
   if (ing) drawEvolutivoBar("chart-ingresos", ing, v=>`$${fmt(v,1)}M`, meta ? meta.values : null);
+  if (_mediCity){ if (ingCD) drawEvolutivoBar("chart-ingresos-cdmx", ingCD, v=>`$${fmt(v,1)}M`); if (ingMT) drawEvolutivoBar("chart-ingresos-mty", ingMT, v=>`$${fmt(v,1)}M`); }
   if (!soloIng && at) drawEvolutivoBar("chart-atenciones", at, v=>`${fmt(v,0)}`);
   if (!soloIng && pu) drawEvolutivoBar("chart-pacientes", pu, v=>`${fmt(v,0)}`);
 }
@@ -1829,7 +1836,7 @@ function buildHeader(){
     } else if (currentScope === "IECH"){
       pn = `IECH (Obispado, Monterrey): Ingresos (sin IVA), Atenciones (líneas con monto) y Pacientes únicos (expedientes), con corte al ${satObj("IECH").corte}. Atenciones y Pacientes solo desde octubre-26. Sin Consultas, HubSpot, Subrogación ni Médicos.` + (currentPeriod==="anio" ? " Año: sin base 2025." : (currentPeriod==="semana" ? " Semana: solo semanas completas desde el 5-oct." : (currentPeriod==="dia" ? " Día: datos hasta el 16-nov." : "")));
     } else if (currentScope === "MEDI"){
-      pn = `Medifert (Farmacia › Medifert): solo Ingresos (sin IVA, neto de ventas a IECH y Clínica Valle), con corte al ${satObj("MEDI").corte}. Sin Atenciones, Pacientes, Consultas, HubSpot, Subrogación ni Médicos, y sin serie diaria/semanal.` + (currentPeriod==="anio" ? " Año: sin base 2025." : "");
+      pn = `Medifert (Farmacia › Medifert): solo Ingresos (sin IVA, neto de ventas a IECH y Clínica Valle), con corte al ${satObj("MEDI").corte}. Sin Atenciones, Pacientes, Consultas, HubSpot, Subrogación ni Médicos; serie diaria y semanal disponible.` + (currentPeriod==="anio" ? " Año: sin base 2025." : "");
     } else if (currentScope === "CMV"){
       pn = `Clínica Valle (CMV): solo Ingresos (sin IVA, Neto − descuento del reporte de ventas por producto de CONTPAQ), con corte al ${satObj("CMV").corte}. Sin Atenciones, Pacientes, Consultas, HubSpot, Subrogación ni Médicos, y sin serie diaria/semanal (el reporte no trae fechas).` + (currentPeriod==="anio" ? " Año: sin base 2025." : "");
     } else {
@@ -1848,12 +1855,117 @@ function buildHeader(){
     `HubSpot: pipeline "Interesa2", deals por fecha de creación, citas por fecha de cita agendada; filtrado por sede: CDMX = Ciudad de México + Benito Juárez; GDL = Guadalajara + Puerto Vallarta + Sahuayo (todo se atiende y factura en GDL); MTP = Metepec. "Todas las sedes" incluye además deals sin sucursal asignada o pendientes, por eso no es la suma de las tres sedes.`;
 }
 
+// ---------------------------------------------------------------- Medifert: evolutivos por ciudad + detalle (23-nov-2026)
+// Fuente: base Medifert_Base_Venta_2026 (neto de intercompañía). Todo se calcula desde window.MEDI.det / ciudad_hist.
+function mediCityObj(c){
+  const I = window.MEDI, m = window.getMesVigente(), H = I.ciudad_hist[c], hist = [];
+  for (let i=1;i<m;i++) hist.push(i <= H.length ? H[i-1] : 0);
+  let real = 0, proy = 0;
+  if (m <= H.length){ real = H[m-1]; proy = H[m-1]; }
+  else if (m === I.mes_proy){ real = I.ciudad[c].real; proy = I.ciudad[c].proy; }
+  return { hist, actual:real, proy, vsLM:pctOrNull(proy, lmOf(hist)), vsU3M:pctOrNull(proy, u3Of(hist)), vsLY:null, nomLY:null };
+}
+const MEDI_CIUDAD_NOM = { CDMX:"CDMX", MTY:"Monterrey" };
+function mediCmp(m){ // comparador: noviembre parcial vs octubre mismos días; otros meses vs mes anterior
+  return m === 11 ? { lbl:"vs oct (1–22)", mode:"oct22" } : (m > 1 ? { lbl:"vs mes ant.", mode:"prev" } : { lbl:"vs mes ant.", mode:null });
+}
+function mediPrev(arr, oct22, m){ const c = mediCmp(m); return c.mode === "oct22" ? (oct22 || 0) : (c.mode === "prev" ? (arr[m-2] || 0) : null); }
+function mediDeltaCell(cur, prev){
+  if (prev == null) return '<span style="color:var(--axis);">—</span>';
+  if (!(prev > 0)) return cur > 0 ? '<span style="color:var(--axis); font-weight:700;">Nuevo</span>' : '<span style="color:var(--axis);">—</span>';
+  return miniPct((cur/prev-1)*100, fmtSignedFn(cur-prev, v=>`$${fmt(v,2)}M`));
+}
+function mediTable(head, rowsHtml, foot){
+  return `<table><thead><tr>${head.map((h,i)=>`<th${i?' class="num"':''}>${h}</th>`).join("")}</tr></thead><tbody>${rowsHtml}${foot||""}</tbody></table>`;
+}
+function mediFamRows(c, m, topN){
+  const D_ = window.MEDI.det, obj = D_.fam[c], o22 = D_.fam_oct22[c];
+  const all = Object.keys(obj).map(k=>({k, cur:obj[k][m-1], prev:mediPrev(obj[k], o22[k], m)}));
+  const rows = all.filter(r=>r.cur>0.0005).sort((a,b)=>b.cur-a.cur);
+  const tot = all.reduce((t,r)=>t+r.cur,0), totPrev = all.reduce((t,r)=>t+(r.prev||0),0), cmp = mediCmp(m);
+  const adj = all.filter(r=>!(r.cur>0.0005)), adjCur = adj.reduce((t,r)=>t+r.cur,0), adjPrev = adj.reduce((t,r)=>t+(r.prev||0),0);
+  const top = rows.slice(0,topN), rest = rows.slice(topN);
+  let html = top.map(r=>`<tr><td>${r.k}</td><td class="num">${fmt(r.cur,2)}</td><td class="num">${fmt(r.cur/tot*100,0)}%</td><td class="num">${mediDeltaCell(r.cur,r.prev)}</td></tr>`).join("");
+  if (rest.length){ const rc = rest.reduce((t,r)=>t+r.cur,0), rp = rest.reduce((t,r)=>t+(r.prev||0),0); html += `<tr><td>Otras familias (${rest.length})</td><td class="num">${fmt(rc,2)}</td><td class="num">${fmt(rc/tot*100,0)}%</td><td class="num">${mediDeltaCell(rc, cmp.mode?rp:null)}</td></tr>`; }
+  if (adj.length && Math.abs(adjCur) > 0.004) html += `<tr><td>Ajustes y notas de crédito</td><td class="num">${fmt(adjCur,2)}</td><td class="num">${fmt(adjCur/tot*100,0)}%</td><td class="num"><span style="color:var(--axis);">—</span></td></tr>`;
+  const foot = `<tr style="font-weight:700;"><td>Total ${MEDI_CIUDAD_NOM[c]}</td><td class="num">${fmt(tot,2)}</td><td class="num">100%</td><td class="num">${mediDeltaCell(tot, cmp.mode?totPrev:null)}</td></tr>`;
+  return mediTable(["Medicamento (familia)","MDP","% mezcla",cmp.lbl], html, foot);
+}
+function mediCanalRows(c, m){
+  const D_ = window.MEDI.det, obj = D_.canal[c], o22 = D_.canal_oct22[c], mg = D_.margen, cmp = mediCmp(m);
+  const rows = Object.keys(obj).map(k=>({k, cur:obj[k][m-1], prev:mediPrev(obj[k], o22[k], m)})).filter(r=>r.cur>0.0005).sort((a,b)=>b.cur-a.cur);
+  const tot = rows.reduce((t,r)=>t+r.cur,0), totPrev = rows.reduce((t,r)=>t+(r.prev||0),0);
+  const html = rows.map(r=>{
+    const g = mg[r.k], vc = g ? g.venta_c[m-1] : 0, mgn = vc > 0 ? (1 - g.costo[m-1]/vc)*100 : null;
+    const tipo = (D_.canal_tipo[r.k]||"").replace(/ \(.*\)/,"");
+    return `<tr><td>${r.k} <span style="color:var(--axis); font-size:11px;">· ${tipo}</span></td><td class="num">${fmt(r.cur,2)}</td><td class="num">${fmt(r.cur/tot*100,0)}%</td><td class="num">${mediDeltaCell(r.cur,r.prev)}</td><td class="num">${mgn==null?'<span style="color:var(--axis);">—</span>':fmt(mgn,0)+'%'}</td></tr>`;
+  }).join("");
+  return mediTable(["Canal","MDP","% mezcla",cmp.lbl,"Margen est."], html);
+}
+function buildMediDetalle(){
+  const el = document.getElementById("medi-detalle"); if (!el) return;
+  if (!(currentScope === "MEDI" && satOn("MEDI") && window.MEDI && window.MEDI.det)){ el.innerHTML = ""; return; }
+  const I = window.MEDI, D_ = I.det, m = window.getMesVigente(), mes = nombreMesLargo(m), cmp = mediCmp(m);
+  if (m < 1 || m > D_.meses){ el.innerHTML = `<div class="section-title">Medifert — detalle por ciudad</div><p class="section-sub">Sin detalle para este mes (la base cubre enero–noviembre 2026).</p>`; return; }
+  const parcial = m === I.mes_proy, corte = parcial ? ` al ${I.corte}` : "";
+  const sub = `Ventas netas sin IVA (excluye IECH y Clínica Valle) de ${mes}${corte}. ${parcial ? "Los comparativos son contra octubre en los mismos días (1–22) para no comparar un mes parcial contra uno completo." : "Comparativos contra el mes anterior."} Margen estimado = 1 − costo estimado de la base ÷ venta, solo en líneas con costo cargado.`;
+  const cityPanel = c => `<div class="panel">
+      <div class="panel-title">${MEDI_CIUDAD_NOM[c]} — Medicamentos más vendidos (familia) · MDP</div>
+      ${mediFamRows(c, m, 8)}
+      <div class="panel-title" style="margin-top:16px;">${MEDI_CIUDAD_NOM[c]} — Canal · MDP</div>
+      ${mediCanalRows(c, m)}
+    </div>`;
+  // Segmento de cliente (ambas ciudades)
+  const segKeys = ["Paciente final","Mostrador (público general)","B2B (clínicas y distribuidores)"];
+  const segRows = segKeys.map(k=>{
+    const cur = ["CDMX","MTY"].map(c=> (D_.seg[c][k]||[])[m-1]||0), prev = cmp.mode ? ["CDMX","MTY"].map(c=> mediPrev(D_.seg[c][k]||[], (D_.seg_oct22[c]||{})[k], m)) : [null,null];
+    const t = cur[0]+cur[1], p = cmp.mode ? (prev[0]||0)+(prev[1]||0) : null;
+    return {k, cur, t, p};
+  });
+  const segTot = segRows.reduce((a,r)=>a+r.t,0);
+  const segHtml = segRows.map(r=>`<tr><td>${r.k}</td><td class="num">${fmt(r.cur[0],2)}</td><td class="num">${fmt(r.cur[1],2)}</td><td class="num">${fmt(r.t,2)}</td><td class="num">${segTot?fmt(r.t/segTot*100,0):0}%</td><td class="num">${mediDeltaCell(r.t,r.p)}</td></tr>`).join("");
+  // Clientes B2B
+  const cliRows = D_.clientes.map(c=>({n:c.nombre, pl:c.plaza, cur:c.m[m-1]||0, prev:mediPrev(c.m, c.oct22, m), avg:(c.m[7]+c.m[8]+c.m[9])/3})).filter(r=>r.cur>0||r.avg>0).sort((a,b)=>b.cur-a.cur);
+  const netoM = (I.ciudad_hist.CDMX[m-1]!=null ? I.ciudad_hist.CDMX[m-1]+I.ciudad_hist.MTY[m-1] : I.mes_en_curso.real);
+  const cliHtml = cliRows.map(r=>`<tr><td>${r.n}</td><td class="num">${r.pl==="CDMX"?"CDMX":"MTY"}</td><td class="num">${fmt(r.cur,2)}</td><td class="num">${netoM?fmt(r.cur/netoM*100,0):0}%</td><td class="num">${mediDeltaCell(r.cur,r.prev)}</td><td class="num">${fmt(r.avg,2)}</td></tr>`).join("");
+  // Volumen
+  const volCol = c=>{
+    const v = D_.vol[c], f = v.facturas[m-1], p = v.pacientes[m-1], vta = (I.ciudad_hist[c][m-1]!=null ? I.ciudad_hist[c][m-1] : I.ciudad[c].real),
+          fp = cmp.mode==="oct22" ? v.facturas_oct22 : (cmp.mode==="prev" ? v.facturas[m-2] : null), pp = cmp.mode==="oct22" ? v.pacientes_oct22 : (cmp.mode==="prev" ? v.pacientes[m-2] : null);
+    const vp = cmp.mode==="oct22" ? v.venta_oct22 : (cmp.mode==="prev" ? (I.ciudad_hist[c][m-2]||0) : null), tk = f ? vta*1e6/f : 0, tkp = (fp && vp!=null) ? vp*1e6/fp : null;
+    const d = (a,b)=> (b>0) ? miniPct((a/b-1)*100, fmtSignedFn(a-b, x=>fmt(x,0))) : '<span style="color:var(--axis);">—</span>';
+    return { f, p, tk, df: fp!=null ? d(f,fp) : '<span style="color:var(--axis);">—</span>', dp: pp!=null ? d(p,pp) : '<span style="color:var(--axis);">—</span>', dt: tkp ? miniPct((tk/tkp-1)*100) : '<span style="color:var(--axis);">—</span>' };
+  };
+  const vc = volCol("CDMX"), vm = volCol("MTY");
+  const volHtml = `<tr><td>Facturas</td><td class="num">${fmt(vc.f,0)}</td><td class="num">${vc.df}</td><td class="num">${fmt(vm.f,0)}</td><td class="num">${vm.df}</td></tr>
+    <tr><td>Ticket promedio por factura ($)</td><td class="num">${fmt(vc.tk,0)}</td><td class="num">${vc.dt}</td><td class="num">${fmt(vm.tk,0)}</td><td class="num">${vm.dt}</td></tr>
+    <tr><td>Pacientes únicos (personas físicas)</td><td class="num">${fmt(vc.p,0)}</td><td class="num">${vc.dp}</td><td class="num">${fmt(vm.p,0)}</td><td class="num">${vm.dp}</td></tr>`;
+  // Intercompañía
+  const ic = D_.interco, icRow = (nom, arr, o22)=>{ const cur = arr[m-1]||0, prev = mediPrev(arr, o22, m); return `<tr><td>${nom}</td><td class="num">${fmt(cur,2)}</td><td class="num">${mediDeltaCell(cur,prev)}</td></tr>`; };
+  const icTot = (ic.iech[m-1]||0)+(ic.valle[m-1]||0), bruto = netoM + icTot;
+  el.innerHTML = `
+    <div class="section-title">Medifert — detalle por ciudad</div>
+    <p class="section-sub">${sub}</p>
+    <div class="grid-2" style="grid-template-columns:1fr 1fr; align-items:start;">${cityPanel("CDMX")}${cityPanel("MTY")}</div>
+    <div class="grid-2" style="grid-template-columns:1fr 1fr; margin-top:16px; align-items:start;">
+      <div class="panel"><div class="panel-title">Segmento de cliente · MDP</div>${mediTable(["Segmento","CDMX","Monterrey","Total","% mezcla",cmp.lbl], segHtml)}</div>
+      <div class="panel"><div class="panel-title">Clientes B2B principales (top 8 del año) · MDP</div>${mediTable(["Cliente","Ciudad",mes,`% del neto`,cmp.lbl,"Prom. ago–oct"], cliHtml)}
+        <div class="section-sub" style="margin:8px 0 0;">Solo instituciones y distribuidores del segmento B2B; el neto es la venta Medifert de ${mes} sin intercompañía. Un cliente grande mueve la proyección: revisar su recurrencia.</div></div>
+    </div>
+    <div class="grid-2" style="grid-template-columns:1fr 1fr; margin-top:16px; align-items:start;">
+      <div class="panel"><div class="panel-title">Volumen y ticket</div>${mediTable(["Indicador","CDMX",cmp.lbl,"Monterrey",cmp.lbl], volHtml)}</div>
+      <div class="panel"><div class="panel-title">Intercompañía (fuera del total, solo monitoreo) · MDP</div>${mediTable(["Cliente",mes,cmp.lbl], icRow("IECH (Obispado)", ic.iech, ic.iech_oct22)+icRow("Clínica Valle (CMV)", ic.valle, ic.valle_oct22), `<tr style="font-weight:700;"><td>Total intercompañía</td><td class="num">${fmt(icTot,2)}</td><td class="num">${bruto?fmt(icTot/bruto*100,0):0}% de la venta bruta</td></tr>`)}
+        <div class="section-sub" style="margin:8px 0 0;">Estas ventas se restan del ingreso Medifert para no duplicar lo que ya reportan IECH y Clínica Valle.</div></div>
+    </div>`;
+}
+
 function renderAll(){
   if (isSatScope(currentScope) && !satOn(currentScope)) currentScope = "total";
   buildTabs();
   buildHeader();
   buildKPIs();
   buildEvolutivos();
+  buildMediDetalle();
   const soloIng = isSatScope(currentScope);
   if (!soloIng) buildConsultas();
   buildServicios();
