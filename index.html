@@ -13,6 +13,7 @@
 <script src="data_cmv.js"></script>
 <script src="data_medifert.js"></script>
 <script src="data_mec.js"></script>
+<script src="data_clinica.js"></script>
 <style>
   :root{
     --gray:#C9CDD3; --red:#B66863; --blue:#7096B0; --pink:#D46A93;
@@ -56,6 +57,7 @@
 
   .grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
   .grid-2{ display:grid; grid-template-columns:1.1fr 1fr; gap:16px; }
+  #hubspot-charts .panel{ min-width:0; }
   .panel{ background:var(--white); border:1px solid var(--border); border-radius:12px; padding:16px 18px 12px; }
   .panel-title{ font-weight:700; font-size:13.5px; margin-bottom:2px; }
   .panel-badges{ display:flex; gap:14px; font-size:11.5px; font-weight:700; margin-bottom:6px; flex-wrap:wrap; }
@@ -366,6 +368,7 @@ const groupedValueLabels = {
     ctx.textBaseline = "bottom";
     ctx.fillStyle = COLORS.text;
     chart.data.datasets.forEach((ds, dIdx)=>{
+      if (ds._noLbl) return;
       if (ds.type === "line") return; // la línea de meta no lleva etiqueta por punto (ver panel-badges "vs Meta")
       const meta = chart.getDatasetMeta(dIdx);
       meta.data.forEach((bar, i)=>{
@@ -383,7 +386,7 @@ const stackedTotalLabels = {
     if (chart.data.datasets.length < 2) return;
     if (!(chart.options.scales?.x?.stacked || chart.options.scales?.y?.stacked)) return; // solo gráficas realmente apiladas
     const {ctx} = chart;
-    const [ds0, ds1] = chart.data.datasets;
+    const dss = chart.data.datasets, ds0 = dss[0];
     const meta0 = chart.getDatasetMeta(0);
     ctx.save();
     ctx.font = "700 11px Calibri, sans-serif";
@@ -391,15 +394,35 @@ const stackedTotalLabels = {
     ctx.textBaseline = "bottom";
     ctx.fillStyle = COLORS.text;
     meta0.data.forEach((bar, i)=>{
-      const total = (ds0.data[i]||0) + (ds1.data[i]||0);
+      // (24-nov-2026) total de TODAS las series apiladas (antes solo 2); la marca va sobre la última serie con valor
+      let total = 0, topBar = bar;
+      dss.forEach((d, k)=>{ const v = d.data[i] || 0; total += v; if (v) topBar = chart.getDatasetMeta(k).data[i]; });
       if (!total) return;
-      const topBar = ds1.data[i] ? chart.getDatasetMeta(1).data[i] : bar;
       ctx.fillText(ds0._fmt ? ds0._fmt(total) : fmt(total), topBar.x, topBar.y - 4);
     });
     ctx.restore();
   }
 };
-Chart.register(barValueLabels, hBarValueLabels, groupedValueLabels, stackedTotalLabels);
+const hsSegLabels = {
+  // (24-nov-2026) número dentro de cada segmento de las gráficas HubSpot desglosadas por clínica (si cabe)
+  id: "hsSegLabels",
+  afterDatasetsDraw(chart){
+    if (!(chart.options.plugins && chart.options.plugins.hsSeg)) return;
+    const {ctx} = chart;
+    ctx.save();
+    ctx.font = "700 10px Calibri, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#FFFFFF";
+    chart.data.datasets.forEach((ds, k)=>{
+      chart.getDatasetMeta(k).data.forEach((bar, i)=>{
+        const v = ds.data[i]; if (!v) return;
+        if (chart.data.datasets.filter(d=> d.data[i]).length < 2) return;   // un solo segmento: basta el total de arriba
+        if (Math.abs(bar.base - bar.y) < 13 || bar.width < 18) return;
+        ctx.fillText(ds._fmt ? ds._fmt(v) : fmt(v), bar.x, (bar.y + bar.base) / 2);
+      });
+    });
+    ctx.restore();
+  }
+};
+Chart.register(barValueLabels, hBarValueLabels, groupedValueLabels, stackedTotalLabels, hsSegLabels);
 
 // ---------------------------------------------------------------- período: config + series builders
 const PERIOD_LABELS = { anio:"Año", trimestre:"Trimestre", mes:"Mes", semana:"Semana", dia:"Día" };
@@ -672,7 +695,8 @@ function buildHubspotSeries(metricKey){
   if (metricKey === "leads") values = leadsVals;
   else if (metricKey === "citas") values = citasVals;
   else values = leadsVals.map((l,i)=> l ? Math.round(citasVals[i]/l*100) : 0);
-  return { labels, values, currentIndex: values.length-1, proyIndex:null, badge1:null, badge2:null };
+  const keys = currentPeriod === "semana" ? leadsEntries.map(([,v])=>v.start) : leadsEntries.map(([d])=>d);
+  return { labels, values, keys, currentIndex: values.length-1, proyIndex:null, badge1:null, badge2:null };
 }
 
 // ---------------------------------------------------------------- tabs
@@ -1767,6 +1791,77 @@ function buildMedicos(){
 }
 
 // ---------------------------------------------------------------- HubSpot
+
+// ---------------------------------------------------------------- HubSpot: desglose por clínica (pedido de Marite, 24-nov-2026)
+// CDMX = Ciudad de México + Benito Juárez; GDL = Guadalajara + Puerto Vallarta + Sahuayo. Las clínicas menores salen de
+// data_clinica.js (HubSpot, campo Clínica); la clínica principal = total de la sede (hoja) menos las menores, así los totales siempre cuadran.
+const HS_COL = { teal: COLORS.teal, amber: COLORS.amber };
+function hsSplitDef(){
+  const H = window.HS_CLINICA;
+  return (H && (currentScope === "CDMX" || currentScope === "GDL") && H[currentScope]) ? H[currentScope] : null;
+}
+function hsMesVig(){ return (typeof window.getMesVigente === "function") ? window.getMesVigente() : 11; }
+function hsOtherAligned(o, metric, base){
+  const mv = hsMesVig(), arr = o[metric] || [];
+  if (currentPeriod === "mes") return Array.from({length: base.values.length}, (_,i)=> arr[i] || 0);
+  if (currentPeriod === "trimestre"){ const hh = Array.from({length: Math.max(0,mv-1)}, (_,i)=> arr[i] || 0); return quarterSums(hh, arr[mv-1] || 0); }
+  if (currentPeriod === "anio") return [ arr.slice(0, mv).reduce((a,b)=> a+(b||0), 0) ];
+  const dd = ((window.HS_CLINICA.diario || {})[o.name] || {})[metric] || {};
+  if (currentPeriod === "dia") return (base.keys || []).map(d=> dd[d] || 0);
+  return (base.keys || []).map(st=>{               // semana: suma de los 7 días desde el lunes
+    let s = 0; const d0 = new Date(st + "T00:00:00");
+    for (let k=0; k<7; k++){ const d = new Date(d0.getTime() + k*864e5);
+      s += dd[d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0")] || 0; }
+    return s; });
+}
+function hsSplitCounts(metric){
+  const def = hsSplitDef(); if (!def) return null;
+  const base = buildHubspotSeries(metric);
+  if (!base.values.length) return null;
+  const others = def.otros.map(o=>({ name:o.name, color: HS_COL[o.color] || COLORS.teal, values: hsOtherAligned(o, metric, base) }));
+  const mainVals = base.values.map((v,i)=> Math.max(0, (v||0) - others.reduce((a,o)=> a + (o.values[i]||0), 0)));
+  return { base, parts: [{ name: def.main, color: COLORS.blue, values: mainVals }, ...others] };
+}
+function hsSplitSeries(metricKey){
+  if (metricKey !== "conversion") return hsSplitCounts(metricKey);
+  const L = hsSplitCounts("leads"), C = hsSplitCounts("citas");
+  if (!L || !C) return null;
+  return { base: L.base, parts: L.parts.map((p,k)=>({ name:p.name, color:p.color, values: p.values.map((l,i)=> l ? Math.round((C.parts[k].values[i]||0)/l*100) : null) })) };
+}
+function hsDrawSplit(id, metricKey, vf){
+  const S = hsSplitSeries(metricKey); if (!S) return false;
+  const stacked = metricKey !== "conversion", n = S.base.labels.length, cur = S.base.currentIndex;
+  const ctx = document.getElementById(id).getContext("2d");
+  charts[id] = new Chart(ctx, {
+    type:"bar",
+    data:{ labels: S.base.labels, datasets: S.parts.map((p,k)=>({ label:p.name, data:p.values,
+      backgroundColor: p.values.map((_,i)=> i===cur ? p.color : p.color + "B3"), borderRadius: stacked ? 2 : 3,
+      maxBarThickness: stacked ? (n>15 ? 14 : 28) : (n>15 ? 8 : 14), stack: stacked ? "hs" : undefined, _fmt: vf, _noLbl: !stacked && k>0 })) },
+    options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:20}},
+      plugins:{ legend:{ display:true, position:"bottom", labels:{ boxWidth:10, boxHeight:10, font:{size:11} } }, hsSeg: stacked },
+      scales:{ y:{ display:false, beginAtZero:true, grace:"20%", stacked }, x:{ stacked, grid:{ display:false }, ticks:{ font:{ size: n>10?8:11 }, maxRotation: n>10?60:0 } } } },
+  });
+  return true;
+}
+function hsSplitTable(){
+  const def = hsSplitDef(); if (!def) return "";
+  const S = hsScope(), mv = hsMesVig();
+  const tl = [...S.leadsHist, S.leadsAct], tc = [...S.citasHist, S.citasAct];
+  const labs = [...D.meses_hist, D.mes_actual];
+  const idx = [mv-3, mv-2, mv-1].filter(i=> i>=0 && i<tl.length);
+  const parts = [{ name:def.main, l:i=> Math.max(0, (tl[i]||0) - def.otros.reduce((a,o)=> a+((o.leads||[])[i]||0), 0)), c:i=> Math.max(0, (tc[i]||0) - def.otros.reduce((a,o)=> a+((o.citas||[])[i]||0), 0)) },
+    ...def.otros.map(o=>({ name:o.name, l:i=> (o.leads||[])[i]||0, c:i=> (o.citas||[])[i]||0 })),
+    { name:"Total " + (currentScope==="CDMX" ? "CDMX" : "GDL"), l:i=> tl[i]||0, c:i=> tc[i]||0, total:true }];
+  const pc = (c,l)=> l ? Math.round(c/l*100) + "%" : "–";
+  const grp = (t)=> `<th class="num" style="text-align:center;" colspan="${idx.length}">${t}</th>`;
+  const sub = idx.map(i=>`<th class="num" style="text-align:right;">${labs[i]}</th>`).join("");
+  const rows = parts.map(p=>`<tr${p.total ? ' style="font-weight:700;background:#F4F4F2;"' : ""}><td>${p.name}</td>` +
+    idx.map(i=>`<td class="num">${fmt(p.l(i),0)}</td>`).join("") + idx.map(i=>`<td class="num">${fmt(p.c(i),0)}</td>`).join("") +
+    idx.map(i=>`<td class="num">${pc(p.c(i), p.l(i))}</td>`).join("") + "</tr>").join("");
+  return `<div class="panel" style="grid-column:1 / -1;"><div class="panel-title">Desglose por clínica${hsScopeLabel()} — últimos ${idx.length} meses</div>
+    <div class="section-sub" style="margin:0 0 8px;">Deals creados, citas agendadas y conversión por clínica (campo Clínica de HubSpot). ${currentScope==="CDMX" ? "Benito Juárez aparece desde fines de octubre." : "Sahuayo es muy pequeña (≈10 deals al mes)."}</div>
+    <div class="scroll-table"><table><thead><tr><th rowspan="2">Clínica</th>${grp("Deals")}${grp("Citas")}${grp("Conversión")}</tr><tr>${sub}${sub}${sub}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
 function buildHubspotCharts(){
   const el = document.getElementById("hubspot-charts");
   el.innerHTML = `
@@ -1776,6 +1871,7 @@ function buildHubspotCharts(){
   `;
   function draw(id, metricKey, color, vf){
     destroyChart(id);
+    if (hsDrawSplit(id, metricKey, vf)) return;   // CDMX / GDL: barras apiladas por clínica
     const series = buildHubspotSeries(metricKey);
     const bg = series.labels.map((_,i)=> i===series.currentIndex ? color : COLORS.gray);
     const ctx = document.getElementById(id).getContext("2d");
@@ -1790,6 +1886,8 @@ function buildHubspotCharts(){
   draw("chart-leads", "leads", COLORS.blue, v=>`${fmt(v,0)}`);
   draw("chart-citas", "citas", COLORS.pink, v=>`${fmt(v,0)}`);
   draw("chart-conv", "conversion", COLORS.red, v=>`${fmt(v,0)}%`);
+  const tb = hsSplitTable();
+  if (tb) el.insertAdjacentHTML("beforeend", tb);
 }
 function buildHubspotDetail(){
   const el = document.getElementById("hubspot-detail");
