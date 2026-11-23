@@ -671,17 +671,17 @@ window.DATA = {
       "Metepec salió del bloqueo de agenda de la Dra. (16 al 20-nov): Real $0.14M y proyección $0.26M (Atenciones MTP 172, Pacientes 62). Sigue siendo la sede con mayor incertidumbre; la proyección ya no descuenta días de bloqueo.",
       "Del 19 al 22-nov se agregaron $2.44M: jueves 19 $1.32M, viernes 20 $0.77M, sábado 21 $0.33M y domingo 22 $0.02M. El jueves 19 concentra cargos grandes en CDMX (incluye subrogación). Sin subrogación ni renovaciones de almacenamiento, el ritmo diario base de CDMX va en $489K por día ponderado vs $450K del promedio ago-oct. La subrogación del mes suma $1.75M en el Real.",
       "Por servicio (proyectado): Tratamientos FIV/ICSI $4.76M, Congelación de Gametos $3.50M, Farmacia $3.21M, Laboratorio $2.65M, Subrogación $1.94M. Subrogación $1.94M: $1.75M ya están en el Real y el resto es la mitad del promedio ago-oct.",
-      "Atenciones proyectadas 3,421 (+9% vs octubre) y Pacientes 1,139 (+18%). Consultas de primera vez al 22-nov: 239 reales y proyección 355 (+28% vs octubre, rango 340–369); No Show 18.8%. HubSpot (Interesa2) al 22-nov: 1,273 leads y 316 citas agendadas (25% de conversión vs 25% en octubre; sedes con GDL = Guadalajara + Puerto Vallarta + Sahuayo y CDMX = Ciudad de México + Benito Juárez: CDMX 32%, GDL 21%, MTP 21%)."
+      "Atenciones proyectadas 3,421 (+9% vs octubre) y Pacientes 1,139 (+18%). Consultas de primera vez al 22-nov: 239 reales y proyección 355 (+28% vs octubre, rango 340–369); No Show 18.8%. HubSpot (Interesa2) al 22-nov: 1,273 leads y 316 citas agendadas (25% de conversión vs 26% en octubre; sedes con GDL = Guadalajara + Puerto Vallarta + Sahuayo y CDMX = Ciudad de México + Benito Juárez: CDMX 32%, GDL 21%, MTP 21%)."
     ],
     "CDMX": [
       "CDMX lleva $10.78M al 22-nov y proyecta $14.41M (+4% vs octubre, +9% vs U3M): Tratamientos FIV/ICSI $4.08M, Congelación de Gametos $2.80M, Farmacia $2.73M, Laboratorio $2.19M, Subrogación $1.92M.",
       "1,834 atenciones y 580 pacientes al corte; proyección 2,560 atenciones (+7% vs octubre) y 792 pacientes (+18% vs octubre). Consultas de primera vez: 134 al corte, proyección 199 (+37% vs octubre); No Show 14.6%.",
-      "HubSpot (Interesa2) al 22-nov (Ciudad de México + Benito Juárez): 551 leads y 177 citas agendadas (32% de conversión vs 30% en octubre, con 908 leads y 269 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
+      "HubSpot (Interesa2) al 22-nov (Ciudad de México + Benito Juárez): 552 leads y 178 citas agendadas (32% de conversión vs 30% en octubre, con 909 leads y 270 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
     ],
     "GDL": [
       "GDL lleva $1.77M al 22-nov y proyecta $2.44M (+22% vs octubre): Congelación de Gametos $0.67M, Tratamientos FIV/ICSI $0.60M, Laboratorio $0.42M, Farmacia $0.40M. Ojo: los cargos de los días hábiles 17, 18 y 20-nov ($57K, $42K y $43K) fueron bajos; si fue captura tardía, el Real de GDL subirá.",
       "480 atenciones y 198 pacientes al corte; proyección 689 atenciones y 285 pacientes. Consultas de primera vez: 81 al corte, proyección 120 (+11% vs octubre); No Show 20.8%.",
-      "HubSpot (Interesa2) al 22-nov (Guadalajara + Puerto Vallarta + Sahuayo): 457 leads y 95 citas agendadas (21% de conversión vs 23% en octubre, con 717 leads y 164 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
+      "HubSpot (Interesa2) al 22-nov (Guadalajara + Puerto Vallarta + Sahuayo): 457 leads y 95 citas agendadas (21% de conversión vs 23% en octubre, con 717 leads y 165 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
     ],
     "MTP": [
       "Metepec lleva $135.5K al 22-nov (107 líneas) y proyecta $258K (-61% vs octubre). La agenda de la Dra. estuvo bloqueada del 16 al 20-nov (ya terminó; no se descuenta nada); sigue siendo la sede con mayor incertidumbre (error de backtest ~30%).",
@@ -878,7 +878,7 @@ window.DATA = {
   "hubspot": {
     "leads": {
       "hist": [
-        833,
+        832,
         1059,
         1020,
         999,
@@ -886,8 +886,8 @@ window.DATA = {
         1435,
         1533,
         1921,
-        2095,
-        2057
+        2090,
+        2052
       ],
       "actual": 1273
     },
@@ -899,10 +899,10 @@ window.DATA = {
         328,
         367,
         315,
-        418,
+        419,
         501,
-        468,
-        514
+        471,
+        528
       ],
       "actual": 316
     },
@@ -916,8 +916,8 @@ window.DATA = {
         22,
         27,
         26,
-        22,
-        25
+        23,
+        26
       ],
       "actual": 25
     },
@@ -948,8 +948,8 @@ window.DATA = {
           657,
           788,
           1000,
-          908,
-          551,
+          909,
+          552,
           null
         ],
         "citas": [
@@ -962,8 +962,8 @@ window.DATA = {
           214,
           187,
           227,
-          269,
-          177,
+          270,
+          178,
           null
         ]
       },
@@ -992,7 +992,7 @@ window.DATA = {
           569,
           619,
           732,
-          707,
+          708,
           717,
           457,
           null
@@ -1007,7 +1007,7 @@ window.DATA = {
           125,
           181,
           135,
-          164,
+          165,
           95,
           null
         ]
@@ -1061,7 +1061,7 @@ window.DATA = {
     "cohortes": [
       {
         "mes": "Ene-26",
-        "leads": 834,
+        "leads": 832,
         "m0": 21,
         "m1": 1,
         "m2": 0,
@@ -1069,7 +1069,7 @@ window.DATA = {
       },
       {
         "mes": "Feb-26",
-        "leads": 1062,
+        "leads": 1059,
         "m0": 20,
         "m1": 2,
         "m2": 0,
@@ -1077,7 +1077,7 @@ window.DATA = {
       },
       {
         "mes": "Mar-26",
-        "leads": 1021,
+        "leads": 1020,
         "m0": 28,
         "m1": 1,
         "m2": 0,
@@ -1085,7 +1085,7 @@ window.DATA = {
       },
       {
         "mes": "Abr-26",
-        "leads": 1000,
+        "leads": 999,
         "m0": 31,
         "m1": 3,
         "m2": 0,
@@ -1093,7 +1093,7 @@ window.DATA = {
       },
       {
         "mes": "May-26",
-        "leads": 1754,
+        "leads": 1752,
         "m0": 19,
         "m1": 1,
         "m2": 1,
@@ -1101,7 +1101,7 @@ window.DATA = {
       },
       {
         "mes": "Jun-26",
-        "leads": 1436,
+        "leads": 1435,
         "m0": 20,
         "m1": 2,
         "m2": 0,
@@ -1117,7 +1117,7 @@ window.DATA = {
       },
       {
         "mes": "Ago-26",
-        "leads": 1924,
+        "leads": 1921,
         "m0": 24,
         "m1": 1,
         "m2": 0,
