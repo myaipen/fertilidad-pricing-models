@@ -387,7 +387,7 @@ const stackedTotalLabels = {
       const total = (ds0.data[i]||0) + (ds1.data[i]||0);
       if (!total) return;
       const topBar = ds1.data[i] ? chart.getDatasetMeta(1).data[i] : bar;
-      ctx.fillText(fmt(total), topBar.x, topBar.y - 4);
+      ctx.fillText(ds0._fmt ? ds0._fmt(total) : fmt(total), topBar.x, topBar.y - 4);
     });
     ctx.restore();
   }
@@ -799,7 +799,11 @@ function drawEvolutivoBar(canvasId, series, valueFmt, metaValues){
     return COLORS.gray;
   });
   const hasMeta = metaValues && metaValues.some(v => v != null);
-  const datasets = [{ label:"Real", data: series.values, backgroundColor: bg, borderRadius:4, maxBarThickness:30, _fmt: valueFmt }];
+  const gv = (series.genevity && series.genevity.some(v => v != null)) ? series.genevity : null;
+  const datasets = gv
+    ? [{ label:"IECH (sin Genevity)", data: series.values.map((v,i)=> gv[i] != null ? v - gv[i] : v), backgroundColor: bg, borderRadius:2, maxBarThickness:30, stack:"ing", _fmt: valueFmt },
+       { label:"Genevity", data: gv, backgroundColor: COLORS.amber, borderRadius:2, maxBarThickness:30, stack:"ing", _fmt: valueFmt }]
+    : [{ label:"Real", data: series.values, backgroundColor: bg, borderRadius:4, maxBarThickness:30, _fmt: valueFmt }];
   if (hasMeta){
     datasets.push({
       type:"line", label:"Meta", data: metaValues,
@@ -815,10 +819,12 @@ function drawEvolutivoBar(canvasId, series, valueFmt, metaValues){
       responsive:true, maintainAspectRatio:false,
       layout:{ padding:{ top:20 } },
       plugins:{
-        legend:{ display: hasMeta, position:"bottom", labels:{ boxWidth:12, font:{ size:11 }, filter:(item)=> item.text === "Meta" } },
-        tooltip:{ callbacks:{ label:(c)=> `${c.dataset.label==="Meta"?"Meta: ":""}${valueFmt(c.raw)}` } },
+        legend:{ display: hasMeta || !!gv, position:"bottom", labels:{ boxWidth:12, font:{ size:11 }, filter:(item)=> gv ? true : item.text === "Meta",
+          generateLabels: gv ? (ch)=> [{ text:"IECH (sin Genevity)", fillStyle:COLORS.gray, strokeStyle:COLORS.gray, lineWidth:0, hidden:false, datasetIndex:0 }, { text:"Genevity", fillStyle:COLORS.amber, strokeStyle:COLORS.amber, lineWidth:0, hidden:false, datasetIndex:1 }] : undefined } },
+        tooltip:{ callbacks:{ label:(c)=> c.raw == null ? null : `${c.dataset.label==="Meta"?"Meta: ":(gv?c.dataset.label+": ":"")}${valueFmt(c.raw)}`,
+          footer: gv ? (items)=> { const i = items[0].dataIndex, tot = (charts[canvasId].data.datasets[0].data[i]||0) + (charts[canvasId].data.datasets[1].data[i]||0); return "Total IECH: " + valueFmt(tot); } : undefined } },
       },
-      scales:{ y:{ display:false, beginAtZero:true, grace:"20%" }, x:{ grid:{ display:false }, ticks:{ autoSkip: series.labels.length > 14, font:{ size: series.labels.length>10 ? 9 : 11 }, maxRotation: series.labels.length>10 ? 60 : 0 } } },
+      scales:{ y:{ display:false, beginAtZero:true, grace:"20%", stacked: !!gv }, x:{ stacked: !!gv, grid:{ display:false }, ticks:{ autoSkip: series.labels.length > 14, font:{ size: series.labels.length>10 ? 9 : 11 }, maxRotation: series.labels.length>10 ? 60 : 0 } } },
     },
   });
 }
@@ -851,6 +857,11 @@ function buildEvolutivos(){
   const pu = soloIng ? null : buildSeries("monthly", currentScope, {key:"pacientes", fineKey:"pacientes"});
   const [b1,b2] = PERIOD_BADGES[currentPeriod];
   const meta = ing ? buildMetaValuesForIngresos(ing) : null;
+  // IECH · Mes: separa Genevity (comisionable) dentro del total, solo en los meses con dato (ene–oct; nov no trae Genevity por separado)
+  if (ing && currentScope === "IECH" && currentPeriod === "mes" && window.IECH && window.IECH.genevity_mensual && ing.labels && ing.currentIndex != null){
+    const gm = window.IECH.genevity_mensual, mv = window.getMesVigente();
+    ing.genevity = ing.values.map((_,i)=>{ const mn = i <= ing.currentIndex ? i+1 : mv; const g = gm[mn-1]; return (g != null && mn <= gm.length) ? g : null; });
+  }
   const _mediCity = currentScope === "MEDI" && satOn("MEDI") && window.MEDI && window.MEDI.ciudad_hist;
   const ingCD = _mediCity ? buildSeries("monthly", "MEDI_CDMX", {key:"ingresos", fineKey:"ingresos"}) : null;
   const ingMT = _mediCity ? buildSeries("monthly", "MEDI_MTY", {key:"ingresos", fineKey:"ingresos"}) : null;
@@ -1836,7 +1847,7 @@ function buildHeader(){
         (currentPeriod==="anio" ? ". En la vista Año el total es solo FI México (IECH, Clínica Valle y Medifert no tienen base 2025)" : (currentPeriod==="semana"||currentPeriod==="dia" ? ". En Semana y Día el total es solo FI México; IECH tiene su propia pestaña" : (currentPeriod==="trimestre" ? ". En Trimestre, Atenciones y Pacientes son solo FI México" : (satOn("IECH") ? ". IECH aporta Atenciones y Pacientes solo desde octubre-26: no hay base anterior, por eso no se muestra vs U3M y los meses previos son solo FI México" : "")))) +
         ". Consultas, HubSpot, Subrogación, Conversión y Médicos incluyen solo CDMX, GDL y Metepec.";
     } else if (currentScope === "IECH"){
-      pn = `IECH (Obispado, Monterrey): Ingresos (sin IVA), Atenciones (líneas con monto) y Pacientes únicos (expedientes), con corte al ${satObj("IECH").corte}. Atenciones y Pacientes solo desde octubre-26. Sin Consultas, HubSpot, Subrogación ni Médicos.` + (currentPeriod==="anio" ? " Año: sin base 2025." : (currentPeriod==="semana" ? " Semana: solo semanas completas desde el 5-oct." : (currentPeriod==="dia" ? " Día: datos hasta el 16-nov." : "")));
+      pn = `IECH (Obispado, Monterrey): Ingresos (sin IVA), Atenciones (líneas con monto) y Pacientes únicos (expedientes), con corte al ${satObj("IECH").corte}. Atenciones y Pacientes solo desde octubre-26. Sin Consultas, HubSpot, Subrogación ni Médicos.` + (currentPeriod==="mes" ? " Evolutivo de Ingresos: el total incluye Genevity (barra ámbar, ene–oct del archivo «Genivity Ingresos Ene-Oct 26»); noviembre sale del reporte de facturación, que no separa Genevity." : "") + (currentPeriod==="anio" ? " Año: sin base 2025." : (currentPeriod==="semana" ? " Semana: solo semanas completas desde el 5-oct." : (currentPeriod==="dia" ? " Día: datos hasta el 16-nov." : "")));
     } else if (currentScope === "MEDI"){
       pn = `Medifert (Farmacia › Medifert): solo Ingresos (sin IVA, neto de ventas a IECH y Clínica Valle), con corte al ${satObj("MEDI").corte}. Sin Atenciones, Pacientes, Consultas, HubSpot, Subrogación ni Médicos; serie diaria y semanal disponible.` + (currentPeriod==="anio" ? " Año: sin base 2025." : "");
     } else if (currentScope === "CMV"){
