@@ -1317,17 +1317,18 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
   ============================================================================
 */
 const CONSULTAS_PROY = {
-  anio: 2026, mes: 11, corte: 22, showRate: 82, modelo: "bru",
+  anio: 2026, mes: 11, corte: 22, showRate: 81, modelo: "bru", m6: 321,
   // 23-nov-2026 (corte 22-nov): modelo de Bru = Terminadas a la fecha + (Agenda pendiente 23-30 nov x show rate) + Incremental por agendar.
-  // Agenda pendiente (vRepro, Citado/Confirmada, primera vez): CDMX 66, GDL 35, MTP 14. Show rate (oct + nov al 22): CDMX 86%, GDL 81%, MTP 68%.
+  // Real conciliado con la hoja "Primera Vez" de Marite (239 = CDMX 134, GDL 81, MTP 24): vRepro cambia estatus a posteriori (No Asiste / citas movidas), por lo que el conteo previo (244) estaba inflado en 5.
+  // Agenda pendiente (vRepro, Citado/Confirmada, primera vez): CDMX 66, GDL 35, MTP 14. Show rate (oct + nov al 22): CDMX 85%, GDL 80%, MTP 68%.
   // Incremental = velocidad de agenda (citas/dia, HubSpot nov 1-22 calibrado a vRepro: CDMX 5.1, GDL 3.9, MTP 0.4) x suma del decay diario (0.04 x dias restantes) x show rate; el bloqueo de MTP (16-20 nov) ya terminó.
-  // Escenarios (slide Bru): piso = Terminadas + agenda x show; min = Piso + incremental x 0.5 (conservador); base = Piso + incremental; max = Piso + incremental x 1.6 (optimista). Referencia cruzada: ritmo M6 = 327 (backtest MAPE 6.9%).
+  // Escenarios (slide Bru): piso = Terminadas + agenda x show; min = Piso + incremental x 0.5 (conservador); base = Piso + incremental; max = Piso + incremental x 1.6 (optimista). Referencia cruzada: ritmo M6 = 321 (backtest MAPE 6.9%).
   sedes: {
-    CDMX: { piso: 194, base: 198, min: 196, max: 201 },
-    GDL:  { piso: 111, base: 115, min: 113, max: 117 },
+    CDMX: { piso: 190, base: 195, min: 193, max: 198 },
+    GDL:  { piso: 109, base: 112, min: 111, max: 114 },
     MTP:  { piso: 34,  base: 34,  min: 34,  max: 34 },
   },
-  total: { piso: 339, base: 347, min: 343, max: 352 },
+  total: { piso: 333, base: 341, min: 338, max: 346 },
 };
 function consultasProyActiva() {
   return ANIO_VIGENTE === CONSULTAS_PROY.anio && MES_VIGENTE === CONSULTAS_PROY.mes; // el corte de consultas (CONSULTAS_PROY.corte = 22) se actualiza a mano con cada refresco
@@ -1503,20 +1504,20 @@ const CONSULTAS_OCT_PROYECTADO = {
  "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 1,
  "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 1,
 };
-// Noviembre 2026 del ranking de consultas (corte 22-nov-2026): Terminadas del grupo Primera Vez del 1 al 22 nov (CDMX 137, GDL 83, MTP 24 = 244).
+// Noviembre 2026 del ranking de consultas (corte 22-nov-2026): Terminadas del grupo Primera Vez del 1 al 22 nov, conciliadas con la hoja "Primera Vez" (CDMX 134, GDL 81, MTP 24 = 239).
 const CONSULTAS_VREPRO_NOV_2026 = {
- "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez": 57,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez": 54,
  "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online": 21,
  "FERTILIDAD INTEGRAL Guadalajara|Check up Ginecologico": 19,
- "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 17,
  "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Mujeres": 16,
+ "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 16,
  "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online gratis": 15,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez": 13,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez": 12,
  "FERTILIDAD INTEGRAL Ciudad de México|Consulta de Primera Vez IP's": 10,
  "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Mujeres": 9,
  "FERTILIDAD INTEGRAL Guadalajara|Check up Integral": 8,
- "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Parejas": 7,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Parejas": 6,
  "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Parejas": 5,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta ginecológica": 5,
  "FERTILIDAD INTEGRAL Ciudad de México|Check up Ginecologico": 4,
@@ -1525,23 +1526,23 @@ const CONSULTAS_VREPRO_NOV_2026 = {
  "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez online": 3,
  "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 3,
  "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 2,
- "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 2,
- "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online gratis": 2,
- "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 2,
  "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 2,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online gratis": 2,
+ "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 2,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 2,
  "FERTILIDAD INTEGRAL Ciudad de México|Check up Integral": 1,
- "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 1,
- "FERTILIDAD INTEGRAL Guadalajara|Consulta Obstetricia": 1,
  "FERTILIDAD INTEGRAL Guadalajara|Asesoria catalogos": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta Obstetricia": 1,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 1,
 };
-// Noviembre PROYECTADO por concepto (corte 22-nov): cada sede suma EXACTAMENTE su proyección Bru (CDMX 198 + GDL 115 + MTP 34 = 347);
+// Noviembre PROYECTADO por concepto (corte 22-nov): cada sede suma EXACTAMENTE su proyección Bru (CDMX 195 + GDL 112 + MTP 34 = 341);
 // por concepto = Real a la fecha + remanente repartido con la mezcla de octubre cerrado (nov-2026: reconciliado con el KPI). Se usa mientras consultasProyActiva().
 const CONSULTAS_NOV_PROYECTADO = {
- "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez": 75,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez": 72,
  "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online": 36,
  "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Mujeres": 27,
  "FERTILIDAD INTEGRAL Guadalajara|Check up Ginecologico": 26,
- "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 24,
+ "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 23,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez": 20,
  "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online gratis": 17,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez": 16,
@@ -1549,20 +1550,20 @@ const CONSULTAS_NOV_PROYECTADO = {
  "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Mujeres": 13,
  "FERTILIDAD INTEGRAL Guadalajara|Check up Integral": 11,
  "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Parejas": 9,
- "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Parejas": 9,
+ "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Parejas": 8,
  "FERTILIDAD INTEGRAL Ciudad de México|Check up Ginecologico": 7,
- "FERTILIDAD INTEGRAL Guadalajara|Consulta ginecológica": 7,
- "FERTILIDAD INTEGRAL Ciudad de México|Asesoria catalogos": 4,
+ "FERTILIDAD INTEGRAL Guadalajara|Consulta ginecológica": 6,
  "FERTILIDAD INTEGRAL Ciudad de México|Check-up SOMP": 4,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez online": 4,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 3,
+ "FERTILIDAD INTEGRAL Ciudad de México|Asesoria catalogos": 3,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta Obstetricia": 3,
- "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 3,
+ "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 3,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 3,
  "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 3,
  "FERTILIDAD INTEGRAL Ciudad de México|Check up Integral": 2,
- "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 2,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online gratis": 2,
- "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 2,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 2,
  "FERTILIDAD INTEGRAL Guadalajara|Asesoria catalogos": 1,
  "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 1,
  "FERTILIDAD INTEGRAL Metepec|Check-up SOMP": 1,
@@ -2753,7 +2754,7 @@ function ajustarConsultasProyUI() {
     ? "<b>Proyección " + MESES_12[CONSULTAS_PROY.mes - 1] + " (" + (sc === "total" ? "total" : sc) + "): " + e.base + " consultas</b> · rango " + e.min + "–" + e.max +
       " · real al " + CONSULTAS_PROY.corte + "-" + MESES_12[CONSULTAS_PROY.mes - 1].toLowerCase() + ": " + e.piso + ". Primera proyección por ritmo (real + días hábiles equivalentes restantes × ritmo ago-oct); aún sin agenda leída. No incluye consultas fuera del grupo Primera Vez."
     : "<b>Proyección " + MESES_12[CONSULTAS_PROY.mes - 1] + " (" + (sc === "total" ? "total" : sc) + "): " + e.base + " consultas</b> · rango " + e.min + "–" + e.max +
-      " · piso " + e.piso + " (real + agenda pendiente × show rate " + CONSULTAS_PROY.showRate + "%). Corte " + CONSULTAS_PROY.corte + "-" + MESES_12[CONSULTAS_PROY.mes - 1].toLowerCase() + ". Modelo Bru: real + agenda pendiente × show rate + citas nuevas esperadas (velocidad de agenda × decay del día × show rate); rango = piso + incremental ×0.5 a ×1.6 (el máximo se calibra con la referencia por ritmo histórico: 303). Referencia cruzada por ritmo histórico: 303. No incluye consultas fuera del grupo Primera Vez.";
+      " · piso " + e.piso + " (real + agenda pendiente × show rate " + CONSULTAS_PROY.showRate + "%). Corte " + CONSULTAS_PROY.corte + "-" + MESES_12[CONSULTAS_PROY.mes - 1].toLowerCase() + ". Modelo Bru: real + agenda pendiente × show rate + citas nuevas esperadas (velocidad de agenda × decay del día × show rate); rango = piso + incremental ×0.5 a ×1.6. Referencia cruzada por ritmo histórico: " + CONSULTAS_PROY.m6 + " (backtest abr–oct, error medio 6.9%). No incluye consultas fuera del grupo Primera Vez.";
 }
 window.ajustarConsultasProyUI = ajustarConsultasProyUI;
 
