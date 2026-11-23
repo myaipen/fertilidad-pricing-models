@@ -1321,7 +1321,7 @@ const CONSULTAS_PROY = {
   // 24-nov-2026 (corte 22-nov).
   // Real conciliado con la hoja "Primera Vez" de Marite (239 = CDMX 134, GDL 81, MTP 24): vRepro cambia estatus a posteriori (No Asiste / citas movidas), por lo que el conteo previo (244) estaba inflado en 5.
   // MODELO v2 (24-nov): base = Terminadas + agenda pendiente 23-30 nov x factor de llenado empirico por horizonte (realizado/agenda al corte observado en los cortes 12, 16 y 18-nov por sede; ya incluye no show y citas agendadas tarde) con la parte tardia escalada por el flujo de citas nuevas de HubSpot (CDMX x0.93, GDL x1.09, MTP x1.2). Rango = remanente x 0.88 a x 1.12. Backtest: error medio 3.2 por sede-corte vs 4.1 (Bru) y 5.6 (agenda x show).
-  // Agenda pendiente (vRepro, Citado/Confirmada, primera vez): CDMX 66, GDL 35, MTP 14. Show rate (oct + nov al 22): CDMX 85%, GDL 78%, MTP 68%.
+  // Agenda pendiente (vRepro, Citado/Confirmada, primera vez): CDMX 66, GDL 35, MTP 14. Show rate (oct + nov al 22): CDMX 85%, GDL 78%, MTP 69%.
   // Piso = Terminadas + agenda x show rate. Referencia cruzada: ritmo M6 = 321 (backtest MAPE 6.9%). Modelo anterior (Bru, velocidad de agenda x decay): base 341.
   sedes: {
     CDMX: { piso: 190, base: 199, min: 191, max: 207 },
@@ -1559,12 +1559,12 @@ const CONSULTAS_NOV_PROYECTADO = {
  "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 3,
  "FERTILIDAD INTEGRAL Ciudad de México|Asesoria catalogos": 3,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta Obstetricia": 3,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 3,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 3,
- "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 3,
  "FERTILIDAD INTEGRAL Ciudad de México|Check up Integral": 2,
  "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 2,
+ "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 2,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online gratis": 2,
- "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 2,
  "FERTILIDAD INTEGRAL Guadalajara|Asesoria catalogos": 1,
  "FERTILIDAD INTEGRAL Metepec|Check-up SOMP": 1,
 };
