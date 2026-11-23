@@ -77,6 +77,12 @@
   .footnote{ font-style:italic; color:var(--axis); font-size:11px; margin-top:26px; line-height:1.5; }
   .footer{ text-align:center; font-style:italic; color:var(--axis); font-size:12px; margin-top:36px; }
 
+  .medi-click{ cursor:pointer; }
+  .medi-click:hover{ background:var(--card-bg); }
+  .medi-click:hover .drill-hint{ opacity:1; text-decoration:underline; }
+  .medi-open .drill-hint{ display:inline-block; transform:rotate(90deg); }
+  .medi-evo-row > td{ background:var(--card-bg); padding:10px 12px 12px !important; }
+  .medi-evo-title{ font-size:12px; font-weight:700; margin-bottom:6px; }
   .servicio-row{ cursor:pointer; }
   .servicio-row:hover{ background:var(--card-bg); }
   .drill-hint{ font-size:10.5px; color:var(--blue); font-weight:700; margin-left:6px; opacity:.75; }
@@ -1891,6 +1897,40 @@ function mediDeltaCell(cur, prev){
 function mediTable(head, rowsHtml, foot){
   return `<table><thead><tr>${head.map((h,i)=>`<th${i?' class="num"':''}>${h}</th>`).join("")}</tr></thead><tbody>${rowsHtml}${foot||""}</tbody></table>`;
 }
+// --- clic en fila (medicamento / cliente / intercompañía) -> evolutivo mensual de su venta
+let _mediSer = {};
+function mediReg(key, title, arr, o22, scope){ _mediSer[key] = {title, arr, o22: o22 == null ? null : o22, scope}; return key; }
+function mediSum(arrs){ const out = []; for (let i=0;i<11;i++) out.push(arrs.reduce((t,a)=>t+((a&&a[i])||0),0)); return out; }
+function mediClickTr(key, inner){ return `<tr class="medi-click" data-ms="${String(key).replace(/"/g,'&quot;')}">${inner}</tr>`; }
+const MEDI_HINT = '<span class="drill-hint" title="Clic para ver el evolutivo mensual" style="white-space:nowrap; font-size:13px; opacity:.8;">›</span>';
+function mediDestroyEvo(){ Object.keys(charts).forEach(k=>{ if (k.indexOf("medi-evo-") === 0) destroyChart(k); }); }
+let _mediEvoN = 0;
+function mediToggleEvo(tr){
+  const next = tr.nextElementSibling;
+  if (next && next.classList.contains("medi-evo-row")){ const cv = next.querySelector("canvas"); if (cv) destroyChart(cv.id); next.remove(); tr.classList.remove("medi-open"); return; }
+  const S = _mediSer[tr.getAttribute("data-ms")]; if (!S) return;
+  const I = window.MEDI, parcial = I.mes_proy === 11, arr = S.arr.slice(0, 11);
+  const labels = MESES_12.slice(0, arr.length).map((l,i)=> (parcial && i === arr.length-1) ? l + "*" : l);
+  const id = "medi-evo-" + (++_mediEvoN);
+  const avg = (arr[7]+arr[8]+arr[9])/3, last = arr[arr.length-1], ytd = arr.reduce((t,v)=>t+v,0);
+  const cap = `${parcial ? "* "+nombreMesLargo(11)+" parcial al "+I.corte+" (real, sin proyección)." : ""} Total ene–${labels[labels.length-1].replace("*","").toLowerCase()}: $${fmt(ytd,2)}M · prom. ago–oct: $${fmt(avg,2)}M${S.o22!=null ? " · oct 1–22: $"+fmt(S.o22,2)+"M" : ""}.`;
+  const row = document.createElement("tr"); row.className = "medi-evo-row";
+  row.innerHTML = `<td colspan="${tr.children.length}"><div class="medi-evo-title">${S.title} — evolutivo mensual 2026 · MDP</div><div style="position:relative; height:170px;"><canvas id="${id}"></canvas></div><div class="section-sub" style="margin:6px 0 0;">${cap}</div></td>`;
+  tr.after(row); tr.classList.add("medi-open");
+  const bg = arr.map((v,i)=> (parcial && i === arr.length-1) ? COLORS.blue : COLORS.gray);
+  destroyChart(id);
+  charts[id] = new Chart(row.querySelector("canvas").getContext("2d"), {
+    type:"bar",
+    data:{ labels, datasets:[{ label:S.title, data:arr, backgroundColor:bg, borderRadius:4, maxBarThickness:30, _fmt:(v)=>fmt(v,2) }] },
+    options:{ responsive:true, maintainAspectRatio:false, layout:{ padding:{ top:20 } },
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:(c)=> c.raw == null ? null : `$${fmt(c.raw,3)}M` } } },
+      scales:{ y:{ display:false, grace:"20%" }, x:{ grid:{ display:false } } } }
+  });
+}
+document.addEventListener("click", e=>{
+  const tr = e.target.closest && e.target.closest("tr.medi-click"); if (!tr || !tr.closest("#medi-detalle")) return;
+  mediToggleEvo(tr);
+});
 function mediFamRows(c, m, topN){
   const D_ = window.MEDI.det, obj = D_.fam[c], o22 = D_.fam_oct22[c];
   const all = Object.keys(obj).map(k=>({k, cur:obj[k][m-1], prev:mediPrev(obj[k], o22[k], m)}));
@@ -1898,10 +1938,11 @@ function mediFamRows(c, m, topN){
   const tot = all.reduce((t,r)=>t+r.cur,0), totPrev = all.reduce((t,r)=>t+(r.prev||0),0), cmp = mediCmp(m);
   const adj = all.filter(r=>!(r.cur>0.0005)), adjCur = adj.reduce((t,r)=>t+r.cur,0), adjPrev = adj.reduce((t,r)=>t+(r.prev||0),0);
   const top = rows.slice(0,topN), rest = rows.slice(topN);
-  let html = top.map(r=>`<tr><td>${r.k}</td><td class="num">${fmt(r.cur,2)}</td><td class="num">${fmt(r.cur/tot*100,0)}%</td><td class="num">${mediDeltaCell(r.cur,r.prev)}</td></tr>`).join("");
-  if (rest.length){ const rc = rest.reduce((t,r)=>t+r.cur,0), rp = rest.reduce((t,r)=>t+(r.prev||0),0); html += `<tr><td>Otras familias (${rest.length})</td><td class="num">${fmt(rc,2)}</td><td class="num">${fmt(rc/tot*100,0)}%</td><td class="num">${mediDeltaCell(rc, cmp.mode?rp:null)}</td></tr>`; }
+  const cn = MEDI_CIUDAD_NOM[c];
+  let html = top.map(r=>mediClickTr(mediReg(`fam|${c}|${r.k}`, `${cn} · ${r.k}`, obj[r.k], o22[r.k]), `<td>${r.k} ${MEDI_HINT}</td><td class="num">${fmt(r.cur,2)}</td><td class="num">${fmt(r.cur/tot*100,0)}%</td><td class="num">${mediDeltaCell(r.cur,r.prev)}</td>`)).join("");
+  if (rest.length){ const rc = rest.reduce((t,r)=>t+r.cur,0), rp = rest.reduce((t,r)=>t+(r.prev||0),0); html += mediClickTr(mediReg(`fam|${c}|otras`, `${cn} · Otras familias (${rest.length})`, mediSum(rest.map(r=>obj[r.k])), cmp.mode==="oct22"?rp:null), `<td>Otras familias (${rest.length}) ${MEDI_HINT}</td><td class="num">${fmt(rc,2)}</td><td class="num">${fmt(rc/tot*100,0)}%</td><td class="num">${mediDeltaCell(rc, cmp.mode?rp:null)}</td>`); }
   if (adj.length && Math.abs(adjCur) > 0.004) html += `<tr><td>Ajustes y notas de crédito</td><td class="num">${fmt(adjCur,2)}</td><td class="num">${fmt(adjCur/tot*100,0)}%</td><td class="num"><span style="color:var(--axis);">—</span></td></tr>`;
-  const foot = `<tr style="font-weight:700;"><td>Total ${MEDI_CIUDAD_NOM[c]}</td><td class="num">${fmt(tot,2)}</td><td class="num">100%</td><td class="num">${mediDeltaCell(tot, cmp.mode?totPrev:null)}</td></tr>`;
+  const foot = mediClickTr(mediReg(`fam|${c}|total`, `Total ${cn}`, mediSum(Object.keys(obj).map(k=>obj[k])), cmp.mode==="oct22"?totPrev:null), `<td style="font-weight:700;">Total ${cn} ${MEDI_HINT}</td><td class="num" style="font-weight:700;">${fmt(tot,2)}</td><td class="num" style="font-weight:700;">100%</td><td class="num" style="font-weight:700;">${mediDeltaCell(tot, cmp.mode?totPrev:null)}</td>`);
   return mediTable(["Medicamento (familia)","MDP","% mezcla",cmp.lbl], html, foot);
 }
 function mediCanalRows(c, m){
@@ -1933,19 +1974,20 @@ function mediSegPanel(){
 }
 function buildMediDetalle(){
   const el = document.getElementById("medi-detalle"); if (!el) return;
+  mediDestroyEvo(); _mediSer = {};
   if (!(currentScope === "MEDI" && satOn("MEDI") && window.MEDI && window.MEDI.det)){ el.innerHTML = ""; return; }
   const I = window.MEDI, D_ = I.det, m = window.getMesVigente(), mes = nombreMesLargo(m), cmp = mediCmp(m);
   if (m < 1 || m > D_.meses){ el.innerHTML = `<div class="section-title">Medifert — detalle por ciudad</div><p class="section-sub">Sin detalle para este mes (la base cubre enero–noviembre 2026).</p>`; return; }
   const parcial = m === I.mes_proy, corte = parcial ? ` al ${I.corte}` : "";
-  const sub = `Ventas netas sin IVA (excluye IECH, Clínica Valle y Fertilidad 360) de ${mes}${corte}. ${parcial ? "Los comparativos son contra octubre en los mismos días (1–22) para no comparar un mes parcial contra uno completo." : "Comparativos contra el mes anterior."}`;
+  const sub = `Ventas netas sin IVA (excluye IECH, Clínica Valle y Fertilidad 360) de ${mes}${corte}. ${parcial ? "Los comparativos son contra octubre en los mismos días (1–22) para no comparar un mes parcial contra uno completo." : "Comparativos contra el mes anterior."} Clic en un medicamento, cliente o fila de intercompañía (›) para ver el evolutivo mensual de su venta.`;
   const cityPanel = c => `<div class="panel">
       <div class="panel-title">${MEDI_CIUDAD_NOM[c]} — Medicamentos más vendidos (familia) · MDP</div>
       ${mediFamRows(c, m, 8)}
     </div>`;
   // Clientes B2B
-  const cliRows = D_.clientes.map(c=>({n:c.nombre, pl:c.plaza, cur:c.m[m-1]||0, prev:mediPrev(c.m, c.oct22, m), avg:(c.m[7]+c.m[8]+c.m[9])/3})).filter(r=>r.cur>0||r.avg>0).sort((a,b)=>b.cur-a.cur);
+  const cliRows = D_.clientes.map(c=>({n:c.nombre, pl:c.plaza, cur:c.m[m-1]||0, prev:mediPrev(c.m, c.oct22, m), avg:(c.m[7]+c.m[8]+c.m[9])/3, arr:c.m, o22:c.oct22})).filter(r=>r.cur>0||r.avg>0).sort((a,b)=>b.cur-a.cur);
   const netoM = (I.ciudad_hist.CDMX[m-1]!=null ? I.ciudad_hist.CDMX[m-1]+I.ciudad_hist.MTY[m-1] : I.mes_en_curso.real);
-  const cliHtml = cliRows.map(r=>`<tr><td>${r.n}</td><td class="num">${r.pl==="CDMX"?"CDMX":"MTY"}</td><td class="num">${fmt(r.cur,2)}</td><td class="num">${netoM?fmt(r.cur/netoM*100,0):0}%</td><td class="num">${mediDeltaCell(r.cur,r.prev)}</td><td class="num">${fmt(r.avg,2)}</td></tr>`).join("");
+  const cliHtml = cliRows.map(r=>mediClickTr(mediReg(`cli|${r.n}`, r.n, r.arr, r.o22), `<td>${r.n} ${MEDI_HINT}</td><td class="num">${r.pl==="CDMX"?"CDMX":"MTY"}</td><td class="num">${fmt(r.cur,2)}</td><td class="num">${netoM?fmt(r.cur/netoM*100,0):0}%</td><td class="num">${mediDeltaCell(r.cur,r.prev)}</td><td class="num">${fmt(r.avg,2)}</td>`)).join("");
   // Volumen
   const volCol = c=>{
     const v = D_.vol[c], f = v.facturas[m-1], p = v.pacientes[m-1], vta = (I.ciudad_hist[c][m-1]!=null ? I.ciudad_hist[c][m-1] : I.ciudad[c].real),
@@ -1959,7 +2001,7 @@ function buildMediDetalle(){
     <tr><td>Ticket promedio por factura ($)</td><td class="num">${fmt(vc.tk,0)}</td><td class="num">${vc.dt}</td><td class="num">${fmt(vm.tk,0)}</td><td class="num">${vm.dt}</td></tr>
     <tr><td>Pacientes únicos (personas físicas)</td><td class="num">${fmt(vc.p,0)}</td><td class="num">${vc.dp}</td><td class="num">${fmt(vm.p,0)}</td><td class="num">${vm.dp}</td></tr>`;
   // Intercompañía
-  const ic = D_.interco, icRow = (nom, arr, o22)=>{ const cur = arr[m-1]||0, prev = mediPrev(arr, o22, m); return `<tr><td>${nom}</td><td class="num">${fmt(cur,2)}</td><td class="num">${mediDeltaCell(cur,prev)}</td></tr>`; };
+  const ic = D_.interco, icRow = (nom, arr, o22)=>{ const cur = arr[m-1]||0, prev = mediPrev(arr, o22, m); return mediClickTr(mediReg(`ic|${nom}`, nom, arr, o22), `<td>${nom} ${MEDI_HINT}</td><td class="num">${fmt(cur,2)}</td><td class="num">${mediDeltaCell(cur,prev)}</td>`); };
   const icTot = (ic.iech[m-1]||0)+(ic.valle[m-1]||0)+((ic.f360||[])[m-1]||0), bruto = netoM + icTot;
   el.innerHTML = `
     <div class="section-title">Medifert — detalle por ciudad</div>
@@ -1971,7 +2013,7 @@ function buildMediDetalle(){
     </div>
     <div class="grid-2" style="grid-template-columns:1fr 1fr; margin-top:16px; align-items:start;">
       <div class="panel"><div class="panel-title">Volumen y ticket</div>${mediTable(["Indicador","CDMX",cmp.lbl,"Monterrey",cmp.lbl], volHtml)}</div>
-      <div class="panel"><div class="panel-title">Intercompañía (fuera del total, solo monitoreo) · MDP</div>${mediTable(["Cliente",mes,cmp.lbl], icRow("IECH (Obispado)", ic.iech, ic.iech_oct22)+icRow("Clínica Valle (CMV)", ic.valle, ic.valle_oct22)+(ic.f360 ? icRow("Fertilidad 360", ic.f360, ic.f360_oct22) : ""), `<tr style="font-weight:700;"><td>Total intercompañía</td><td class="num">${fmt(icTot,2)}</td><td class="num">${bruto?fmt(icTot/bruto*100,0):0}% de la venta bruta</td></tr>`)}
+      <div class="panel"><div class="panel-title">Intercompañía (fuera del total, solo monitoreo) · MDP</div>${mediTable(["Cliente",mes,cmp.lbl], icRow("IECH (Obispado)", ic.iech, ic.iech_oct22)+icRow("Clínica Valle (CMV)", ic.valle, ic.valle_oct22)+(ic.f360 ? icRow("Fertilidad 360", ic.f360, ic.f360_oct22) : ""), mediClickTr(mediReg("ic|total", "Total intercompañía", mediSum([ic.iech, ic.valle, ic.f360]), null), `<td style="font-weight:700;">Total intercompañía ${MEDI_HINT}</td><td class="num" style="font-weight:700;">${fmt(icTot,2)}</td><td class="num" style="font-weight:700;">${bruto?fmt(icTot/bruto*100,0):0}% de la venta bruta</td>`))}
         <div class="section-sub" style="margin:8px 0 0;">Estas ventas se restan del ingreso Medifert para no duplicar lo que ya reportan IECH y Clínica Valle; las ventas a Fertilidad 360 se consideran intercompañía.</div></div>
     </div>`;
 }
