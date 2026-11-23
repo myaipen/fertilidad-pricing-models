@@ -176,8 +176,8 @@ window.MES_HIGHLIGHTS_CURADOS = MESES_12.indexOf(window.DATA.mes_actual) + 1;
 // mesVigenteCerrado() ahora también devuelve true cuando el corte llega al último día del mes (CORTE_MES/CORTE_REAL_DIA),
 // así el mes sale cerrado aunque el calendario aún no haya cambiado de mes.
 // ACTUALIZADO 23-nov-2026: CORTE 22-nov-2026 (noviembre, 16.63 de 23.25 días hábiles equivalentes). Cargos de vRepro del 1 al 22 nov
-// (2,436 líneas, Real MTD $13,913,830: CDMX $12.00M, GDL $1.72M, MTP $0.19M). Misma metodología del 12, 16 y 18-nov: Base!F por sede = Real + días ponderados restantes x (a x ritmo del mes + (1-a) x ritmo ago-oct, sin almacenamientos ni subrogación; a = 16.63/(16.63+10))
-// + cola de mantenimientos $0.35M + 50% del promedio ago-oct de subrogación. Proyección $18.40M (bajo $18.22M, alto $18.57M). El bloqueo de agenda de Metepec (16-20 nov) ya terminó: sin días descontados.
+// (2,421 líneas, Real MTD $12,677,196: CDMX $10.78M, GDL $1.77M, MTP $0.14M). Misma metodología del 12, 16 y 18-nov: Base!F por sede = Real + días ponderados restantes x (a x ritmo del mes + (1-a) x ritmo ago-oct, sin almacenamientos ni subrogación; a = 16.63/(16.63+10))
+// + cola de mantenimientos $0.35M + 50% del promedio ago-oct de subrogación. Proyección $17.10M (bajo $16.93M, alto $17.28M). El bloqueo de agenda de Metepec (16-20 nov) ya terminó: sin días descontados.
 // Atenciones: ATEN_PROY_NOV26_CORTE22. Consultas, HubSpot, médicos, subrogación y conversión al 22-nov.
 // ACTUALIZADO 19-nov-2026: CORTE 18-nov-2026 (noviembre, 14.01 de 23.25 días hábiles equivalentes). Cargos de vRepro del 1 al 18 nov
 // (2,008 líneas, Real MTD $11,518,086: CDMX $9.93M, GDL $1.41M, MTP $0.18M). Misma metodología del 12 y 16-nov: Base!F por sede = Real + días ponderados restantes x (a x ritmo del mes + (1-a) x ritmo ago-oct, sin almacenamientos ni subrogación; a = 14.01/(14.01+10))
@@ -1165,7 +1165,7 @@ function buildMonthlyRealMetric(rows, anio = ANIO_VIGENTE, esAtenciones = false,
     // 7.5% y sin sesgo; la curva de máximo histórico + techo por ticket máximo daba sub-proyección). Metepec ya descuenta el bloqueo de agenda 16-20-nov.
     // Con el ingreso de subrogación aparte, el ticket sin subrogación es ~$5.2K (igual que octubre), así que el techo por ticket máximo ya no aplica este mes.
     // Pacientes = Atenciones x razón pacientes/atención (arriba). Se ignora si cambia el corte o el mes.
-    const ATEN_PROY_NOV26_CORTE22 = { CDMX: 2569, GDL: 682, MTP: 173 };
+    const ATEN_PROY_NOV26_CORTE22 = { CDMX: 2560, GDL: 689, MTP: 172 };
     if (esAtenciones && anio === 2026 && MES_VIGENTE === 11 && CORTE_REAL_DIA === 22 && ATEN_PROY_NOV26_CORTE22[sede]) {
       return Math.max(actual, ATEN_PROY_NOV26_CORTE22[sede]);
     }

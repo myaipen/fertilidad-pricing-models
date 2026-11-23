@@ -19,7 +19,7 @@
   ============================================================================
 */
 
-// ACTUALIZADO 23-nov-2026: CORTE 22-NOV-2026 (noviembre, 22 días de Real: 1 al 22 nov). Proyección de noviembre $18.40M (ajustada el 10-nov por mantenimientos y subrogación; antes $17.95M) con el bloqueo de agenda de Metepec (16 al 20-nov) ya terminado. Octubre ya cerrado e incluido en "hist".
+// ACTUALIZADO 23-nov-2026: CORTE 22-NOV-2026 (noviembre, 22 días de Real: 1 al 22 nov). Proyección de noviembre $17.10M (ajustada el 10-nov por mantenimientos y subrogación; antes $17.95M) con el bloqueo de agenda de Metepec (16 al 20-nov) ya terminado. Octubre ya cerrado e incluido en "hist".
 // Este archivo es el RESPALDO ESTÁTICO si el fetch en vivo (data-live.js) falla. Proyección central de ingresos = Base!F del Sheet
 // (ritmo por día hábil ponderado con peso por recencia); Atenciones/Pacientes por curva de ritmo por sede; Consultas por ritmo (sin agenda).
 // Highlights manuales. Ingresos, Atenciones, Pacientes, Servicios y Subrogación al 18-nov (cargos de vRepro; el Drive de Cargos llega al 31-oct).
@@ -54,11 +54,11 @@ window.DATA = {
         15.2,
         16.5
       ],
-      "actual": 13.91,
-      "proy": 18.4,
-      "vsLM": 12,
-      "vsU3M": 15,
-      "nota": "NOVIEMBRE AL CORTE DEL 22-NOV (16.63 de 23.25 días ponderados; Real = $13,913,830: CDMX $12.00M, Guadalajara $1.72M y Metepec $0.19M). Proyección $18.40M (rango $18.22M–$18.57M): +12% vs octubre ($16.47M) y +15% vs el promedio ago-oct. Método (igual que los cortes del 12, 16 y 18-nov): Real + días ponderados restantes × ritmo base + cola de mantenimientos + subrogación restante. El ritmo base es 62% el de los primeros 22 días y 38% el promedio ago-oct (mezcla con k=10), SIN los almacenamientos/renovaciones de gametos (~$1.1M al mes, cobrados sobre todo al inicio) y SIN la subrogación. Cola de mantenimientos supuesta $0.35M (como octubre). Subrogación: Real $2.68M en 22 días (ya supera cualquier mes de 2026) + 50% del promedio ago-oct por los días restantes (+$0.18M; al 100% serían +$0.36M). Pesos de días: lun–vie 1, sáb 0.55, dom 0.07; lun 16-nov (feriado de la Revolución) 0.7; GDL sáb 14 = 0.25 y lun 16 = 0.1. Quedan 6.62 días ponderados (23 al 30-nov). Los cargos de GDL en días hábiles recientes fueron bajos (17-nov $57K, 18-nov $42K y 20-nov $43K): si hubo captura tardía en vRepro, el Real de GDL subirá en el próximo corte. METEPEC: la agenda de la Dra. estuvo bloqueada del 16 al 20-nov (esos días pesan 0 en el ritmo); el bloqueo ya terminó, por lo que no se descuenta ningún día restante. Escenarios: bajo $18.22M (sin más subrogación) y alto $18.57M (subrogación restante al promedio completo)."
+      "actual": 12.68,
+      "proy": 17.1,
+      "vsLM": 4,
+      "vsU3M": 7,
+      "nota": "NOVIEMBRE AL CORTE DEL 22-NOV (16.63 de 23.25 días ponderados; Real = $12,677,196: CDMX $10.78M, Guadalajara $1.77M y Metepec $0.14M). Proyección $17.10M (rango $16.93M–$17.28M): +4% vs octubre ($16.47M) y +7% vs el promedio ago-oct. Método (igual que los cortes del 12, 16 y 18-nov): Real + días ponderados restantes × ritmo base + cola de mantenimientos + subrogación restante. El ritmo base es 62% el de los primeros 22 días y 38% el promedio ago-oct (mezcla con k=10), SIN los almacenamientos/renovaciones de gametos (~$1.1M al mes, cobrados sobre todo al inicio) y SIN la subrogación. Cola de mantenimientos supuesta $0.35M (como octubre). Subrogación: Real $1.75M en 22 días (ya supera cualquier mes de 2026) + 50% del promedio ago-oct por los días restantes (+$0.18M; al 100% serían +$0.36M). Pesos de días: lun–vie 1, sáb 0.55, dom 0.07; lun 16-nov (feriado de la Revolución) 0.7; GDL sáb 14 = 0.25 y lun 16 = 0.1. Quedan 6.62 días ponderados (23 al 30-nov). Los cargos de GDL en días hábiles recientes fueron bajos (17-nov $57K, 18-nov $42K y 20-nov $43K): si hubo captura tardía en vRepro, el Real de GDL subirá en el próximo corte. METEPEC: la agenda de la Dra. estuvo bloqueada del 16 al 20-nov (esos días pesan 0 en el ritmo); el bloqueo ya terminó, por lo que no se descuenta ningún día restante. Escenarios: bajo $16.93M (sin más subrogación) y alto $17.28M (subrogación restante al promedio completo)."
     },
     "atenciones": {
       "hist": [
@@ -73,11 +73,11 @@ window.DATA = {
         3543,
         3147
       ],
-      "actual": 2436,
-      "proy": 3424,
+      "actual": 2421,
+      "proy": 3421,
       "vsLM": 9,
       "vsU3M": 5,
-      "nota": "Real al 22-nov: 2,436 líneas de cargo (CDMX 1,853, GDL 475, MTP 108; 181 son renovaciones de almacenamiento de gametos, concentradas en los primeros días). Proyección 3,424 (mezcla ritmo del mes / ritmo ago-oct con shrinkage k=10 SIN las líneas de almacenamiento + cola de líneas de almacenamiento por llegar): +9% vs octubre (3,147). Ingreso por atención proyectado ~$5.4K vs ~$5.2K en octubre (el Real trae paquetes de subrogación)."
+      "nota": "Real al 22-nov: 2,421 líneas de cargo (CDMX 1,834, GDL 480, MTP 107; 168 son renovaciones de almacenamiento de gametos, concentradas en los primeros días). Proyección 3,421 (mezcla ritmo del mes / ritmo ago-oct con shrinkage k=10 SIN las líneas de almacenamiento + cola de líneas de almacenamiento por llegar): +9% vs octubre (3,147). Ingreso por atención proyectado ~$5.0K vs ~$5.2K en octubre (el Real trae paquetes de subrogación)."
     },
     "pacientes": {
       "hist": [
@@ -92,11 +92,11 @@ window.DATA = {
         1323,
         962
       ],
-      "actual": 850,
-      "proy": 1140,
-      "vsLM": 19,
+      "actual": 835,
+      "proy": 1139,
+      "vsLM": 18,
       "vsU3M": 4,
-      "nota": "Real al 22-nov: 850 pacientes únicos (CDMX 594, GDL 198, MTP 58; suma por sede). Proyección 1,140 = atenciones proyectadas × razón pacientes/atención por sede (CDMX 0.31, GDL 0.41, MTP 0.36): +19% vs octubre (962)."
+      "nota": "Real al 22-nov: 835 pacientes únicos (CDMX 580, GDL 198, MTP 57; suma por sede). Proyección 1,139 = atenciones proyectadas × razón pacientes/atención por sede (CDMX 0.31, GDL 0.41, MTP 0.36): +18% vs octubre (962)."
     },
     "consultas": {
       "hist": [
@@ -152,11 +152,11 @@ window.DATA = {
           13.3,
           13.8
         ],
-        "actual": 12.0,
-        "proy": 15.68,
-        "vsLM": 14,
-        "vsU3M": 19,
-        "nota": "Real al 22-nov $12.00M; proyección $15.68M (+14% vs octubre, $13.80M). Incluye subrogación proyectada $2.86M (Real $2.68M + 50% del promedio ago-oct del resto del mes)."
+        "actual": 10.78,
+        "proy": 14.41,
+        "vsLM": 4,
+        "vsU3M": 9,
+        "nota": "Real al 22-nov $10.78M; proyección $14.41M (+4% vs octubre, $13.80M). Incluye subrogación proyectada $1.92M (Real $1.75M + 50% del promedio ago-oct del resto del mes)."
       },
       "atenciones": {
         "hist": [
@@ -171,8 +171,8 @@ window.DATA = {
           2658,
           2394
         ],
-        "actual": 1853,
-        "proy": 2569,
+        "actual": 1834,
+        "proy": 2560,
         "vsLM": 7,
         "vsU3M": 8
       },
@@ -189,10 +189,10 @@ window.DATA = {
           931,
           669
         ],
-        "actual": 594,
-        "proy": 795,
-        "vsLM": 19,
-        "vsU3M": 8
+        "actual": 580,
+        "proy": 792,
+        "vsLM": 18,
+        "vsU3M": 7
       },
       "consultas": {
         "hist": [
@@ -248,11 +248,11 @@ window.DATA = {
           1.5,
           2.0
         ],
-        "actual": 1.72,
-        "proy": 2.38,
-        "vsLM": 19,
-        "vsU3M": 14,
-        "nota": "Real al 22-nov $1.72M; proyección $2.38M (+19% vs octubre, $2.00M). Los cargos de los días hábiles 17, 18 y 20-nov ($57K, $42K y $43K) fueron bajos: posible captura tardía."
+        "actual": 1.77,
+        "proy": 2.44,
+        "vsLM": 22,
+        "vsU3M": 17,
+        "nota": "Real al 22-nov $1.77M; proyección $2.44M (+22% vs octubre, $2.00M). Los cargos de los días hábiles 17, 18 y 20-nov ($57K, $42K y $43K) fueron bajos: posible captura tardía."
       },
       "atenciones": {
         "hist": [
@@ -267,10 +267,10 @@ window.DATA = {
           660,
           555
         ],
-        "actual": 475,
-        "proy": 682,
-        "vsLM": 23,
-        "vsU3M": 4
+        "actual": 480,
+        "proy": 689,
+        "vsLM": 24,
+        "vsU3M": 5
       },
       "pacientes": {
         "hist": [
@@ -286,9 +286,9 @@ window.DATA = {
           226
         ],
         "actual": 198,
-        "proy": 282,
-        "vsLM": 25,
-        "vsU3M": 4
+        "proy": 285,
+        "vsLM": 26,
+        "vsU3M": 5
       },
       "consultas": {
         "hist": [
@@ -344,11 +344,11 @@ window.DATA = {
           0.4,
           0.7
         ],
-        "actual": 0.194,
-        "proy": 0.334,
-        "vsLM": -50,
-        "vsU3M": -50,
-        "nota": "Real al 22-nov $193.7K (108 líneas de cargo); proyección $334K (-50% vs octubre, $666K). El bloqueo de agenda de la Dra. (16 al 20-nov) ya terminó: no se descuenta ningún día restante."
+        "actual": 0.136,
+        "proy": 0.258,
+        "vsLM": -61,
+        "vsU3M": -61,
+        "nota": "Real al 22-nov $135.5K (107 líneas de cargo); proyección $258K (-61% vs octubre, $666K). El bloqueo de agenda de la Dra. (16 al 20-nov) ya terminó: no se descuenta ningún día restante."
       },
       "atenciones": {
         "hist": [
@@ -363,8 +363,8 @@ window.DATA = {
           225,
           198
         ],
-        "actual": 108,
-        "proy": 173,
+        "actual": 107,
+        "proy": 172,
         "vsLM": -13,
         "vsU3M": -27
       },
@@ -381,10 +381,10 @@ window.DATA = {
           93,
           67
         ],
-        "actual": 58,
-        "proy": 63,
-        "vsLM": -6,
-        "vsU3M": -26
+        "actual": 57,
+        "proy": 62,
+        "vsLM": -7,
+        "vsU3M": -27
       },
       "consultas": {
         "hist": [
@@ -430,33 +430,33 @@ window.DATA = {
     "total": [
       {
         "nombre": "Tratamientos FIV/ICSI",
-        "valor": 4.87,
-        "vsLM": 9,
-        "vsU3M": 6
+        "valor": 4.76,
+        "vsLM": 7,
+        "vsU3M": 3
       },
       {
         "nombre": "Congelación de Gametos",
-        "valor": 3.59,
-        "vsLM": 8,
-        "vsU3M": 8
+        "valor": 3.5,
+        "vsLM": 5,
+        "vsU3M": 5
       },
       {
         "nombre": "Farmacia",
-        "valor": 3.29,
-        "vsLM": -7,
+        "valor": 3.21,
+        "vsLM": -9,
+        "vsU3M": 2
+      },
+      {
+        "nombre": "Laboratorio",
+        "valor": 2.65,
+        "vsLM": -4,
         "vsU3M": 4
       },
       {
         "nombre": "Subrogación",
-        "valor": 2.88,
-        "vsLM": 82,
-        "vsU3M": 119
-      },
-      {
-        "nombre": "Laboratorio",
-        "valor": 2.71,
-        "vsLM": -2,
-        "vsU3M": 6
+        "valor": 1.94,
+        "vsLM": 23,
+        "vsU3M": 48
       },
       {
         "nombre": "Consultas",
@@ -466,127 +466,127 @@ window.DATA = {
       },
       {
         "nombre": "Procedimientos / Quirúrgicos",
-        "valor": 0.4,
-        "vsLM": 31,
-        "vsU3M": 7
+        "valor": 0.39,
+        "vsLM": 28,
+        "vsU3M": 5
       },
       {
         "nombre": "Imágenes",
         "valor": 0.09,
-        "vsLM": 42,
-        "vsU3M": 6
+        "vsLM": 40,
+        "vsU3M": 4
       },
       {
         "nombre": "Wellness",
         "valor": 0.04,
-        "vsLM": -21,
-        "vsU3M": 9
+        "vsLM": -23,
+        "vsU3M": 6
       },
       {
         "nombre": "Otros",
         "valor": 0.02,
-        "vsLM": 24,
-        "vsU3M": 9
+        "vsLM": 22,
+        "vsU3M": 7
       }
     ],
     "CDMX": [
       {
         "nombre": "Tratamientos FIV/ICSI",
-        "valor": 4.19,
-        "vsLM": 14,
-        "vsU3M": 8
+        "valor": 4.08,
+        "vsLM": 11,
+        "vsU3M": 5
       },
       {
         "nombre": "Congelación de Gametos",
-        "valor": 2.88,
-        "vsLM": 6,
-        "vsU3M": 8
-      },
-      {
-        "nombre": "Subrogación",
-        "valor": 2.86,
-        "vsLM": 81,
-        "vsU3M": 119
+        "valor": 2.8,
+        "vsLM": 3,
+        "vsU3M": 5
       },
       {
         "nombre": "Farmacia",
-        "valor": 2.8,
-        "vsLM": -3,
-        "vsU3M": 8
+        "valor": 2.73,
+        "vsLM": -5,
+        "vsU3M": 5
       },
       {
         "nombre": "Laboratorio",
-        "valor": 2.25,
-        "vsLM": -7,
-        "vsU3M": 8
+        "valor": 2.19,
+        "vsLM": -9,
+        "vsU3M": 5
+      },
+      {
+        "nombre": "Subrogación",
+        "valor": 1.92,
+        "vsLM": 22,
+        "vsU3M": 47
       },
       {
         "nombre": "Procedimientos / Quirúrgicos",
-        "valor": 0.33,
-        "vsLM": 35,
-        "vsU3M": 8
+        "valor": 0.32,
+        "vsLM": 32,
+        "vsU3M": 5
       },
       {
         "nombre": "Consultas",
-        "valor": 0.24,
-        "vsLM": 30,
-        "vsU3M": 8
+        "valor": 0.23,
+        "vsLM": 27,
+        "vsU3M": 5
       },
       {
         "nombre": "Imágenes",
-        "valor": 0.08,
-        "vsLM": 54,
-        "vsU3M": 8
+        "valor": 0.07,
+        "vsLM": 50,
+        "vsU3M": 5
       },
       {
         "nombre": "Wellness",
         "valor": 0.03,
-        "vsLM": -23,
-        "vsU3M": 8
+        "vsLM": -25,
+        "vsU3M": 5
       },
       {
         "nombre": "Otros",
         "valor": 0.01,
-        "vsLM": 168,
-        "vsU3M": 8
+        "vsLM": 161,
+        "vsU3M": 5
       }
     ],
     "GDL": [
       {
         "nombre": "Congelación de Gametos",
-        "valor": 0.65,
-        "vsLM": 11,
-        "vsU3M": 14
+        "valor": 0.67,
+        "vsLM": 14,
+        "vsU3M": 17
       },
       {
         "nombre": "Tratamientos FIV/ICSI",
-        "valor": 0.58,
-        "vsLM": 40,
-        "vsU3M": 14
+        "valor": 0.6,
+        "vsLM": 43,
+        "vsU3M": 17
       },
       {
         "nombre": "Laboratorio",
-        "valor": 0.41,
-        "vsLM": 45,
-        "vsU3M": 14
+        "valor": 0.42,
+        "vsLM": 48,
+        "vsU3M": 17
       },
       {
         "nombre": "Farmacia",
-        "valor": 0.39,
-        "vsLM": -9,
-        "vsU3M": 14
+        "valor": 0.4,
+        "vsLM": -6,
+        "vsU3M": 17
       },
       {
         "nombre": "Consultas",
         "valor": 0.24,
-        "vsLM": 24,
-        "vsU3M": 14
+        "vsLM": 27,
+        "vsU3M": 17
       },
       {
         "nombre": "Procedimientos / Quirúrgicos",
         "valor": 0.06,
-        "vsLM": 6,
-        "vsU3M": 14
+        "vsLM": 8,
+        "vsU3M": 17
       },
       {
         "nombre": "Subrogación",
@@ -597,8 +597,8 @@ window.DATA = {
       {
         "nombre": "Imágenes",
         "valor": 0.01,
-        "vsLM": -12,
-        "vsU3M": 14
+        "vsLM": -10,
+        "vsU3M": 17
       },
       {
         "nombre": "Wellness",
@@ -609,34 +609,34 @@ window.DATA = {
       {
         "nombre": "Otros",
         "valor": 0.0,
-        "vsLM": -62,
-        "vsU3M": 14
+        "vsLM": -61,
+        "vsU3M": 17
       }
     ],
     "MTP": [
       {
         "nombre": "Tratamientos FIV/ICSI",
-        "valor": 0.1,
-        "vsLM": -72,
-        "vsU3M": -56
+        "valor": 0.08,
+        "vsLM": -77,
+        "vsU3M": -63
       },
       {
         "nombre": "Farmacia",
-        "valor": 0.1,
-        "vsLM": -56,
-        "vsU3M": -56
-      },
-      {
-        "nombre": "Congelación de Gametos",
-        "valor": 0.06,
-        "vsLM": 292,
-        "vsU3M": -20
+        "valor": 0.08,
+        "vsLM": -64,
+        "vsU3M": -63
       },
       {
         "nombre": "Laboratorio",
-        "valor": 0.05,
-        "vsLM": -16,
-        "vsU3M": -56
+        "valor": 0.04,
+        "vsLM": -30,
+        "vsU3M": -63
+      },
+      {
+        "nombre": "Congelación de Gametos",
+        "valor": 0.03,
+        "vsLM": 82,
+        "vsU3M": -63
       },
       {
         "nombre": "Consultas",
@@ -645,47 +645,47 @@ window.DATA = {
         "vsU3M": -14
       },
       {
-        "nombre": "Procedimientos / Quirúrgicos",
-        "valor": 0.0,
-        "vsLM": null,
-        "vsU3M": -56,
-        "nuevo": true
-      },
-      {
         "nombre": "Imágenes",
         "valor": 0.0,
         "vsLM": 200,
         "vsU3M": -29
       },
       {
+        "nombre": "Procedimientos / Quirúrgicos",
+        "valor": 0.0,
+        "vsLM": null,
+        "vsU3M": -63,
+        "nuevo": true
+      },
+      {
         "nombre": "Wellness",
         "valor": 0.0,
-        "vsLM": -61,
-        "vsU3M": -56
+        "vsLM": -68,
+        "vsU3M": -63
       }
     ]
   },
   "highlights": {
     "total": [
-      "Noviembre al corte del 22-nov: Real $13.91M (16.63 de 23.25 días ponderados). Proyección $18.40M (rango $18.22M–$18.57M): +12% vs octubre ($16.47M); el corte del 18-nov decía $17.35M. CDMX aporta 85% ($15.68M), Guadalajara 13% ($2.38M) y Metepec 2% ($0.33M).",
-      "Metepec salió del bloqueo de agenda de la Dra. (16 al 20-nov): Real $0.19M y proyección $0.33M (Atenciones MTP 173, Pacientes 63). Sigue siendo la sede con mayor incertidumbre; la proyección ya no descuenta días de bloqueo.",
-      "Del 19 al 22-nov se agregaron $2.45M: jueves 19 $1.32M, viernes 20 $0.77M, sábado 21 $0.33M y domingo 22 $0.02M. El jueves 19 concentra cargos grandes en CDMX (incluye subrogación). Sin subrogación ni renovaciones de almacenamiento, el ritmo diario base de CDMX va en $501K por día ponderado vs $450K del promedio ago-oct. La subrogación del mes suma $2.68M en el Real.",
-      "Por servicio (proyectado): Tratamientos FIV/ICSI $4.87M, Congelación de Gametos $3.59M, Farmacia $3.29M, Subrogación $2.88M, Laboratorio $2.71M. Subrogación $2.88M: $2.68M ya están en el Real y el resto es la mitad del promedio ago-oct.",
-      "Atenciones proyectadas 3,424 (+9% vs octubre) y Pacientes 1,140 (+19%). Consultas de primera vez al 22-nov: 244 reales y proyección 347 (+25% vs octubre, rango 343–352); No Show 16.2%. HubSpot (Interesa2) al 22-nov: 1,273 leads y 316 citas agendadas (25% de conversión vs 25% en octubre; sedes con GDL = Guadalajara + Puerto Vallarta + Sahuayo y CDMX = Ciudad de México + Benito Juárez: CDMX 32%, GDL 21%, MTP 21%)."
+      "Noviembre al corte del 22-nov: Real $12.68M (16.63 de 23.25 días ponderados). Proyección $17.10M (rango $16.93M–$17.28M): +4% vs octubre ($16.47M); el corte del 18-nov decía $17.35M. CDMX aporta 84% ($14.41M), Guadalajara 14% ($2.44M) y Metepec 2% ($0.26M).",
+      "Metepec salió del bloqueo de agenda de la Dra. (16 al 20-nov): Real $0.14M y proyección $0.26M (Atenciones MTP 172, Pacientes 62). Sigue siendo la sede con mayor incertidumbre; la proyección ya no descuenta días de bloqueo.",
+      "Del 19 al 22-nov se agregaron $2.44M: jueves 19 $1.32M, viernes 20 $0.77M, sábado 21 $0.33M y domingo 22 $0.02M. El jueves 19 concentra cargos grandes en CDMX (incluye subrogación). Sin subrogación ni renovaciones de almacenamiento, el ritmo diario base de CDMX va en $489K por día ponderado vs $450K del promedio ago-oct. La subrogación del mes suma $1.75M en el Real.",
+      "Por servicio (proyectado): Tratamientos FIV/ICSI $4.76M, Congelación de Gametos $3.50M, Farmacia $3.21M, Laboratorio $2.65M, Subrogación $1.94M. Subrogación $1.94M: $1.75M ya están en el Real y el resto es la mitad del promedio ago-oct.",
+      "Atenciones proyectadas 3,421 (+9% vs octubre) y Pacientes 1,139 (+18%). Consultas de primera vez al 22-nov: 244 reales y proyección 347 (+25% vs octubre, rango 343–352); No Show 16.2%. HubSpot (Interesa2) al 22-nov: 1,273 leads y 316 citas agendadas (25% de conversión vs 25% en octubre; sedes con GDL = Guadalajara + Puerto Vallarta + Sahuayo y CDMX = Ciudad de México + Benito Juárez: CDMX 32%, GDL 21%, MTP 21%)."
     ],
     "CDMX": [
-      "CDMX lleva $12.00M al 22-nov y proyecta $15.68M (+14% vs octubre, +19% vs U3M): Tratamientos FIV/ICSI $4.19M, Congelación de Gametos $2.88M, Subrogación $2.86M, Farmacia $2.80M, Laboratorio $2.25M.",
-      "1,853 atenciones y 594 pacientes al corte; proyección 2,569 atenciones (+7% vs octubre) y 795 pacientes (+19% vs octubre). Consultas de primera vez: 137 al corte, proyección 198 (+37% vs octubre); No Show 13.8%.",
+      "CDMX lleva $10.78M al 22-nov y proyecta $14.41M (+4% vs octubre, +9% vs U3M): Tratamientos FIV/ICSI $4.08M, Congelación de Gametos $2.80M, Farmacia $2.73M, Laboratorio $2.19M, Subrogación $1.92M.",
+      "1,834 atenciones y 580 pacientes al corte; proyección 2,560 atenciones (+7% vs octubre) y 792 pacientes (+18% vs octubre). Consultas de primera vez: 137 al corte, proyección 198 (+37% vs octubre); No Show 13.8%.",
       "HubSpot (Interesa2) al 22-nov (Ciudad de México + Benito Juárez): 551 leads y 177 citas agendadas (32% de conversión vs 30% en octubre, con 908 leads y 269 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
     ],
     "GDL": [
-      "GDL lleva $1.72M al 22-nov y proyecta $2.38M (+19% vs octubre): Congelación de Gametos $0.65M, Tratamientos FIV/ICSI $0.58M, Laboratorio $0.41M, Farmacia $0.39M. Ojo: los cargos de los días hábiles 17, 18 y 20-nov ($57K, $42K y $43K) fueron bajos; si fue captura tardía, el Real de GDL subirá.",
-      "475 atenciones y 198 pacientes al corte; proyección 682 atenciones y 282 pacientes. Consultas de primera vez: 83 al corte, proyección 115 (+6% vs octubre); No Show 13.5%.",
+      "GDL lleva $1.77M al 22-nov y proyecta $2.44M (+22% vs octubre): Congelación de Gametos $0.67M, Tratamientos FIV/ICSI $0.60M, Laboratorio $0.42M, Farmacia $0.40M. Ojo: los cargos de los días hábiles 17, 18 y 20-nov ($57K, $42K y $43K) fueron bajos; si fue captura tardía, el Real de GDL subirá.",
+      "480 atenciones y 198 pacientes al corte; proyección 689 atenciones y 285 pacientes. Consultas de primera vez: 83 al corte, proyección 115 (+6% vs octubre); No Show 13.5%.",
       "HubSpot (Interesa2) al 22-nov (Guadalajara + Puerto Vallarta + Sahuayo): 457 leads y 95 citas agendadas (21% de conversión vs 23% en octubre, con 717 leads y 164 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
     ],
     "MTP": [
-      "Metepec lleva $193.7K al 22-nov (108 líneas) y proyecta $334K (-50% vs octubre). La agenda de la Dra. estuvo bloqueada del 16 al 20-nov (ya terminó; no se descuenta nada); sigue siendo la sede con mayor incertidumbre (error de backtest ~30%).",
-      "108 atenciones y 58 pacientes al corte; proyección 173 atenciones y 63 pacientes. Consultas de primera vez: 24 al corte, proyección 34 (+36% vs octubre); No Show 33.3%.",
+      "Metepec lleva $135.5K al 22-nov (107 líneas) y proyecta $258K (-61% vs octubre). La agenda de la Dra. estuvo bloqueada del 16 al 20-nov (ya terminó; no se descuenta nada); sigue siendo la sede con mayor incertidumbre (error de backtest ~30%).",
+      "107 atenciones y 57 pacientes al corte; proyección 172 atenciones y 62 pacientes. Consultas de primera vez: 24 al corte, proyección 34 (+36% vs octubre); No Show 33.3%.",
       "HubSpot (Interesa2) al 22-nov: 76 leads y 16 citas agendadas (21% de conversión vs 34% en octubre, con 200 leads y 67 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
     ]
   },
