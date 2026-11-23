@@ -116,7 +116,7 @@ window.DATA = {
       "proy": 355,
       "vsLM": 28,
       "vsU3M": 17,
-      "nota": "Real al 22-nov: 239 consultas de primera vez terminadas (CDMX 134, GDL 81, MTP 24; conciliado con la hoja \"Primera Vez\"). Proyección 355 con el modelo v2 (factor de llenado de agenda + flujo de deals): terminadas 239 + agenda pendiente 23–30 nov (CDMX 66, GDL 35, MTP 14 citas) × factor de llenado por horizonte (observado en los cortes 12, 16 y 18-nov, incluye no show y agendamientos tardíos) ajustado por el flujo de citas nuevas de HubSpot (CDMX ×0.93, GDL ×1.09, MTP ×1.2). Piso 333 (agenda × show rate de CDMX 85%, GDL 80%, MTP 68%). Rango 340–369 (±12% del remanente, error observado en backtest). Backtest sobre las consultas de los días posteriores a cada corte: error medio 3.2 por sede vs 4.1 del modelo anterior y 5.6 de agenda × show rate. Referencia por ritmo histórico (MAPE 6.9%): 321. +28% vs octubre (278). No Show 17.3% (50 inasistencias sobre 289 citas de primera vez del 1 al 22-nov). Los deals de HubSpot mantienen el ritmo: 14 citas nuevas por día (16–22 nov) vs 14.3 en 12–22 nov y 58 leads por día, sin aceleración ni caída."
+      "nota": "Real al 22-nov: 239 consultas de primera vez terminadas (CDMX 134, GDL 81, MTP 24; conciliado con la hoja \"Primera Vez\"). Proyección 355 con el modelo v2 (factor de llenado de agenda + flujo de deals): terminadas 239 + agenda pendiente 23–30 nov (CDMX 66, GDL 35, MTP 14 citas) × factor de llenado por horizonte (observado en los cortes 12, 16 y 18-nov, incluye no show y agendamientos tardíos) ajustado por el flujo de citas nuevas de HubSpot (CDMX ×0.93, GDL ×1.09, MTP ×1.2). Piso 332 (agenda × show rate de CDMX 85%, GDL 78%, MTP 68%). Rango 340–369 (±12% del remanente, error observado en backtest). Backtest sobre las consultas de los días posteriores a cada corte: error medio 3.2 por sede vs 4.1 del modelo anterior y 5.6 de agenda × show rate. Referencia por ritmo histórico (MAPE 6.9%): 321. +28% vs octubre (278). No Show 18.5% (54 inasistencias únicas sobre 292 pacientes únicos de primera vez del 1 al 22-nov; GDL sin duplicados: 80 pacientes únicos y 19 inasistencias únicas). Los deals de HubSpot mantienen el ritmo: 14 citas nuevas por día (16–22 nov) vs 14.3 en 12–22 nov y 58 leads por día, sin aceleración ni caída."
     },
     "noshow": {
       "hist": [
@@ -131,9 +131,9 @@ window.DATA = {
         16.4,
         19.9
       ],
-      "actual": 17.3,
+      "actual": 18.5,
       "prom": 14.5,
-      "deltaPts": 2.8
+      "deltaPts": 4.0
     }
   },
   "sedes": {
@@ -324,9 +324,9 @@ window.DATA = {
           15.8,
           23.4
         ],
-        "actual": 15.6,
+        "actual": 19.2,
         "prom": 15.6,
-        "deltaPts": 0.0
+        "deltaPts": 3.6
       }
     },
     "MTP": {
@@ -671,7 +671,7 @@ window.DATA = {
       "Metepec salió del bloqueo de agenda de la Dra. (16 al 20-nov): Real $0.14M y proyección $0.26M (Atenciones MTP 172, Pacientes 62). Sigue siendo la sede con mayor incertidumbre; la proyección ya no descuenta días de bloqueo.",
       "Del 19 al 22-nov se agregaron $2.44M: jueves 19 $1.32M, viernes 20 $0.77M, sábado 21 $0.33M y domingo 22 $0.02M. El jueves 19 concentra cargos grandes en CDMX (incluye subrogación). Sin subrogación ni renovaciones de almacenamiento, el ritmo diario base de CDMX va en $489K por día ponderado vs $450K del promedio ago-oct. La subrogación del mes suma $1.75M en el Real.",
       "Por servicio (proyectado): Tratamientos FIV/ICSI $4.76M, Congelación de Gametos $3.50M, Farmacia $3.21M, Laboratorio $2.65M, Subrogación $1.94M. Subrogación $1.94M: $1.75M ya están en el Real y el resto es la mitad del promedio ago-oct.",
-      "Atenciones proyectadas 3,421 (+9% vs octubre) y Pacientes 1,139 (+18%). Consultas de primera vez al 22-nov: 239 reales y proyección 355 (+28% vs octubre, rango 340–369); No Show 17.3%. HubSpot (Interesa2) al 22-nov: 1,273 leads y 316 citas agendadas (25% de conversión vs 25% en octubre; sedes con GDL = Guadalajara + Puerto Vallarta + Sahuayo y CDMX = Ciudad de México + Benito Juárez: CDMX 32%, GDL 21%, MTP 21%)."
+      "Atenciones proyectadas 3,421 (+9% vs octubre) y Pacientes 1,139 (+18%). Consultas de primera vez al 22-nov: 239 reales y proyección 355 (+28% vs octubre, rango 340–369); No Show 18.5%. HubSpot (Interesa2) al 22-nov: 1,273 leads y 316 citas agendadas (25% de conversión vs 25% en octubre; sedes con GDL = Guadalajara + Puerto Vallarta + Sahuayo y CDMX = Ciudad de México + Benito Juárez: CDMX 32%, GDL 21%, MTP 21%)."
     ],
     "CDMX": [
       "CDMX lleva $10.78M al 22-nov y proyecta $14.41M (+4% vs octubre, +9% vs U3M): Tratamientos FIV/ICSI $4.08M, Congelación de Gametos $2.80M, Farmacia $2.73M, Laboratorio $2.19M, Subrogación $1.92M.",
@@ -680,7 +680,7 @@ window.DATA = {
     ],
     "GDL": [
       "GDL lleva $1.77M al 22-nov y proyecta $2.44M (+22% vs octubre): Congelación de Gametos $0.67M, Tratamientos FIV/ICSI $0.60M, Laboratorio $0.42M, Farmacia $0.40M. Ojo: los cargos de los días hábiles 17, 18 y 20-nov ($57K, $42K y $43K) fueron bajos; si fue captura tardía, el Real de GDL subirá.",
-      "480 atenciones y 198 pacientes al corte; proyección 689 atenciones y 285 pacientes. Consultas de primera vez: 81 al corte, proyección 120 (+11% vs octubre); No Show 15.6%.",
+      "480 atenciones y 198 pacientes al corte; proyección 689 atenciones y 285 pacientes. Consultas de primera vez: 81 al corte, proyección 120 (+11% vs octubre); No Show 19.2%.",
       "HubSpot (Interesa2) al 22-nov (Guadalajara + Puerto Vallarta + Sahuayo): 457 leads y 95 citas agendadas (21% de conversión vs 23% en octubre, con 717 leads y 164 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
     ],
     "MTP": [

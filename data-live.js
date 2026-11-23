@@ -1321,14 +1321,14 @@ const CONSULTAS_PROY = {
   // 24-nov-2026 (corte 22-nov).
   // Real conciliado con la hoja "Primera Vez" de Marite (239 = CDMX 134, GDL 81, MTP 24): vRepro cambia estatus a posteriori (No Asiste / citas movidas), por lo que el conteo previo (244) estaba inflado en 5.
   // MODELO v2 (24-nov): base = Terminadas + agenda pendiente 23-30 nov x factor de llenado empirico por horizonte (realizado/agenda al corte observado en los cortes 12, 16 y 18-nov por sede; ya incluye no show y citas agendadas tarde) con la parte tardia escalada por el flujo de citas nuevas de HubSpot (CDMX x0.93, GDL x1.09, MTP x1.2). Rango = remanente x 0.88 a x 1.12. Backtest: error medio 3.2 por sede-corte vs 4.1 (Bru) y 5.6 (agenda x show).
-  // Agenda pendiente (vRepro, Citado/Confirmada, primera vez): CDMX 66, GDL 35, MTP 14. Show rate (oct + nov al 22): CDMX 85%, GDL 80%, MTP 68%.
+  // Agenda pendiente (vRepro, Citado/Confirmada, primera vez): CDMX 66, GDL 35, MTP 14. Show rate (oct + nov al 22): CDMX 85%, GDL 78%, MTP 68%.
   // Piso = Terminadas + agenda x show rate. Referencia cruzada: ritmo M6 = 321 (backtest MAPE 6.9%). Modelo anterior (Bru, velocidad de agenda x decay): base 341.
   sedes: {
     CDMX: { piso: 190, base: 199, min: 191, max: 207 },
-    GDL:  { piso: 109, base: 120, min: 115, max: 125 },
+    GDL:  { piso: 108, base: 120, min: 115, max: 125 },
     MTP:  { piso: 34,  base: 36,  min: 34,  max: 37 },
   },
-  total: { piso: 333, base: 355, min: 340, max: 369 },
+  total: { piso: 332, base: 355, min: 340, max: 369 },
 };
 function consultasProyActiva() {
   return ANIO_VIGENTE === CONSULTAS_PROY.anio && MES_VIGENTE === CONSULTAS_PROY.mes; // el corte de consultas (CONSULTAS_PROY.corte = 22) se actualiza a mano con cada refresco
@@ -1559,12 +1559,12 @@ const CONSULTAS_NOV_PROYECTADO = {
  "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 3,
  "FERTILIDAD INTEGRAL Ciudad de México|Asesoria catalogos": 3,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta Obstetricia": 3,
- "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 3,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 3,
+ "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 3,
  "FERTILIDAD INTEGRAL Ciudad de México|Check up Integral": 2,
  "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 2,
- "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 2,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online gratis": 2,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 2,
  "FERTILIDAD INTEGRAL Guadalajara|Asesoria catalogos": 1,
  "FERTILIDAD INTEGRAL Metepec|Check-up SOMP": 1,
 };
@@ -2761,13 +2761,17 @@ window.ajustarConsultasProyUI = ajustarConsultasProyUI;
 // ---- CIERRE DE MES (2-nov-2026): quita del texto de la página lo que habla de proyección/agenda cuando el
 // mes vigente ya está cerrado (index.html no se toca, así que se reescribe el texto tras cada renderAll).
 function ajustarCierreUI() {
-  // Color de las insignias de No show: rojo solo si es negativo (▼); ▲ en verde (Marite, 2-nov-2026)
-  for (const e of document.querySelectorAll("span.down, span.up")) {
+  // Color de las insignias de No show (Marite, 24-nov-2026): si el no show SUBE es malo (rojo); si BAJA es bueno (verde); sin cambio, neutro.
+  for (const e of document.querySelectorAll("span.down, span.up, span.neutral")) {
     if (e.children.length) continue;
     const t = e.textContent.trim();
     if (!/No show/i.test(t)) continue;
-    if (t.startsWith("▲")) { e.classList.remove("down"); e.classList.add("up"); }
-    else if (t.startsWith("▼")) { e.classList.remove("up"); e.classList.add("down"); }
+    const m = t.match(/([+-]?\d+(?:\.\d+)?)\s*pts/);
+    const d = m ? parseFloat(m[1]) : (t.startsWith("▲") ? 1 : t.startsWith("▼") ? -1 : 0);
+    e.classList.remove("up", "down", "neutral"); e.style.color = "";
+    if (d > 0.05) { e.classList.add("down"); e.style.color = "var(--red)"; }
+    else if (d < -0.05) { e.classList.add("up"); }
+    else { e.classList.add("neutral"); const t2 = t.replace(/^[▲▼]\s*/, ""); if (t2 !== t) e.textContent = t2; }
   }
   let cerrado = false;
   try { cerrado = ANIO_VIGENTE === 2026 && MES_VIGENTE === CORTE_MES && mesVigenteCerrado(MES_VIGENTE) && CORTE_REAL_DIA >= diasEnMes(MES_VIGENTE); } catch (_) {}
