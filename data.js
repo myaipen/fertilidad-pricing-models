@@ -430,13 +430,13 @@ window.DATA = {
     "total": [
       {
         "nombre": "Tratamientos FIV/ICSI",
-        "valor": 4.86,
-        "vsLM": 9,
+        "valor": 4.15,
+        "vsLM": 15,
         "vsU3M": 5
       },
       {
         "nombre": "Congelación de Gametos",
-        "valor": 3.56,
+        "valor": 3.55,
         "vsLM": 7,
         "vsU3M": 7
       },
@@ -448,7 +448,7 @@ window.DATA = {
       },
       {
         "nombre": "Laboratorio",
-        "valor": 2.7,
+        "valor": 2.69,
         "vsLM": -2,
         "vsU3M": 6
       },
@@ -459,15 +459,21 @@ window.DATA = {
         "vsU3M": 46
       },
       {
+        "nombre": "Donación",
+        "valor": 0.73,
+        "vsLM": -12,
+        "vsU3M": 9
+      },
+      {
         "nombre": "Consultas",
         "valor": 0.49,
-        "vsLM": 28,
-        "vsU3M": 10
+        "vsLM": 27,
+        "vsU3M": 9
       },
       {
         "nombre": "Procedimientos / Quirúrgicos",
         "valor": 0.4,
-        "vsLM": 31,
+        "vsLM": 30,
         "vsU3M": 7
       },
       {
@@ -492,8 +498,8 @@ window.DATA = {
     "CDMX": [
       {
         "nombre": "Tratamientos FIV/ICSI",
-        "valor": 4.2,
-        "vsLM": 14,
+        "valor": 3.58,
+        "vsLM": 16,
         "vsU3M": 8
       },
       {
@@ -519,6 +525,12 @@ window.DATA = {
         "valor": 1.9,
         "vsLM": 20,
         "vsU3M": 45
+      },
+      {
+        "nombre": "Donación",
+        "valor": 0.62,
+        "vsLM": 6,
+        "vsU3M": 8
       },
       {
         "nombre": "Procedimientos / Quirúrgicos",
@@ -554,39 +566,45 @@ window.DATA = {
     "GDL": [
       {
         "nombre": "Congelación de Gametos",
-        "valor": 0.65,
-        "vsLM": 10,
-        "vsU3M": 13
+        "valor": 0.64,
+        "vsLM": 9,
+        "vsU3M": 12
       },
       {
         "nombre": "Tratamientos FIV/ICSI",
-        "valor": 0.58,
-        "vsLM": 39,
-        "vsU3M": 13
+        "valor": 0.5,
+        "vsLM": 189,
+        "vsU3M": 20
       },
       {
         "nombre": "Laboratorio",
-        "valor": 0.41,
-        "vsLM": 44,
-        "vsU3M": 13
+        "valor": 0.4,
+        "vsLM": 42,
+        "vsU3M": 12
       },
       {
         "nombre": "Farmacia",
         "valor": 0.39,
-        "vsLM": -9,
-        "vsU3M": 13
+        "vsLM": -10,
+        "vsU3M": 12
       },
       {
         "nombre": "Consultas",
-        "valor": 0.24,
-        "vsLM": 24,
-        "vsU3M": 13
+        "valor": 0.23,
+        "vsLM": 22,
+        "vsU3M": 12
+      },
+      {
+        "nombre": "Donación",
+        "valor": 0.11,
+        "vsLM": -56,
+        "vsU3M": 12
       },
       {
         "nombre": "Procedimientos / Quirúrgicos",
         "valor": 0.06,
-        "vsLM": 5,
-        "vsU3M": 13
+        "vsLM": 4,
+        "vsU3M": 12
       },
       {
         "nombre": "Subrogación",
@@ -597,8 +615,8 @@ window.DATA = {
       {
         "nombre": "Imágenes",
         "valor": 0.01,
-        "vsLM": -13,
-        "vsU3M": 13
+        "vsLM": -14,
+        "vsU3M": 12
       },
       {
         "nombre": "Wellness",
@@ -609,8 +627,8 @@ window.DATA = {
       {
         "nombre": "Otros",
         "valor": 0.0,
-        "vsLM": -62,
-        "vsU3M": 13
+        "vsLM": -63,
+        "vsU3M": 12
       }
     ],
     "MTP": [
@@ -670,16 +688,16 @@ window.DATA = {
       "Noviembre al corte del 23-nov: Real $13.50M (17.63 de 23.25 días ponderados). Proyección $17.36M (rango $17.20M–$17.51M): +5% vs octubre ($16.47M); el corte del 22-nov decía $17.10M. CDMX aporta 85% ($14.74M), Guadalajara 14% ($2.37M) y Metepec 1% ($0.25M).",
       "Metepec salió del bloqueo de agenda de la Dra. (16 al 20-nov): Real $0.15M y proyección $0.25M (Atenciones MTP 173, Pacientes 63). Sigue siendo la sede con mayor incertidumbre; la proyección ya no descuenta días de bloqueo.",
       "El lunes 23-nov se agregaron $0.82M (CDMX $0.78M, GDL $0.04M y MTP $0.01M), con subrogación sin cambios. Sin subrogación ni renovaciones de almacenamiento, el ritmo diario base de CDMX va en $504K por día ponderado vs $450K del promedio ago-oct. La subrogación del mes suma $1.75M en el Real.",
-      "Por servicio (proyectado): Tratamientos FIV/ICSI $4.86M, Congelación de Gametos $3.56M, Farmacia $3.27M, Laboratorio $2.70M, Subrogación $1.92M. Subrogación $1.92M: $1.75M ya están en el Real y el resto es la mitad del promedio ago-oct.",
+      "Por servicio (proyectado): Tratamientos FIV/ICSI $4.15M, Congelación de Gametos $3.55M, Farmacia $3.27M, Laboratorio $2.69M, Subrogación $1.92M. Subrogación $1.92M: $1.75M ya están en el Real y el resto es la mitad del promedio ago-oct. Donación ($0.73M proyectados) ahora es línea propia: antes estaba dentro de Tratamientos FIV/ICSI y Congelación; el total no cambia.",
       "Atenciones proyectadas 3,489 (+11% vs octubre) y Pacientes 1,161 (+21%). Consultas de primera vez al 23-nov: 250 reales y proyección 351 (+26% vs octubre, rango 340–364); No Show 20.4%. HubSpot (Interesa2) al 23-nov: 1,351 leads y 333 citas agendadas (25% de conversión vs 26% en octubre; sedes con GDL = Guadalajara + Puerto Vallarta + Sahuayo y CDMX = Ciudad de México + Benito Juárez: CDMX 32%, GDL 20%, MTP 22%)."
     ],
     "CDMX": [
-      "CDMX lleva $11.55M al 23-nov y proyecta $14.74M (+7% vs octubre, +12% vs U3M): Tratamientos FIV/ICSI $4.20M, Congelación de Gametos $2.88M, Farmacia $2.81M, Laboratorio $2.25M, Subrogación $1.90M.",
+      "CDMX lleva $11.55M al 23-nov y proyecta $14.74M (+7% vs octubre, +12% vs U3M): Tratamientos FIV/ICSI $3.58M, Congelación de Gametos $2.88M, Farmacia $2.81M, Laboratorio $2.25M, Subrogación $1.90M.",
       "1,988 atenciones y 603 pacientes al corte; proyección 2,629 atenciones (+10% vs octubre) y 814 pacientes (+22% vs octubre). Consultas de primera vez: 142 al corte, proyección 195 (+34% vs octubre); No Show 15.5%.",
       "HubSpot (Interesa2) al 23-nov (Ciudad de México + Benito Juárez): 583 leads y 186 citas agendadas (32% de conversión vs 30% en octubre, con 909 leads y 270 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
     ],
     "GDL": [
-      "GDL lleva $1.81M al 23-nov y proyecta $2.37M (+18% vs octubre): Congelación de Gametos $0.65M, Tratamientos FIV/ICSI $0.58M, Laboratorio $0.41M, Farmacia $0.39M. Ojo: los cargos de los días hábiles 17, 18, 20 y 23-nov ($57K, $42K, $43K y $39K) fueron bajos; si fue captura tardía, el Real de GDL subirá.",
+      "GDL lleva $1.81M al 23-nov y proyecta $2.37M (+18% vs octubre): Congelación de Gametos $0.64M, Tratamientos FIV/ICSI $0.50M, Laboratorio $0.40M, Farmacia $0.39M. Ojo: los cargos de los días hábiles 17, 18, 20 y 23-nov ($57K, $42K, $43K y $39K) fueron bajos; si fue captura tardía, el Real de GDL subirá.",
       "505 atenciones y 202 pacientes al corte; proyección 687 atenciones y 284 pacientes. Consultas de primera vez: 84 al corte, proyección 120 (+11% vs octubre); No Show 22.4%.",
       "HubSpot (Interesa2) al 23-nov (Guadalajara + Puerto Vallarta + Sahuayo): 486 leads y 99 citas agendadas (20% de conversión vs 23% en octubre, con 717 leads y 165 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
     ],

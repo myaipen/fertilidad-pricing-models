@@ -52,6 +52,7 @@ const SERVICIO_LABEL = {
   "Farmacia": "Farmacia",
   "Laboratorio": "Laboratorio",
   "Subrogación": "Subrogación",
+  "Donación": "Donación", // 24-nov-2026: línea de servicio propia (antes dentro de Tratamientos FIV/ICSI y Congelación); ver ConceptosHier (Servicio = Donación) y Base
   "Consultas": "Consultas",
   "Procedimientos / Quirúrgicos": "Procedimientos / Quirúrgicos",
   "Imágenes": "Imágenes",
