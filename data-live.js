@@ -1326,14 +1326,14 @@ const CONSULTAS_PROY = {
   // 24-nov-2026 (corte 23-nov).
   // Real al 23-nov desde vRepro (grupo Primera Vez, Terminadas): 250 = CDMX 142, GDL 84, MTP 24. vRepro cambia estatus a posteriori (No Asiste / citas movidas), por lo que el conteo puede moverse unas unidades entre cortes.
   // MODELO v2 (24-nov): base = Terminadas + agenda pendiente 24-30 nov x factor de llenado empirico por horizonte (realizado/agenda al corte observado en los cortes 12, 16, 18 y 22-nov por sede; ya incluye no show y citas agendadas tarde) con la parte tardia escalada por el flujo de citas nuevas de HubSpot (CDMX x0.92, GDL x1.05, MTP x1.22). Rango = remanente x 0.88 a x 1.12. Backtest previo: error medio 3.2 por sede-corte vs 4.1 (Bru) y 5.6 (agenda x show).
-  // Agenda pendiente (vRepro, Citado/Confirmada, primera vez): CDMX 55, GDL 34, MTP 16. Show rate (oct + nov al 23): CDMX 85%, GDL 77%, MTP 66%.
+  // Agenda pendiente (vRepro, Citado/Confirmada, primera vez): CDMX 55, GDL 34, MTP 16. Show rate (oct + nov al 23): CDMX 85% observado (se usa 80% como supuesto conservador desde el 24-nov, a pedido de Marite; las citas nuevas se mantienen: CDMX 195 -> 192), GDL 77%, MTP 66%.
   // Piso = Terminadas + agenda x show rate. Referencia cruzada: ritmo M6 = 320 (backtest MAPE 6.9%).
   sedes: {
-    CDMX: { piso: 189, base: 195, min: 189, max: 202 },
+    CDMX: { piso: 186, base: 192, min: 186, max: 199 },
     GDL:  { piso: 110, base: 120, min: 116, max: 124 },
     MTP:  { piso: 35,  base: 36,  min: 35,  max: 38 },
   },
-  total: { piso: 334, base: 351, min: 340, max: 364 },
+  total: { piso: 331, base: 348, min: 337, max: 361 },
 };
 function consultasProyActiva() {
   return ANIO_VIGENTE === CONSULTAS_PROY.anio && MES_VIGENTE === CONSULTAS_PROY.mes; // el corte de consultas (CONSULTAS_PROY.corte = 23) se actualiza a mano con cada refresco
@@ -1540,17 +1540,17 @@ const CONSULTAS_VREPRO_NOV_2026 = {
  "FERTILIDAD INTEGRAL Guadalajara|Asesoria catalogos": 1,
  "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 1,
 };
-// Noviembre PROYECTADO por concepto (corte 23-nov): cada sede suma EXACTAMENTE su proyección (CDMX 195 + GDL 120 + MTP 36 = 351);
+// Noviembre PROYECTADO por concepto (corte 23-nov): cada sede suma EXACTAMENTE su proyección (CDMX 192 + GDL 120 + MTP 36 = 348);
 // por concepto = Real a la fecha + remanente repartido con la mezcla de octubre cerrado (nov-2026: reconciliado con el KPI). Se usa mientras consultasProyActiva().
 const CONSULTAS_NOV_PROYECTADO = {
  "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez": 74,
- "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online": 35,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online": 34,
  "FERTILIDAD INTEGRAL Guadalajara|Check up Ginecologico": 27,
- "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Mujeres": 26,
+ "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Mujeres": 25,
  "FERTILIDAD INTEGRAL Guadalajara|Check-up SOMP": 24,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez": 21,
- "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online gratis": 17,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez": 17,
+ "FERTILIDAD INTEGRAL Ciudad de México|Consulta primera vez online gratis": 16,
  "FERTILIDAD INTEGRAL Ciudad de México|Consulta de Primera Vez IP's": 14,
  "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Mujeres": 14,
  "FERTILIDAD INTEGRAL Guadalajara|Check up Integral": 12,
@@ -1562,13 +1562,13 @@ const CONSULTAS_NOV_PROYECTADO = {
  "FERTILIDAD INTEGRAL Ciudad de México|Fertility Check up Hombres": 4,
  "FERTILIDAD INTEGRAL Ciudad de México|Check-up SOMP": 4,
  "FERTILIDAD INTEGRAL Guadalajara|Consulta primera vez online": 4,
- "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 4,
  "FERTILIDAD INTEGRAL Ciudad de México|Asesoria catalogos": 3,
  "FERTILIDAD INTEGRAL Metepec|Fertility Check up Parejas": 3,
+ "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 3,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online": 3,
+ "FERTILIDAD INTEGRAL Metepec|Fertility Check up Mujeres": 3,
  "FERTILIDAD INTEGRAL Ciudad de México|Check up Integral": 2,
  "FERTILIDAD INTEGRAL Metepec|Consulta primera vez online gratis": 2,
- "FERTILIDAD INTEGRAL Metepec|Check up Ginecologico": 2,
  "FERTILIDAD INTEGRAL Guadalajara|Fertility Check up Hombres": 1,
  "FERTILIDAD INTEGRAL Guadalajara|Asesoria catalogos": 1,
  "FERTILIDAD INTEGRAL Metepec|Check-up SOMP": 1,

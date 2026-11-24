@@ -112,11 +112,11 @@ window.DATA = {
         278
       ],
       "real": 250,
-      "agendado": 101,
-      "proy": 351,
-      "vsLM": 26,
-      "vsU3M": 15,
-      "nota": "Real al 23-nov: 250 consultas de primera vez terminadas (CDMX 142, GDL 84, MTP 24; grupo Primera Vez completo en vRepro). Proyección 351 con el modelo v2 (factor de llenado de agenda + flujo de deals): terminadas 250 + agenda pendiente 24–30 nov (CDMX 55, GDL 34, MTP 16 citas) × factor de llenado por horizonte (observado en los cortes 12, 16, 18 y 22-nov, incluye no show y agendamientos tardíos) ajustado por el flujo de citas nuevas de HubSpot (CDMX ×0.92, GDL ×1.05, MTP ×1.22). Piso 334 (agenda × show rate de CDMX 85%, GDL 77%, MTP 66%). Rango 340–364 (±12% del remanente, error observado en backtest). Backtest previo sobre las consultas de los días posteriores a los cortes 12, 16 y 18-nov: error medio 3.2 por sede vs 4.1 del modelo anterior y 5.6 de agenda × show rate. Referencia por ritmo histórico (MAPE 6.9%): 320. +26% vs octubre (278). No Show 20.4% (64 inasistencias únicas sobre 313 pacientes únicos de primera vez del 1 al 23-nov; GDL sin duplicados: 83 pacientes únicos y 24 inasistencias únicas; CDMX 26 y MTP 14). Los deals de HubSpot mantienen el ritmo: 14 citas nuevas por día (17–23 nov) vs 14.5 en 12–23 nov y 61 leads por día, sin aceleración ni caída."
+      "agendado": 98,
+      "proy": 348,
+      "vsLM": 25,
+      "vsU3M": 14,
+      "nota": "Real al 23-nov: 250 consultas de primera vez terminadas (CDMX 142, GDL 84, MTP 24; grupo Primera Vez completo en vRepro). Proyección 348 con el modelo v2 (factor de llenado de agenda + flujo de deals): terminadas 250 + agenda pendiente 24–30 nov (CDMX 55, GDL 34, MTP 16 citas) × factor de llenado por horizonte (observado en los cortes 12, 16, 18 y 22-nov, incluye no show y agendamientos tardíos) ajustado por el flujo de citas nuevas de HubSpot (CDMX ×0.92, GDL ×1.05, MTP ×1.22). Piso 331 (agenda × show rate de CDMX 80%, GDL 77%, MTP 66%). Ajuste conservador de CDMX (24-nov, a pedido de Marite): se usa 80% de asistencia sobre la agenda de 55 citas (observado 85% en oct + nov) y se mantienen las citas nuevas (+6); CDMX baja de 195 a 192 y el piso de 189 a 186. Rango 337–361 (±12% del remanente, error observado en backtest). Backtest previo sobre las consultas de los días posteriores a los cortes 12, 16 y 18-nov: error medio 3.2 por sede vs 4.1 del modelo anterior y 5.6 de agenda × show rate. Referencia por ritmo histórico (MAPE 6.9%): 320. +25% vs octubre (278). No Show 20.4% (64 inasistencias únicas sobre 313 pacientes únicos de primera vez del 1 al 23-nov; GDL sin duplicados: 83 pacientes únicos y 24 inasistencias únicas; CDMX 26 y MTP 14). Los deals de HubSpot mantienen el ritmo: 14 citas nuevas por día (17–23 nov) vs 14.5 en 12–23 nov y 61 leads por día, sin aceleración ni caída."
     },
     "noshow": {
       "hist": [
@@ -208,12 +208,12 @@ window.DATA = {
           145
         ],
         "real": 142,
-        "agendado": 53,
-        "proy": 195,
-        "vsLM": 34,
-        "vsU3M": 37,
+        "agendado": 50,
+        "proy": 192,
+        "vsLM": 32,
+        "vsU3M": 35,
         "top_cat": "Consulta primera vez",
-        "top_n": 126
+        "top_n": 124
       },
       "noshow": {
         "hist": [
@@ -689,11 +689,11 @@ window.DATA = {
       "Metepec salió del bloqueo de agenda de la Dra. (16 al 20-nov): Real $0.15M y proyección $0.25M (Atenciones MTP 173, Pacientes 63). Sigue siendo la sede con mayor incertidumbre; la proyección ya no descuenta días de bloqueo.",
       "El lunes 23-nov se agregaron $0.82M (CDMX $0.78M, GDL $0.04M y MTP $0.01M), con subrogación sin cambios. Sin subrogación ni renovaciones de almacenamiento, el ritmo diario base de CDMX va en $504K por día ponderado vs $450K del promedio ago-oct. La subrogación del mes suma $1.75M en el Real.",
       "Por servicio (proyectado): Tratamientos FIV/ICSI $4.15M, Congelación de Gametos $3.55M, Farmacia $3.27M, Laboratorio $2.69M, Subrogación $1.92M. Subrogación $1.92M: $1.75M ya están en el Real y el resto es la mitad del promedio ago-oct. Donación ($0.73M proyectados) ahora es línea propia: antes estaba dentro de Tratamientos FIV/ICSI y Congelación; el total no cambia.",
-      "Atenciones proyectadas 3,489 (+11% vs octubre) y Pacientes 1,161 (+21%). Consultas de primera vez al 23-nov: 250 reales y proyección 351 (+26% vs octubre, rango 340–364); No Show 20.4%. HubSpot (Interesa2) al 23-nov: 1,351 leads y 333 citas agendadas (25% de conversión vs 26% en octubre; sedes con GDL = Guadalajara + Puerto Vallarta + Sahuayo y CDMX = Ciudad de México + Benito Juárez: CDMX 32%, GDL 20%, MTP 22%)."
+      "Atenciones proyectadas 3,489 (+11% vs octubre) y Pacientes 1,161 (+21%). Consultas de primera vez al 23-nov: 250 reales y proyección 348 (+25% vs octubre, rango 337–361); No Show 20.4%. HubSpot (Interesa2) al 23-nov: 1,351 leads y 333 citas agendadas (25% de conversión vs 26% en octubre; sedes con GDL = Guadalajara + Puerto Vallarta + Sahuayo y CDMX = Ciudad de México + Benito Juárez: CDMX 32%, GDL 20%, MTP 22%)."
     ],
     "CDMX": [
       "CDMX lleva $11.55M al 23-nov y proyecta $14.74M (+7% vs octubre, +12% vs U3M): Tratamientos FIV/ICSI $3.58M, Congelación de Gametos $2.88M, Farmacia $2.81M, Laboratorio $2.25M, Subrogación $1.90M.",
-      "1,988 atenciones y 603 pacientes al corte; proyección 2,629 atenciones (+10% vs octubre) y 814 pacientes (+22% vs octubre). Consultas de primera vez: 142 al corte, proyección 195 (+34% vs octubre); No Show 15.5%.",
+      "1,988 atenciones y 603 pacientes al corte; proyección 2,629 atenciones (+10% vs octubre) y 814 pacientes (+22% vs octubre). Consultas de primera vez: 142 al corte, proyección 192 (+32% vs octubre); No Show 15.5%.",
       "HubSpot (Interesa2) al 23-nov (Ciudad de México + Benito Juárez): 583 leads y 186 citas agendadas (32% de conversión vs 30% en octubre, con 909 leads y 270 citas). El mes en curso es parcial: los deals recientes aún no completan su ventana para agendar."
     ],
     "GDL": [
@@ -711,18 +711,18 @@ window.DATA = {
     "total": [
       {
         "nombre": "Consulta primera vez",
-        "valor": 173,
-        "vsLM": 45
+        "valor": 171,
+        "vsLM": 44
       },
       {
         "nombre": "Fertility Check up Mujeres",
-        "valor": 44,
-        "vsLM": 10
+        "valor": 42,
+        "vsLM": 5
       },
       {
         "nombre": "Check up Ginecologico",
-        "valor": 36,
-        "vsLM": 9
+        "valor": 37,
+        "vsLM": 12
       },
       {
         "nombre": "Check-up SOP",
@@ -735,14 +735,14 @@ window.DATA = {
         "vsLM": 25
       },
       {
-        "nombre": "Check up Integral",
-        "valor": 14,
-        "vsLM": 0
-      },
-      {
         "nombre": "Consulta de Primera Vez IP's",
         "valor": 14,
         "vsLM": 17
+      },
+      {
+        "nombre": "Check up Integral",
+        "valor": 14,
+        "vsLM": 0
       },
       {
         "nombre": "Consulta ginecológica",
@@ -768,13 +768,13 @@ window.DATA = {
     "CDMX": [
       {
         "nombre": "Consulta primera vez",
-        "valor": 126,
-        "vsLM": 56
+        "valor": 124,
+        "vsLM": 53
       },
       {
         "nombre": "Fertility Check up Mujeres",
-        "valor": 26,
-        "vsLM": -4
+        "valor": 25,
+        "vsLM": -7
       },
       {
         "nombre": "Consulta de Primera Vez IP's",
@@ -872,19 +872,19 @@ window.DATA = {
         "vsLM": 30
       },
       {
-        "nombre": "Fertility Check up Mujeres",
-        "valor": 4,
-        "vsLM": 300
-      },
-      {
         "nombre": "Fertility Check up Parejas",
         "valor": 3,
         "vsLM": 200
       },
       {
         "nombre": "Check up Ginecologico",
-        "valor": 2,
-        "vsLM": 100
+        "valor": 3,
+        "vsLM": 200
+      },
+      {
+        "nombre": "Fertility Check up Mujeres",
+        "valor": 3,
+        "vsLM": 200
       },
       {
         "nombre": "Check-up SOP",
