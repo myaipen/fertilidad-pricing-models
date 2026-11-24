@@ -1335,6 +1335,10 @@ const CONSULTAS_PROY = {
   },
   total: { piso: 331, base: 348, min: 337, max: 361 },
 };
+// 24-nov-2026 (pedido de Marite): consultas terminadas (Primera Vez, Terminada) de la Dra. Mónica Olavarria desde el 19-oct-2026 se muestran como Benito Juárez
+// (solo atiende ahí). vRepro las registra en la delegación CDMX, por lo que CDMX total no cambia: se parte el "Real" en Ciudad de México + Benito Juárez.
+// Nov al corte 23-nov: 8 (Hernández E., Juárez Gómez, Solórzano, Muñoz Rivas, Martínez A.B., Ocampo, Ramírez L., Bolaina). Oct (19-31): 0.
+const CONSULTAS_BJ = { mes: 11, corte: 23, real: 8 };
 function consultasProyActiva() {
   return ANIO_VIGENTE === CONSULTAS_PROY.anio && MES_VIGENTE === CONSULTAS_PROY.mes; // el corte de consultas (CONSULTAS_PROY.corte = 23) se actualiza a mano con cada refresco
 }
@@ -2724,24 +2728,35 @@ function ajustarConsultasProyUI() {
         Chart.register({
           id: "consultasTotales3",
           afterDatasetsDraw(c) {
-            if (!c.canvas || c.canvas.id !== "chart-consultas-stack" || c.data.datasets.length !== 3) return;
+            if (!c.canvas || c.canvas.id !== "chart-consultas-stack" || c.data.datasets.length < 3) return;
             const { ctx } = c; ctx.save();
             ctx.font = "700 11px Calibri, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; ctx.fillStyle = "#1F2937";
             c.getDatasetMeta(0).data.forEach((bar, i) => {
               const tot = c.data.datasets.reduce((a, d) => a + (Number(d.data[i]) || 0), 0);
               if (!tot) return;
               let top = bar;
-              for (let j = 2; j >= 0; j--) { if (Number(c.data.datasets[j].data[i])) { top = c.getDatasetMeta(j).data[i]; break; } }
+              for (let j = c.data.datasets.length - 1; j >= 0; j--) { if (Number(c.data.datasets[j].data[i])) { top = c.getDatasetMeta(j).data[i]; break; } }
               ctx.fillText(String(Math.round(tot)), top.x, top.y - 4);
             });
             ctx.restore();
           },
         });
       }
+      let bjTxt = "";
+      if (sc === "CDMX" && CONSULTAS_BJ.mes === CONSULTAS_PROY.mes && CONSULTAS_BJ.real > 0 && CONSULTAS_BJ.real <= realMes) {
+        const ds0 = ch.data.datasets[0];
+        ds0.label = "Real — Ciudad de México";
+        ds0.data = ds0.data.map((v, i) => i === k ? v - CONSULTAS_BJ.real : v);
+        ch.data.datasets.splice(1, 0, {
+          label: "Real — Benito Juárez (Dra. Mónica)", data: ds0.data.map((_, i) => i === k ? CONSULTAS_BJ.real : 0),
+          backgroundColor: COLORS.amber, borderRadius: 4, maxBarThickness: ds0.maxBarThickness || 34, stack: ds0.stack || "s",
+        });
+        bjTxt = ' (Ciudad de México <b style="color:var(--text)">' + Math.round(realMes - CONSULTAS_BJ.real) + '</b> · Benito Juárez <b style="color:var(--text)">' + CONSULTAS_BJ.real + '</b>)';
+      }
       ch.update("none");
       const cap = ch.canvas.closest(".panel") && ch.canvas.closest(".panel").querySelector(".chart-box + div");
       if (cap && /Real MTD/.test(cap.textContent)) {
-        cap.innerHTML = 'Real MTD: <b style="color:var(--text)">' + Math.round(realMes) + '</b> · Agendadas × show rate: <b style="color:var(--text)">' + Math.round(agenda) +
+        cap.innerHTML = 'Real MTD: <b style="color:var(--text)">' + Math.round(realMes) + '</b>' + bjTxt + ' · Agendadas × show rate: <b style="color:var(--text)">' + Math.round(agenda) +
           '</b> · Nuevas citas esperadas: <b style="color:var(--text)">' + Math.round(nuevas) + '</b> · Proyección: <b style="color:var(--text)">' + Math.round(e.base) + '</b>';
       }
     } else {
