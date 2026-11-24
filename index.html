@@ -1985,7 +1985,7 @@ function mediCityObj(c){
 }
 const MEDI_CIUDAD_NOM = { CDMX:"CDMX", MTY:"Monterrey" };
 function mediCmp(m){ // comparador: noviembre parcial vs octubre mismos días; otros meses vs mes anterior
-  return m === 11 ? { lbl:"vs oct (1–22)", mode:"oct22" } : (m > 1 ? { lbl:"vs mes ant.", mode:"prev" } : { lbl:"vs mes ant.", mode:null });
+  return m === 11 ? { lbl:"vs oct (1–23)", mode:"oct22" } : (m > 1 ? { lbl:"vs mes ant.", mode:"prev" } : { lbl:"vs mes ant.", mode:null });
 }
 function mediPrev(arr, oct22, m){ const c = mediCmp(m); return c.mode === "oct22" ? (oct22 || 0) : (c.mode === "prev" ? (arr[m-2] || 0) : null); }
 function mediDeltaCell(cur, prev){
@@ -2012,7 +2012,7 @@ function mediToggleEvo(tr){
   const labels = MESES_12.slice(0, arr.length).map((l,i)=> (parcial && i === arr.length-1) ? l + "*" : l);
   const id = "medi-evo-" + (++_mediEvoN);
   const avg = (arr[7]+arr[8]+arr[9])/3, last = arr[arr.length-1], ytd = arr.reduce((t,v)=>t+v,0);
-  const cap = `${parcial ? "* "+nombreMesLargo(11)+" parcial al "+I.corte+" (real, sin proyección)." : ""} Total ene–${labels[labels.length-1].replace("*","").toLowerCase()}: $${fmt(ytd,2)}M · prom. ago–oct: $${fmt(avg,2)}M${S.o22!=null ? " · oct 1–22: $"+fmt(S.o22,2)+"M" : ""}.`;
+  const cap = `${parcial ? "* "+nombreMesLargo(11)+" parcial al "+I.corte+" (real, sin proyección)." : ""} Total ene–${labels[labels.length-1].replace("*","").toLowerCase()}: $${fmt(ytd,2)}M · prom. ago–oct: $${fmt(avg,2)}M${S.o22!=null ? " · oct 1–23: $"+fmt(S.o22,2)+"M" : ""}.`;
   const row = document.createElement("tr"); row.className = "medi-evo-row";
   row.innerHTML = `<td colspan="${tr.children.length}"><div class="medi-evo-title">${S.title} — evolutivo mensual 2026 · MDP</div><div style="position:relative; height:170px;"><canvas id="${id}"></canvas></div><div class="section-sub" style="margin:6px 0 0;">${cap}</div></td>`;
   tr.after(row); tr.classList.add("medi-open");
@@ -2068,7 +2068,7 @@ function mediSegPanel(){
   const segTot = segRows.reduce((a,r)=>a+r.t,0);
   const segHtml = segRows.map(r=>`<tr><td>${r.k}</td><td class="num">${fmt(r.cur[0],2)}</td><td class="num">${fmt(r.cur[1],2)}</td><td class="num">${fmt(r.t,2)}</td><td class="num">${segTot?fmt(r.t/segTot*100,0):0}%</td><td class="num">${mediDeltaCell(r.t,r.p)}</td></tr>`).join("");
   return `<div class="panel-title">Segmento de cliente · MDP</div>
-      <div class="section-sub" style="margin:0 0 8px;">Venta neta sin IVA de ${nombreMesLargo(m)}${parcial ? " al "+I.corte : ""} (real, sin proyección) · ${parcial ? "comparativo contra octubre 1–22" : "comparativo contra el mes anterior"}</div>
+      <div class="section-sub" style="margin:0 0 8px;">Venta neta sin IVA de ${nombreMesLargo(m)}${parcial ? " al "+I.corte : ""} (real, sin proyección) · ${parcial ? "comparativo contra octubre 1–23" : "comparativo contra el mes anterior"}</div>
       ${mediTable(["Segmento","CDMX","Monterrey","Total","% mezcla",cmp.lbl], segHtml)}`;
 }
 function buildMediDetalle(){
@@ -2078,7 +2078,7 @@ function buildMediDetalle(){
   const I = window.MEDI, D_ = I.det, m = window.getMesVigente(), mes = nombreMesLargo(m), cmp = mediCmp(m);
   if (m < 1 || m > D_.meses){ el.innerHTML = `<div class="section-title">Medifert — detalle por ciudad</div><p class="section-sub">Sin detalle para este mes (la base cubre enero–noviembre 2026).</p>`; return; }
   const parcial = m === I.mes_proy, corte = parcial ? ` al ${I.corte}` : "";
-  const sub = `Ventas netas sin IVA (excluye IECH, Clínica Valle y Fertilidad 360) de ${mes}${corte}. ${parcial ? "Los comparativos son contra octubre en los mismos días (1–22) para no comparar un mes parcial contra uno completo." : "Comparativos contra el mes anterior."} Clic en un medicamento, cliente o fila de intercompañía (›) para ver el evolutivo mensual de su venta.`;
+  const sub = `Ventas netas sin IVA (excluye IECH, Clínica Valle y Fertilidad 360) de ${mes}${corte}. ${parcial ? "Los comparativos son contra octubre en los mismos días (1–23) para no comparar un mes parcial contra uno completo." : "Comparativos contra el mes anterior."} Clic en un medicamento, cliente o fila de intercompañía (›) para ver el evolutivo mensual de su venta.`;
   const cityPanel = c => `<div class="panel">
       <div class="panel-title">${MEDI_CIUDAD_NOM[c]} — Medicamentos más vendidos (familia) · MDP</div>
       ${mediFamRows(c, m, 8)}
